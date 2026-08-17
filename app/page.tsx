@@ -31,7 +31,7 @@ export default async function Home(){
   }
   const hero=sections.find(s=>s.key==='hero'&&s.stories?.length)||sections.find(s=>s.stories?.length);
   const rest=sections.filter(s=>s!==hero&&s.stories?.length);
-  const latest=hero?.stories?.length?hero.stories:[];
+  const newsroomRibbonStories=hero?.stories?.slice(1,5)??[];
 
   return <>
     <SiteHeader/>
@@ -49,7 +49,7 @@ export default async function Home(){
         <div className="lead-rail">{hero.stories.slice(1,5).map((s:any)=><StoryCard key={s.id} story={s} variant="compact"/>)}</div>
       </section>:null}
 
-      {latest.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{latest.slice(1,5).map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{s.title}</span></Link>)}</section>:null}
+      {newsroomRibbonStories.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{newsroomRibbonStories.map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{s.title}</span></Link>)}</section>:null}
 
       <div className={adFlow.desktopAfterHeroAd}>
         <AdSlot slotKey="HOME_AFTER_HERO"/>
