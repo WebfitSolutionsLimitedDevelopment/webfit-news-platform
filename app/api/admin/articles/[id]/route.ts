@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../../lib/supabase-server';
+import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
 
 const Patch = z.object({
   title:z.string().min(5).optional(),
@@ -55,6 +56,8 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
   if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
 
+  const {data:before}=await c.supabase.from('articles').select('slug,status').eq('id',id).maybeSingle();
+
   const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
   const changes:any={...articleChanges};
   if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
@@ -90,6 +93,11 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   }
 
   await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'article.update',entity_type:'article',entity_id:id,metadata:{fields:Object.keys(p.data)}});
+
+  // Purge the public ISR cache immediately so changed featured images and
+  // story metadata are visible on every device as soon as the CMS save ends.
+  revalidateEditorialContent(before?.slug,data.slug);
+
   return NextResponse.json({article:data});
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../lib/supabase-server';
+import { revalidateEditorialContent } from '../../../../lib/editorial-revalidate';
 
 const ArticleInput = z.object({
   title: z.string().trim().min(5),
@@ -70,5 +71,8 @@ export async function POST(req: Request) {
   }
 
   await ctx.supabase.from('audit_log').insert({ actor_id: ctx.user.id, action: 'article.create', entity_type: 'article', entity_id: created.id, metadata: { status: input.status } });
+
+  if (input.status === 'published') revalidateEditorialContent(created.slug);
+
   return NextResponse.json({ article: created }, { status: 201 });
 }
