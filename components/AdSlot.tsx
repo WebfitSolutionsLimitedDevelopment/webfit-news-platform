@@ -22,8 +22,5 @@ export async function AdSlot({slotKey,className=''}:Props){
       </a>
     </aside>;
   }
-  return <aside className={`ad-zone ad-zone-empty ${className}`} aria-label="Advertising position">
-    <span className="ad-label">Advertising</span>
-    <div><strong>{slot.label}</strong><small>{slot.recommended_width||''}{slot.recommended_width&&slot.recommended_height?' × ':''}{slot.recommended_height||''}</small></div>
-  </aside>;
+  return null;
 }

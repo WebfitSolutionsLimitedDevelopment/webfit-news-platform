@@ -4,7 +4,8 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 import { BreakingStrip } from '@/components/BreakingStrip';
 import { AdSlot } from '@/components/AdSlot';
-import { getBreakingStories,getHomepageFeed,getLatestStories } from '@/lib/news';
+import { VideoSection } from '@/components/VideoSection';
+import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
 
 export const revalidate=60;
 
@@ -21,6 +22,7 @@ function StandardSection({title,stories,index}:{title:string;stories:any[];index
 
 export default async function Home(){
   let breaking:any[]=[];try{breaking=await getBreakingStories(4)}catch{breaking=[]}
+  let videos:any[]=[];try{videos=await getPublishedVideos(8)}catch{videos=[]}
   let sections:any[]=[];try{sections=await getHomepageFeed()}catch{sections=[]}
   if(!sections.some(s=>s.stories?.length)){
     let stories:any[]=[];try{stories=await getLatestStories(32)}catch{stories=[]}
@@ -39,9 +41,10 @@ export default async function Home(){
         <div className="lead-main"><StoryCard story={hero.stories[0]} variant="lead"/></div>
         <div className="lead-rail">{hero.stories.slice(1,5).map((s:any)=><StoryCard key={s.id} story={s} variant="compact"/>)}</div>
       </section>:null}
-      {latest.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{latest.slice(1,5).map((s:any)=><Link key={s.id} href={`/${s.slug}`}>{s.title}</Link>)}</section>:null}
+      {latest.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{latest.slice(1,5).map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{s.title}</span></Link>)}</section>:null}
       <AdSlot slotKey="HOME_AFTER_HERO"/>
       {rest.map((s:any,i:number)=><div key={s.id||s.key}>{i===1?<AdSlot slotKey="HOME_MIDDLE"/>:null}<StandardSection title={s.title} stories={s.stories} index={i}/></div>)}
+      <VideoSection videos={videos}/>
       {!hero&&!rest.length?<section className="prelaunch"><img src="/webfit-news-logo.png" alt="Webfit News"/><h1>Webfit News newsroom is connected.</h1><p>Editorial content is ready for homepage curation.</p></section>:null}
     </main>
     <PublicFooter/>

@@ -84,3 +84,48 @@ export async function getHomepageFeed(): Promise<HomepageSectionFeed[]> {
   }
   return out;
 }
+
+
+export type VideoStory = {
+  id:string;
+  title:string;
+  video_url:string;
+  provider:string|null;
+  published_at:string|null;
+  is_featured:boolean;
+  youtube_id:string|null;
+  display_title:string;
+};
+
+export function getYoutubeId(url:string){
+  try{
+    const parsed=new URL(url);
+    if(parsed.hostname==='youtu.be')return parsed.pathname.replace(/^\//,'').split('/')[0]||null;
+    if(parsed.hostname.includes('youtube.com')){
+      if(parsed.pathname.startsWith('/shorts/'))return parsed.pathname.split('/')[2]||null;
+      return parsed.searchParams.get('v');
+    }
+  }catch{}
+  return null;
+}
+
+async function resolveYoutubeTitle(url:string,fallback:string){
+  try{
+    const endpoint=`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    const response=await fetch(endpoint,{next:{revalidate:86400}});
+    if(!response.ok)return fallback;
+    const data=await response.json() as {title?:string};
+    return data.title?.trim()||fallback;
+  }catch{return fallback;}
+}
+
+export async function getPublishedVideos(limit=8):Promise<VideoStory[]>{
+  const supabase=await createClient();
+  const {data,error}=await supabase.from('videos').select('id,title,video_url,provider,published_at,is_featured').eq('is_published',true).order('is_featured',{ascending:false}).order('published_at',{ascending:false}).limit(limit);
+  if(error)throw error;
+  return Promise.all((data||[]).map(async(v:any)=>{
+    const youtube_id=getYoutubeId(v.video_url);
+    const display_title=youtube_id?await resolveYoutubeTitle(v.video_url,v.title):v.title;
+    return {...v,youtube_id,display_title} as VideoStory;
+  }));
+}
