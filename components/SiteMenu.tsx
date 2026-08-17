@@ -51,7 +51,7 @@ export function SiteMenu({label='Menu',mobile=false}:{label?:string;mobile?:bool
 
   return <>
     <button
-      className={`menu-chip ${styles.trigger} ${mobile?styles.mobileTrigger:''}`}
+      className={`${mobile?'':'menu-chip'} ${styles.trigger} ${mobile?styles.mobileTrigger:''}`}
       type="button"
       aria-label={open?'Close sections':'Open sections'}
       aria-expanded={open}
