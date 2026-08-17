@@ -1,0 +1,108 @@
+.trigger{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  cursor:pointer;
+}
+.icon{
+  width:18px;
+  display:grid;
+  gap:3px;
+}
+.icon i{
+  display:block;
+  height:2px;
+  background:currentColor;
+  border-radius:999px;
+}
+.layer{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+}
+.backdrop{
+  position:absolute;
+  inset:0;
+  border:0;
+  background:rgba(0,0,0,.48);
+  cursor:pointer;
+}
+.drawer{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:min(430px,92vw);
+  background:#fff;
+  color:#111;
+  box-shadow:18px 0 60px rgba(0,0,0,.2);
+  display:flex;
+  flex-direction:column;
+  overflow:auto;
+}
+.head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:22px 24px;
+  border-bottom:1px solid #dedede;
+}
+.brand img{
+  width:145px;
+  height:auto;
+  display:block;
+}
+.close{
+  border:1px solid #111;
+  background:#fff;
+  border-radius:999px;
+  padding:8px 13px;
+  font-weight:800;
+  cursor:pointer;
+}
+.content{
+  padding:24px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:28px;
+}
+.label{
+  display:block;
+  font-size:10px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  font-weight:900;
+  color:#9a6800;
+  margin-bottom:12px;
+}
+.links{
+  display:grid;
+}
+.links a{
+  padding:9px 0;
+  border-bottom:1px solid #ececec;
+  font-size:15px;
+  font-weight:800;
+}
+.secondary a{
+  font-weight:650;
+}
+.foot{
+  margin-top:auto;
+  padding:18px 24px;
+  border-top:1px solid #dedede;
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap;
+  font-size:13px;
+  font-weight:800;
+}
+@media(max-width:720px){
+  .content{grid-template-columns:1fr;gap:24px;padding:18px}
+  .drawer{width:min(360px,94vw)}
+  .head{padding:18px}
+  .foot{padding:16px 18px}
+  .triggerLabel{display:none}
+  .trigger{padding:10px 11px}
+}
