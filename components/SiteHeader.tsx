@@ -10,7 +10,7 @@ export async function SiteHeader(){
   const settings=await getPublicSiteSettings();
   const siteName=settings.identity.name||'Webfit News';
   const today=new Intl.DateTimeFormat('en-NZ',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date());
-  return <>
+  return <div className="wf-auto-ads-exclude-top">
     <SupportBanner/>
 
     <div className={`utility-premium ${styles.utility}`}>
@@ -50,5 +50,5 @@ export async function SiteHeader(){
     <div className={`nav-premium-wrap ${styles.desktopNav}`}>
       <nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav>
     </div>
-  </>;
+  </div>;
 }
