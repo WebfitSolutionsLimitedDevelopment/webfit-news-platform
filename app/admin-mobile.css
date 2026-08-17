@@ -1,0 +1,476 @@
+/* Mobile-first newsroom CMS improvements. Public site is unaffected. */
+.admin-mobile-bar{display:none}
+
+@media(max-width:900px){
+  .admin-layout{
+    display:block!important;
+    min-height:100vh;
+    padding-top:62px;
+  }
+
+  .admin-sidebar{
+    display:none!important;
+  }
+
+  .admin-mobile-bar{
+    position:fixed;
+    inset:0 0 auto 0;
+    z-index:500;
+    height:62px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    align-items:center;
+    gap:8px;
+    padding:7px 10px;
+    background:#111317;
+    color:#fff;
+    border-bottom:1px solid #2c3036;
+    box-shadow:0 3px 16px rgba(0,0,0,.14);
+  }
+
+  .admin-mobile-brand{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#fff;
+    font-size:10px;
+    letter-spacing:.12em;
+    font-weight:900;
+  }
+
+  .admin-mobile-brand img{
+    width:88px;
+    height:42px;
+    object-fit:contain;
+    background:#fff;
+    border-radius:5px;
+    padding:3px;
+  }
+
+  .admin-mobile-new{
+    display:inline-flex;
+    align-items:center;
+    min-height:40px;
+    padding:0 11px;
+    border-radius:7px;
+    background:#fff;
+    color:#111317;
+    font-size:11px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+
+  .admin-mobile-menu{
+    position:relative;
+  }
+
+  .admin-mobile-menu summary{
+    list-style:none;
+    min-height:40px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:0 10px;
+    border:1px solid #454b54;
+    border-radius:7px;
+    cursor:pointer;
+    font-size:11px;
+    font-weight:850;
+    user-select:none;
+  }
+
+  .admin-mobile-menu summary::-webkit-details-marker{display:none}
+  .admin-mobile-menu summary b{font-size:17px;line-height:1}
+
+  .admin-mobile-menu-panel{
+    position:fixed;
+    top:62px;
+    left:0;
+    right:0;
+    max-height:calc(100dvh - 62px);
+    overflow:auto;
+    overscroll-behavior:contain;
+    background:#fff;
+    color:#15171a;
+    padding:12px 12px calc(20px + env(safe-area-inset-bottom));
+    border-bottom:1px solid #dfe3e7;
+    box-shadow:0 14px 28px rgba(0,0,0,.18);
+  }
+
+  .admin-mobile-menu-panel section{
+    padding:9px 0 12px;
+    border-bottom:1px solid #e8ebee;
+  }
+
+  .admin-mobile-menu-panel section>strong{
+    display:block;
+    margin:0 4px 7px;
+    color:#78808a;
+    font-size:9px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  .admin-mobile-menu-panel nav{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+  }
+
+  .admin-mobile-menu-panel nav a{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    padding:9px 10px;
+    border-radius:7px;
+    background:#f5f6f7;
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .admin-mobile-menu-panel nav a.active{
+    background:#111317;
+    color:#fff;
+  }
+
+  .admin-mobile-menu-footer{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding-top:12px;
+  }
+
+  .admin-mobile-menu-footer a,
+  .admin-mobile-menu-footer button{
+    min-height:40px;
+    border:1px solid #d3d8dd;
+    border-radius:7px;
+    background:#fff;
+    padding:8px 11px;
+    color:#111317;
+    font:inherit;
+    font-size:11px;
+    font-weight:850;
+  }
+
+  .admin-content{
+    padding:16px 12px 42px!important;
+    width:100%;
+    min-width:0;
+  }
+
+  .admin-header{
+    margin-bottom:14px!important;
+    gap:12px!important;
+  }
+
+  .admin-header h1{
+    font-size:24px!important;
+    line-height:1.08;
+  }
+
+  .admin-header p{
+    font-size:12px;
+    line-height:1.45;
+  }
+
+  .admin-header-actions{
+    width:100%;
+  }
+
+  .admin-header-actions>a,
+  .admin-header-actions>button{
+    width:100%;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .admin-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+
+  .admin-metrics>div{
+    padding:12px!important;
+  }
+
+  .admin-metrics strong{
+    font-size:23px!important;
+  }
+
+  .admin-two-col,
+  .settings-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .admin-card{
+    padding:14px!important;
+    margin-bottom:12px!important;
+  }
+
+  .admin-card-head{
+    align-items:flex-start;
+    gap:10px;
+  }
+
+  .admin-table-wrap{
+    margin:0 -14px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .admin-table-wrap table{
+    min-width:600px;
+  }
+
+  .admin-toolbar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+  }
+
+  .admin-toolbar input,
+  .admin-toolbar select{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px;
+  }
+
+  .media-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+}
+
+@media(max-width:560px){
+  .admin-mobile-brand span{display:none}
+  .admin-mobile-brand img{width:76px}
+  .admin-mobile-new{padding:0 9px}
+  .admin-mobile-menu summary span{display:none}
+  .admin-mobile-menu summary{padding:0 11px}
+  .admin-content{padding:12px 9px 38px!important}
+  .admin-metrics{grid-template-columns:1fr 1fr!important}
+}
+
+/* Article composer: phone-first publishing workflow. */
+@media(max-width:760px){
+  .admin-mobile-bar + .admin-sidebar + .admin-content{padding:0!important}
+}
+
+/* The editor is outside AdminShell, so target its CSS-module generated descendants structurally. */
+@media(max-width:760px){
+  body:has([class*="ArticleWorkspace_page"]){
+    background:#f3f5f7;
+  }
+
+  [class*="ArticleWorkspace_page"]{
+    padding-bottom:86px;
+  }
+
+  [class*="ArticleWorkspace_top"]{
+    position:sticky!important;
+    top:0!important;
+    z-index:120!important;
+    display:block!important;
+    padding:10px 10px 8px!important;
+    background:#fff!important;
+    border-bottom:1px solid #dfe3e7!important;
+  }
+
+  [class*="ArticleWorkspace_top"] h1{
+    font-size:21px!important;
+    line-height:1.1!important;
+  }
+
+  [class*="ArticleWorkspace_back"]{
+    margin-bottom:3px!important;
+  }
+
+  [class*="ArticleWorkspace_state"] small{
+    display:none;
+  }
+
+  [class*="ArticleWorkspace_actions"]{
+    position:fixed!important;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:140;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    width:auto!important;
+    padding:9px 10px calc(9px + env(safe-area-inset-bottom))!important;
+    background:rgba(255,255,255,.98);
+    border-top:1px solid #d9dde2;
+    box-shadow:0 -8px 24px rgba(16,24,40,.10);
+  }
+
+  [class*="ArticleWorkspace_actions"] a{
+    display:none!important;
+  }
+
+  [class*="ArticleWorkspace_actions"] button{
+    min-height:46px!important;
+    padding:10px 8px!important;
+    font-size:12px!important;
+    border-radius:8px!important;
+  }
+
+  [class*="ArticleWorkspace_layout"]{
+    width:calc(100% - 12px)!important;
+    margin:7px auto 24px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+  }
+
+  [class*="ArticleWorkspace_main"],
+  [class*="ArticleWorkspace_side"]{
+    display:contents!important;
+  }
+
+  [class*="ArticleWorkspace_card"]{
+    padding:13px!important;
+    border-radius:9px!important;
+    box-shadow:none!important;
+  }
+
+  [class*="ArticleWorkspace_cardHead"]{
+    margin-bottom:12px!important;
+    align-items:flex-start!important;
+  }
+
+  [class*="ArticleWorkspace_cardHead"] small{
+    max-width:48%;
+    text-align:right;
+    line-height:1.35;
+  }
+
+  [class*="ArticleWorkspace_field"]{
+    margin-bottom:13px!important;
+    font-size:12px!important;
+  }
+
+  [class*="ArticleWorkspace_field"] input,
+  [class*="ArticleWorkspace_field"] textarea,
+  [class*="ArticleWorkspace_field"] select,
+  [class*="ArticleWorkspace_categoryBox"]>input{
+    min-height:46px!important;
+    padding:11px!important;
+    font-size:16px!important;
+    border-radius:8px!important;
+  }
+
+  [class*="ArticleWorkspace_headline"]{
+    font-size:25px!important;
+    line-height:1.12!important;
+    padding:12px!important;
+  }
+
+  [class*="ArticleWorkspace_body"]{
+    min-height:52vh!important;
+    font-size:17px!important;
+    line-height:1.6!important;
+  }
+
+  [class*="ArticleWorkspace_releaseInput"]{
+    min-height:190px!important;
+    font-size:14px!important;
+  }
+
+  [class*="ArticleWorkspace_two"]{
+    grid-template-columns:1fr!important;
+    gap:0!important;
+  }
+
+  [class*="ArticleWorkspace_side"] [class*="ArticleWorkspace_card"]{
+    order:3;
+  }
+
+  [class*="ArticleWorkspace_featured"] img{
+    aspect-ratio:auto!important;
+    max-height:260px;
+    object-fit:contain!important;
+    background:#eef1f3!important;
+  }
+
+  [class*="ArticleWorkspace_addImage"]{
+    min-height:118px!important;
+  }
+
+  [class*="ArticleWorkspace_categoryBox"]>div{
+    max-height:180px!important;
+  }
+
+  [class*="ArticleWorkspace_toggles"]{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  [class*="ArticleWorkspace_toggles"] label{
+    min-height:46px;
+    padding:9px!important;
+  }
+
+  [class*="ArticleWorkspace_modal"]{
+    align-items:end!important;
+    padding:0!important;
+  }
+
+  [class*="ArticleWorkspace_dialog"]{
+    width:100%!important;
+    max-height:88dvh!important;
+    border-radius:14px 14px 0 0!important;
+  }
+
+  [class*="ArticleWorkspace_dialog"]>header{
+    padding:12px!important;
+  }
+
+  [class*="ArticleWorkspace_upload"]{
+    margin:10px!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+  }
+
+  [class*="ArticleWorkspace_upload"] input{
+    width:100%;
+    font-size:12px!important;
+  }
+
+  [class*="ArticleWorkspace_mediaSearch"]{
+    padding:8px 10px 10px!important;
+  }
+
+  [class*="ArticleWorkspace_mediaGrid"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+    padding:0 10px 18px!important;
+  }
+
+  [class*="ArticleWorkspace_mediaGrid"] button>span{
+    aspect-ratio:1/1!important;
+  }
+
+  [class*="ArticleWorkspace_converterFacts"]{
+    grid-template-columns:1fr!important;
+  }
+
+  [class*="ArticleWorkspace_converterActions"]{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  [class*="ArticleWorkspace_converterActions"] button{
+    min-height:44px;
+  }
+
+  [class*="ArticleWorkspace_converterActions"] small{
+    grid-column:1/-1;
+    width:100%;
+    margin:0!important;
+  }
+}
