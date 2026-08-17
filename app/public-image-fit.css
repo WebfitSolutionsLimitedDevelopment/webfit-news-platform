@@ -1,0 +1,50 @@
+/*
+ * Public newsroom image fit policy.
+ *
+ * Source images arrive in many aspect ratios. Public story cards should
+ * preserve the complete editorial image instead of cropping it to fill a
+ * fixed frame.
+ */
+
+.story-image {
+  background: #f2f3f4 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.story-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+
+.story-card:hover .story-image img {
+  transform: none !important;
+}
+
+/* Legacy/public card selectors still used by older homepage sections. */
+.card img {
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #f2f3f4 !important;
+}
+
+/* Small latest-news thumbnails should also show the full supplied image. */
+.latest-item img {
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #f2f3f4 !important;
+}
+
+/*
+ * Full article hero images already use natural height, but these rules make
+ * the intent explicit and protect against future fixed-height overrides.
+ */
+.article-hero img {
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}

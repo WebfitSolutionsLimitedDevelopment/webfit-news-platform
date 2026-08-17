@@ -1,4 +1,5 @@
 import './globals.css';
+import './public-image-fit.css';
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import { getSiteUrl } from '../lib/env';
