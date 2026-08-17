@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '../../../../../lib/supabase-server';
-import { convertMediaRelease } from '../../../../../lib/media-release-converter';
+import { createClient } from '../../../../lib/supabase-server';
+import { convertMediaRelease } from '../../../../lib/media-release-converter';
 
 const Input = z.object({
   raw_text: z.string().trim().min(40, 'Paste the full media release.').max(120000, 'Media release is too large.'),
