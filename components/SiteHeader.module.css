@@ -1,0 +1,123 @@
+.mobileHeader{
+  display:none;
+}
+
+@media(max-width:720px){
+  .desktopHeader,
+  .desktopNav{
+    display:none!important;
+  }
+
+  .utilityInner{
+    min-height:42px;
+    padding-top:0!important;
+    padding-bottom:0!important;
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    font-size:11px!important;
+  }
+
+  .utilityLinks{
+    display:flex!important;
+    align-items:center;
+    justify-content:flex-end;
+    gap:0!important;
+  }
+
+  .utilityLinks a{
+    display:none;
+  }
+
+  .utilityLinks span{
+    display:block;
+    font-size:11px;
+    white-space:nowrap;
+  }
+
+  .mobileHeader{
+    display:block;
+    background:#fff;
+    border-bottom:1px solid #dfe3e6;
+  }
+
+  .mobileRow{
+    min-height:72px;
+    padding:0 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+  }
+
+  .mobileBrand{
+    display:flex;
+    align-items:center;
+    flex:0 0 auto;
+  }
+
+  .mobileBrand img{
+    display:block;
+    width:122px;
+    max-height:52px;
+    object-fit:contain;
+  }
+
+  .mobileControls{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    margin-left:auto;
+  }
+
+  .mobileSearch{
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:8px 0 8px 10px;
+    border-left:1px solid #dfe3e6;
+    font-size:14px;
+    font-weight:800;
+  }
+
+  .mobileSearch svg{
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+  }
+}
+
+@media(max-width:390px){
+  .mobileRow{
+    padding:0 12px;
+    gap:9px;
+  }
+
+  .mobileBrand img{
+    width:108px;
+  }
+
+  .mobileControls{
+    gap:8px;
+  }
+
+  .mobileSearch span{
+    display:none;
+  }
+
+  .mobileSearch{
+    padding-left:10px;
+  }
+
+  .utilityLinks span{
+    max-width:190px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}

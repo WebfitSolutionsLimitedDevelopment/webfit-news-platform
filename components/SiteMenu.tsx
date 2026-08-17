@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import styles from './SiteMenu.module.css';
 
 const sections=[
@@ -30,8 +30,9 @@ const publication=[
   ['RSS','/rss.xml'],
 ];
 
-export function SiteMenu(){
+export function SiteMenu({label='Menu',mobile=false}:{label?:string;mobile?:boolean}){
   const [open,setOpen]=useState(false);
+  const menuId=`site-menu-${useId().replaceAll(':','')}`;
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -50,46 +51,50 @@ export function SiteMenu(){
 
   return <>
     <button
-      className={`menu-chip ${styles.trigger}`}
+      className={`menu-chip ${styles.trigger} ${mobile?styles.mobileTrigger:''}`}
       type="button"
-      aria-label={open?'Close menu':'Open menu'}
+      aria-label={open?'Close sections':'Open sections'}
       aria-expanded={open}
-      aria-controls="site-menu-drawer"
+      aria-controls={menuId}
       onClick={()=>setOpen(value=>!value)}
     >
+      <span className={styles.triggerLabel}>{label}</span>
       <span className={styles.icon} aria-hidden="true"><i></i><i></i><i></i></span>
-      <span className={styles.triggerLabel}>Menu</span>
     </button>
 
     {open?<div className={styles.layer}>
-      <button className={styles.backdrop} aria-label="Close menu" onClick={close}/>
-      <aside id="site-menu-drawer" className={styles.drawer} aria-label="Site navigation">
+      <button className={styles.backdrop} aria-label="Close sections" onClick={close}/>
+      <aside id={menuId} className={styles.drawer} aria-label="Site navigation">
         <div className={styles.head}>
           <Link href="/" className={styles.brand} onClick={close}>
             <img src="/webfit-news-logo.png" alt="Webfit News"/>
           </Link>
-          <button className={styles.close} type="button" onClick={close} aria-label="Close menu">Close</button>
+          <button className={styles.close} type="button" onClick={close} aria-label="Close sections">
+            <span aria-hidden="true">×</span>
+            <b>Close</b>
+          </button>
         </div>
 
         <div className={styles.content}>
-          <div>
-            <span className={styles.label}>News</span>
+          <section>
+            <span className={styles.label}>Sections</span>
             <nav className={styles.links} aria-label="News sections">
-              {sections.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
+              {sections.map(([itemLabel,href])=><Link key={href} href={href} onClick={close}>{itemLabel}</Link>)}
             </nav>
-          </div>
+          </section>
 
-          <div>
+          <section>
             <span className={styles.label}>Webfit News</span>
             <nav className={`${styles.links} ${styles.secondary}`} aria-label="Publication links">
-              {publication.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
+              {publication.map(([itemLabel,href])=><Link key={href} href={href} onClick={close}>{itemLabel}</Link>)}
             </nav>
-          </div>
+          </section>
         </div>
 
         <div className={styles.foot}>
+          <Link className={styles.footPrimary} href="/login" onClick={close}>Sign in</Link>
           <Link href="/search" onClick={close}>Search</Link>
-          <Link href="/login" onClick={close}>Reader Sign In</Link>
+          <Link href="/support-us" onClick={close}>Support us</Link>
         </div>
       </aside>
     </div>:null}
