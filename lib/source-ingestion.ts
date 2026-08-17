@@ -1,6 +1,8 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import sanitizeHtml from 'sanitize-html';
+import WordExtractor from 'word-extractor';
+import { PDFParse } from 'pdf-parse';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_TEXT = 120000;
@@ -81,7 +83,6 @@ function decodeText(buffer: Buffer) {
 }
 
 async function pdfToText(buffer: Buffer) {
-  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
@@ -92,8 +93,6 @@ async function pdfToText(buffer: Buffer) {
 }
 
 async function wordToText(buffer: Buffer) {
-  const module = await import('word-extractor');
-  const WordExtractor = module.default;
   const extractor = new WordExtractor();
   const document = await extractor.extract(buffer);
   return [document.getBody(), document.getFootnotes(), document.getTextboxes({ includeHeadersAndFooters: true, includeBody: true })]
