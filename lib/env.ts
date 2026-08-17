@@ -1,5 +1,5 @@
 const PROJECT_REF = 'akyavvskmlrjptyuxkmk';
-const PRODUCTION_HOST = 'webfitnews.co.nz';
+const PRODUCTION_HOST = 'webfitnews.com';
 
 export function getPublicEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -54,3 +54,4 @@ export function getDeploymentIdentity() {
     productionHost: PRODUCTION_HOST,
   } as const;
 }
+
