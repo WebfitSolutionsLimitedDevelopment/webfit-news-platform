@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../lib/supabase-server';
 import { convertMediaRelease, type ConverterCategory } from '../../../../lib/media-release-converter';
-import { extractUploadedSource, extractUrlSource } from '../../../../lib/source-ingestion';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -36,12 +35,17 @@ export async function POST(req: Request) {
 
   try {
     const contentType = req.headers.get('content-type') || '';
+
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
-      const file = form.get('file');
-      if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a source file first.' }, { status: 422 });
+      const entry = form.get('file');
+      if (!entry || typeof entry === 'string' || typeof entry.arrayBuffer !== 'function') {
+        return NextResponse.json({ error: 'Choose a source file first.' }, { status: 422 });
+      }
+
       const categories = parseCategories(form.get('categories'));
-      const imported = await extractUploadedSource(file);
+      const { extractUploadedSource } = await import('../../../../lib/source-ingestion');
+      const imported = await extractUploadedSource(entry as File);
       return NextResponse.json({
         draft: convertMediaRelease(imported.text, categories),
         source: { kind: imported.kind, label: imported.label, filename: imported.filename, content_type: imported.contentType, url: imported.url, extracted_text: imported.text },
@@ -50,19 +54,24 @@ export async function POST(req: Request) {
 
     const parsed = JsonInput.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
-    if (parsed.data.source_url) {
-      const imported = await extractUrlSource(parsed.data.source_url);
+
+    // Keep pasted text on the proven converter path. Optional document parsers are
+    // loaded only for file/URL imports, so they cannot break ordinary paste conversion.
+    if (!parsed.data.source_url) {
       return NextResponse.json({
-        draft: convertMediaRelease(imported.text, parsed.data.categories),
-        source: { kind: imported.kind, label: imported.label, filename: imported.filename, content_type: imported.contentType, url: imported.url, extracted_text: imported.text },
+        draft: convertMediaRelease(parsed.data.raw_text, parsed.data.categories),
+        source: { kind: 'paste', label: 'Pasted source', filename: null, content_type: 'text/plain', url: null, extracted_text: parsed.data.raw_text },
       });
     }
 
+    const { extractUrlSource } = await import('../../../../lib/source-ingestion');
+    const imported = await extractUrlSource(parsed.data.source_url);
     return NextResponse.json({
-      draft: convertMediaRelease(parsed.data.raw_text, parsed.data.categories),
-      source: { kind: 'paste', label: 'Pasted source', filename: null, content_type: 'text/plain', url: null, extracted_text: parsed.data.raw_text },
+      draft: convertMediaRelease(imported.text, parsed.data.categories),
+      source: { kind: imported.kind, label: imported.label, filename: imported.filename, content_type: imported.contentType, url: imported.url, extracted_text: imported.text },
     });
   } catch (error) {
+    console.error('Source converter failed:', error);
     const message = error instanceof Error ? error.message : 'Could not read the supplied source.';
     return NextResponse.json({ error: message }, { status: 422 });
   }
