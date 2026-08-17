@@ -1,16 +1,12 @@
 const PROJECT_REF = 'akyavvskmlrjptyuxkmk';
 const PRODUCTION_HOST = 'webfitnews.co.nz';
 
-function required(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required.`);
-  return value;
-}
-
 export function getPublicEnv() {
-  const url = required('NEXT_PUBLIC_SUPABASE_URL');
-  const key = required('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 
+  if (!url) throw new Error('NEXT_PUBLIC_SUPABASE_URL is required.');
+  if (!key) throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required.');
   if (key === 'your_publishable_key_here') {
     throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY must be configured.');
   }
