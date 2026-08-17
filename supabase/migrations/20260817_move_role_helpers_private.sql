@@ -1,0 +1,4 @@
+-- The production database migration moves current_user_role/is_staff/is_admin/can_publish
+-- from public into app_private and updates all RLS policies to reference the private helpers.
+-- This file records the architectural decision; production was migrated through Supabase tooling.
+-- See docs/SECURITY_V18.md for the verified state.
