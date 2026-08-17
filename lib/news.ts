@@ -11,7 +11,7 @@ export type Story = {
   media?: { public_url: string | null; alt_text: string | null } | null;
 };
 
-const storyFields='id,title,slug,excerpt,published_at,featured_media_id,article_type,media:featured_media_id(public_url,alt_text)';
+const storyFields='id,title,slug,excerpt,published_at,featured_media_id,article_type,media:media!articles_featured_media_id_fkey(public_url,alt_text)';
 
 export async function getLatestStories(limit = 12) {
   const supabase = await createClient();
@@ -39,7 +39,7 @@ export async function searchStories(query:string,limit=40){
 export async function getArticleBySlug(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.from('articles')
-    .select('*,author:author_id(name,slug,bio),media:featured_media_id(public_url,alt_text,caption,credit),article_categories(category:category_id(id,name,slug))')
+    .select('*,author:author_id(name,slug,bio),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit),article_categories(category:category_id(id,name,slug))')
     .eq('slug', slug).eq('status', 'published').maybeSingle();
   if (error) throw error;
   return data;
@@ -61,7 +61,7 @@ export async function getHomepageFeed(): Promise<HomepageSectionFeed[]> {
   const supabase = await createClient();
   const { data: sections, error } = await supabase
     .from('homepage_sections')
-    .select('id,key,title,section_type,sort_order,max_items,category_id,slots:homepage_slots(position,article:article_id(id,title,slug,excerpt,published_at,featured_media_id,article_type,media:featured_media_id(public_url,alt_text)))')
+    .select('id,key,title,section_type,sort_order,max_items,category_id,slots:homepage_slots(position,article:article_id(id,title,slug,excerpt,published_at,featured_media_id,article_type,media:media!articles_featured_media_id_fkey(public_url,alt_text)))')
     .eq('is_enabled', true).order('sort_order');
   if (error) throw error;
   const out: HomepageSectionFeed[] = [];
@@ -71,7 +71,7 @@ export async function getHomepageFeed(): Promise<HomepageSectionFeed[]> {
       stories = ((section as any).slots || []).sort((a:any,b:any)=>a.position-b.position).map((x:any)=>x.article).filter(Boolean).slice(0,section.max_items);
     } else if (section.section_type === 'category' && section.category_id) {
       const { data } = await supabase.from('article_categories')
-        .select('article:article_id(id,title,slug,excerpt,published_at,featured_media_id,article_type,status,media:featured_media_id(public_url,alt_text))')
+        .select('article:article_id(id,title,slug,excerpt,published_at,featured_media_id,article_type,status,media:media!articles_featured_media_id_fkey(public_url,alt_text))')
         .eq('category_id', section.category_id).limit(Math.max(section.max_items * 4, 24));
       stories=(data||[]).map((x:any)=>x.article).filter((x:any)=>x && x.status==='published').sort((a:any,b:any)=>new Date(b.published_at||0).getTime()-new Date(a.published_at||0).getTime()).slice(0,section.max_items);
     } else if (section.key === 'videos' || section.key === 'digital-edition') {
