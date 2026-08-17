@@ -1,0 +1,309 @@
+diff --git a/app/contact/page.tsx b/app/contact/page.tsx
+new file mode 100644
+index 0000000..09d7013
+--- /dev/null
++++ b/app/contact/page.tsx
+@@ -0,0 +1,25 @@
++import Link from 'next/link';
++import { SiteHeader } from '@/components/SiteHeader';
++import { PublicFooter } from '@/components/PublicFooter';
++
++export const metadata={title:'Contact Webfit News'};
++
++export default function ContactPage(){
++  return <>
++    <SiteHeader/>
++    <main className="static-page">
++      <span className="article-kicker">Contact</span>
++      <h1>Contact Webfit News</h1>
++      <p className="standfirst">Get in touch with Webfit News about editorial matters, community coverage, corrections, advertising and reader support.</p>
++      <h2>Editorial and community coverage</h2>
++      <p>For story tips, community events, interview opportunities and newsroom enquiries, contact Webfit News through our official social channels or newsroom contacts.</p>
++      <h2>Corrections</h2>
++      <p>If you believe something we have published requires correction or clarification, please use our <Link href="/corrections">Corrections</Link> page.</p>
++      <h2>Advertising</h2>
++      <p>For advertising and media opportunities, visit our <Link href="/advertise-media-kit">Advertise</Link> page.</p>
++      <h2>Reader support</h2>
++      <p>For information about supporting independent Webfit News journalism, visit <Link href="/support-us">Support Webfit News</Link>.</p>
++    </main>
++    <PublicFooter/>
++  </>;
++}
+diff --git a/app/privacy-policy/page.tsx b/app/privacy-policy/page.tsx
+new file mode 100644
+index 0000000..f538ee6
+--- /dev/null
++++ b/app/privacy-policy/page.tsx
+@@ -0,0 +1,30 @@
++import Link from 'next/link';
++import { SiteHeader } from '@/components/SiteHeader';
++import { PublicFooter } from '@/components/PublicFooter';
++
++export const metadata={title:'Privacy Policy'};
++
++export default function PrivacyPolicyPage(){
++  return <>
++    <SiteHeader/>
++    <main className="static-page">
++      <span className="article-kicker">Privacy</span>
++      <h1>Privacy Policy</h1>
++      <p className="standfirst">This policy explains how Webfit News handles information when readers use our website and related services.</p>
++      <h2>Information we may process</h2>
++      <p>Webfit News may process information that readers provide directly, such as account details, support or payment information, correspondence and information submitted through newsroom interactions. We may also receive technical information such as browser, device, page-view and usage data.</p>
++      <h2>Analytics and advertising</h2>
++      <p>We use services including Google Analytics to understand website usage and Google AdSense to support advertising. Those services may use cookies or similar technologies subject to their own policies and applicable consent requirements.</p>
++      <h2>Payments</h2>
++      <p>Reader contributions are processed by Stripe. Payment card details are handled by Stripe and are not intended to be stored directly by Webfit News.</p>
++      <h2>How information is used</h2>
++      <p>Information may be used to operate and secure the website, provide requested services, understand readership, administer reader accounts and contributions, communicate with readers, improve our journalism and meet legal or regulatory obligations.</p>
++      <h2>Third-party services</h2>
++      <p>The website may use third-party infrastructure and services for hosting, authentication, analytics, advertising, payments and media delivery. Information processed by those providers is also subject to their applicable privacy terms.</p>
++      <h2>Your choices</h2>
++      <p>You can manage browser cookie controls and may contact Webfit News about privacy-related questions through our <Link href="/contact">Contact</Link> page.</p>
++      <p><small>Last updated: 17 August 2026.</small></p>
++    </main>
++    <PublicFooter/>
++  </>;
++}
+diff --git a/app/terms/page.tsx b/app/terms/page.tsx
+new file mode 100644
+index 0000000..e955aac
+--- /dev/null
++++ b/app/terms/page.tsx
+@@ -0,0 +1,30 @@
++import Link from 'next/link';
++import { SiteHeader } from '@/components/SiteHeader';
++import { PublicFooter } from '@/components/PublicFooter';
++
++export const metadata={title:'Terms of Use'};
++
++export default function TermsPage(){
++  return <>
++    <SiteHeader/>
++    <main className="static-page">
++      <span className="article-kicker">Terms</span>
++      <h1>Terms of Use</h1>
++      <p className="standfirst">These terms apply when you access or use the Webfit News website and its public reader services.</p>
++      <h2>Editorial content</h2>
++      <p>Webfit News publishes journalism, analysis, opinion, community reporting and other editorial material. Content is provided for general information and may be updated, corrected or removed as editorial circumstances require.</p>
++      <h2>Acceptable use</h2>
++      <p>You may access and share links to Webfit News content for lawful personal and informational purposes. You must not misuse the website, interfere with its operation, attempt unauthorised access, or reproduce substantial portions of our content in a way that infringes applicable rights.</p>
++      <h2>Reader accounts</h2>
++      <p>Where reader sign-in is available, you are responsible for using your account lawfully and for protecting access to your sign-in method.</p>
++      <h2>Reader contributions</h2>
++      <p>Support payments are voluntary contributions to Webfit News. Unless a payment screen expressly states otherwise, support contributions are one-off payments rather than recurring subscriptions.</p>
++      <h2>External services and links</h2>
++      <p>Webfit News may link to third-party websites and use third-party providers for authentication, payments, analytics, advertising and other services. We do not control external websites and their terms may apply separately.</p>
++      <h2>Corrections and complaints</h2>
++      <p>Questions about published material can be raised through our <Link href="/corrections">Corrections</Link> or <Link href="/contact">Contact</Link> pages.</p>
++      <p><small>Last updated: 17 August 2026.</small></p>
++    </main>
++    <PublicFooter/>
++  </>;
++}
+diff --git a/components/HeaderSocialLinks.module.css b/components/HeaderSocialLinks.module.css
+new file mode 100644
+index 0000000..4fcc538
+--- /dev/null
++++ b/components/HeaderSocialLinks.module.css
+@@ -0,0 +1,12 @@
++.social{display:flex;align-items:center;gap:7px;margin-right:4px}
++.social a{width:30px;height:30px;border:1px solid #d8d8d8;border-radius:50%;display:grid;place-items:center;background:#fff;color:#111;transition:transform .16s ease,border-color .16s ease,background .16s ease}
++.social a:hover{transform:translateY(-1px);border-color:#111;background:#f7f7f7}
++.social svg{width:14px;height:14px;fill:currentColor}
++@media(max-width:720px){
++  .social{gap:5px;margin-right:0}
++  .social a{width:27px;height:27px}
++  .social svg{width:12px;height:12px}
++}
++@media(max-width:480px){
++  .social a{width:25px;height:25px}
++}
+diff --git a/components/HeaderSocialLinks.tsx b/components/HeaderSocialLinks.tsx
+new file mode 100644
+index 0000000..6e2e9f0
+--- /dev/null
++++ b/components/HeaderSocialLinks.tsx
+@@ -0,0 +1,24 @@
++import styles from './HeaderSocialLinks.module.css';
++
++type Props={social:Record<string,string>};
++
++function FacebookIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 8.1h2.6V4.3c-.4-.1-1.9-.2-3.6-.2-3.5 0-5.9 2.1-5.9 6v3.4H3.4v4.3h3.9V24h4.8v-6.2h4l.6-4.3h-4.6v-3c0-1.2.3-2.4 2.1-2.4Z"/></svg>}
++function InstagramIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.1 2h9.8A5.1 5.1 0 0 1 22 7.1v9.8a5.1 5.1 0 0 1-5.1 5.1H7.1A5.1 5.1 0 0 1 2 16.9V7.1A5.1 5.1 0 0 1 7.1 2Zm-.2 2A2.9 2.9 0 0 0 4 6.9v10.2A2.9 2.9 0 0 0 6.9 20h10.2a2.9 2.9 0 0 0 2.9-2.9V6.9A2.9 2.9 0 0 0 17.1 4H6.9Zm10.7 1.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM12 6.8A5.2 5.2 0 1 1 12 17.2 5.2 5.2 0 0 1 12 6.8Zm0 2A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z"/></svg>}
++function YouTubeIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4L15.8 12l-6.2 3.6Z"/></svg>}
++function LinkedInIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.3 7.9H.8V22h4.5V7.9ZM3.1 1A2.6 2.6 0 1 0 3.1 6.2 2.6 2.6 0 0 0 3.1 1ZM22.9 13.9c0-4.2-2.2-6.2-5.2-6.2a4.5 4.5 0 0 0-4.1 2.3V7.9H9.1V22h4.5v-7c0-1.8.3-3.6 2.6-3.6 2.2 0 2.3 2.1 2.3 3.7V22H23l-.1-8.1Z"/></svg>}
++
++export function HeaderSocialLinks({social}:Props){
++  const facebook=social.facebook_page||social.facebook||social.facebook_profile;
++  const items=[
++    facebook?{label:'Facebook',href:facebook,icon:<FacebookIcon/>}:null,
++    social.instagram?{label:'Instagram',href:social.instagram,icon:<InstagramIcon/>}:null,
++    social.youtube?{label:'YouTube',href:social.youtube,icon:<YouTubeIcon/>}:null,
++    social.linkedin?{label:'LinkedIn',href:social.linkedin,icon:<LinkedInIcon/>}:null,
++  ].filter(Boolean) as Array<{label:string;href:string;icon:React.ReactNode}>;
++
++  if(!items.length)return null;
++
++  return <div className={styles.social} aria-label="Follow Webfit News">
++    {items.map(item=><a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" aria-label={item.label} title={item.label}>{item.icon}</a>)}
++  </div>;
++}
+diff --git a/components/SiteHeader.tsx b/components/SiteHeader.tsx
+index bbb56b1..72fefd6 100644
+--- a/components/SiteHeader.tsx
++++ b/components/SiteHeader.tsx
+@@ -1,6 +1,8 @@
+ import Link from 'next/link';
+ import { getPublicSiteSettings } from '@/lib/public-settings';
+ import { SupportBanner } from './SupportBanner';
++import { SiteMenu } from './SiteMenu';
++import { HeaderSocialLinks } from './HeaderSocialLinks';
+ 
+ const links=[['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
+ 
+@@ -12,9 +14,13 @@ export async function SiteHeader(){
+     <SupportBanner/>
+     <div className="utility-premium"><div className="shell utility-premium-inner"><span>{today}</span><div><Link href="/about">About</Link><Link href="/editorial-policy">Editorial policy</Link>{settings.footer.media_council_member!==false?<span>Member, New Zealand Media Council</span>:null}</div></div></div>
+     <header className="masthead-premium"><div className="shell masthead-premium-inner">
+-      <button className="menu-chip" aria-label="Menu">Menu</button>
++      <SiteMenu/>
+       <Link href="/" className="brand-premium"><img src="/webfit-news-logo.png" alt={siteName}/></Link>
+-      <div className="header-actions-premium"><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
++      <div className="header-actions-premium">
++        <HeaderSocialLinks social={settings.social}/>
++        <Link href="/search">Search</Link>
++        <Link className="newsroom-chip" href="/admin">Newsroom</Link>
++      </div>
+     </div></header>
+     <div className="nav-premium-wrap"><nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav></div>
+   </>;
+diff --git a/components/SiteMenu.module.css b/components/SiteMenu.module.css
+new file mode 100644
+index 0000000..c6a7a06
+--- /dev/null
++++ b/components/SiteMenu.module.css
+@@ -0,0 +1,23 @@
++.trigger{display:inline-flex;align-items:center;gap:9px;cursor:pointer}
++.icon{width:18px;display:grid;gap:3px}
++.icon i{display:block;height:2px;background:currentColor;border-radius:999px}
++.layer{position:fixed;inset:0;z-index:1000}
++.backdrop{position:absolute;inset:0;border:0;background:rgba(0,0,0,.48);cursor:pointer}
++.drawer{position:absolute;left:0;top:0;height:100%;width:min(430px,92vw);background:#fff;color:#111;box-shadow:18px 0 60px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:auto}
++.head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;border-bottom:1px solid #dedede}
++.brand img{width:145px;height:auto;display:block}
++.close{border:1px solid #111;background:#fff;border-radius:999px;padding:8px 13px;font-weight:800;cursor:pointer}
++.content{padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:28px}
++.label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:900;color:#9a6800;margin-bottom:12px}
++.links{display:grid}
++.links a{padding:9px 0;border-bottom:1px solid #ececec;font-size:15px;font-weight:800}
++.secondary a{font-weight:650}
++.foot{margin-top:auto;padding:18px 24px;border-top:1px solid #dedede;display:flex;gap:18px;flex-wrap:wrap;font-size:13px;font-weight:800}
++@media(max-width:720px){
++  .content{grid-template-columns:1fr;gap:24px;padding:18px}
++  .drawer{width:min(360px,94vw)}
++  .head{padding:18px}
++  .foot{padding:16px 18px}
++  .triggerLabel{display:none}
++  .trigger{padding:10px 11px}
++}
+diff --git a/components/SiteMenu.tsx b/components/SiteMenu.tsx
+new file mode 100644
+index 0000000..ca3e543
+--- /dev/null
++++ b/components/SiteMenu.tsx
+@@ -0,0 +1,94 @@
++'use client';
++
++import Link from 'next/link';
++import { useEffect, useState } from 'react';
++import styles from './SiteMenu.module.css';
++
++const sections=[
++  ['New Zealand','/category/new-zealand'],
++  ['Auckland','/category/auckland'],
++  ['Politics','/category/politics'],
++  ['Business','/category/business'],
++  ['Immigration','/category/immigration'],
++  ['India','/category/india'],
++  ['World','/category/world'],
++  ['Community','/category/communities'],
++  ['Entertainment','/category/entertainment'],
++  ['Sports','/category/sports'],
++  ['Opinion','/category/opinion'],
++];
++
++const publication=[
++  ['About','/about'],
++  ['Editorial Policy','/editorial-policy'],
++  ['Corrections','/corrections'],
++  ['Privacy Policy','/privacy-policy'],
++  ['Terms','/terms'],
++  ['Contact','/contact'],
++  ['Advertise','/advertise-media-kit'],
++  ['Support Webfit News','/support-us'],
++  ['RSS','/rss.xml'],
++];
++
++export function SiteMenu(){
++  const [open,setOpen]=useState(false);
++
++  useEffect(()=>{
++    const onKey=(event:KeyboardEvent)=>{
++      if(event.key==='Escape')setOpen(false);
++    };
++    window.addEventListener('keydown',onKey);
++    return()=>window.removeEventListener('keydown',onKey);
++  },[]);
++
++  useEffect(()=>{
++    document.body.style.overflow=open?'hidden':'';
++    return()=>{document.body.style.overflow='';};
++  },[open]);
++
++  const close=()=>setOpen(false);
++
++  return <>
++    <button
++      className={`menu-chip ${styles.trigger}`}
++      type="button"
++      aria-label={open?'Close menu':'Open menu'}
++      aria-expanded={open}
++      aria-controls="site-menu-drawer"
++      onClick={()=>setOpen(value=>!value)}
++    >
++      <span className={styles.icon} aria-hidden="true"><i></i><i></i><i></i></span>
++      <span className={styles.triggerLabel}>Menu</span>
++    </button>
++
++    {open?<div className={styles.layer}>
++      <button className={styles.backdrop} aria-label="Close menu" onClick={close}/>
++      <aside id="site-menu-drawer" className={styles.drawer} aria-label="Site navigation">
++        <div className={styles.head}>
++          <Link href="/" className={styles.brand} onClick={close}>
++            <img src="/webfit-news-logo.png" alt="Webfit News"/>
++          </Link>
++          <button className={styles.close} type="button" onClick={close} aria-label="Close menu">Close</button>
++        </div>
++        <div className={styles.content}>
++          <div>
++            <span className={styles.label}>News</span>
++            <nav className={styles.links} aria-label="News sections">
++              {sections.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
++            </nav>
++          </div>
++          <div>
++            <span className={styles.label}>Webfit News</span>
++            <nav className={`${styles.links} ${styles.secondary}`} aria-label="Publication links">
++              {publication.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
++            </nav>
++          </div>
++        </div>
++        <div className={styles.foot}>
++          <Link href="/search" onClick={close}>Search</Link>
++          <Link href="/login" onClick={close}>Reader Sign In</Link>
++        </div>
++      </aside>
++    </div>:null}
++  </>;
++}
