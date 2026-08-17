@@ -1,0 +1,80 @@
+diff --git a/app/api/admin/articles/[id]/route.ts b/app/api/admin/articles/[id]/route.ts
+index ca8523e..0a79764 100644
+--- a/app/api/admin/articles/[id]/route.ts
++++ b/app/api/admin/articles/[id]/route.ts
+@@ -1,6 +1,7 @@
+ import { NextResponse } from 'next/server';
+ import { z } from 'zod';
+ import { createClient } from '../../../../../lib/supabase-server';
++import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
+ 
+ const Patch = z.object({
+   title:z.string().min(5).optional(),
+@@ -55,6 +56,8 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
+   if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
+   if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
+ 
++  const {data:before}=await c.supabase.from('articles').select('slug,status').eq('id',id).maybeSingle();
++
+   const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
+   const changes:any={...articleChanges};
+   if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
+@@ -90,6 +93,11 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
+   }
+ 
+   await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'article.update',entity_type:'article',entity_id:id,metadata:{fields:Object.keys(p.data)}});
++
++  // Purge the public ISR cache immediately so changed featured images and
++  // story metadata are visible on every device as soon as the CMS save ends.
++  revalidateEditorialContent(before?.slug,data.slug);
++
+   return NextResponse.json({article:data});
+ }
+ 
+diff --git a/app/api/admin/articles/route.ts b/app/api/admin/articles/route.ts
+index 7981312..9597a01 100644
+--- a/app/api/admin/articles/route.ts
++++ b/app/api/admin/articles/route.ts
+@@ -1,6 +1,7 @@
+ import { NextResponse } from 'next/server';
+ import { z } from 'zod';
+ import { createClient } from '../../../../lib/supabase-server';
++import { revalidateEditorialContent } from '../../../../lib/editorial-revalidate';
+ 
+ const ArticleInput = z.object({
+   title: z.string().trim().min(5),
+@@ -70,5 +71,8 @@ export async function POST(req: Request) {
+   }
+ 
+   await ctx.supabase.from('audit_log').insert({ actor_id: ctx.user.id, action: 'article.create', entity_type: 'article', entity_id: created.id, metadata: { status: input.status } });
++
++  if (input.status === 'published') revalidateEditorialContent(created.slug);
++
+   return NextResponse.json({ article: created }, { status: 201 });
+ }
+diff --git a/lib/editorial-revalidate.ts b/lib/editorial-revalidate.ts
+new file mode 100644
+index 0000000..0764d99
+--- /dev/null
++++ b/lib/editorial-revalidate.ts
+@@ -0,0 +1,20 @@
++import { revalidatePath } from 'next/cache';
++
++/**
++ * Invalidate public newsroom routes after an editorial write.
++ *
++ * The site keeps ISR enabled for performance, but CMS writes should never
++ * wait for the normal revalidation window before readers see a changed image,
++ * headline, category or other story metadata.
++ */
++export function revalidateEditorialContent(...slugs: Array<string | null | undefined>) {
++  revalidatePath('/');
++  revalidatePath('/search');
++  revalidatePath('/rss.xml');
++  revalidatePath('/category/[slug]', 'page');
++
++  for (const raw of slugs) {
++    const slug = raw?.trim();
++    if (slug) revalidatePath(`/${slug}`);
++  }
++}

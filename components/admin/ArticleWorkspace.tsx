@@ -7,6 +7,10 @@ import styles from './ArticleWorkspace.module.css';
 type Option={id:string;name:string};
 type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
 type Revision={id:string;title:string;created_at:string};
+type ConverterResult={
+  source_name:string|null;release_date:string|null;warnings:string[];
+  stats:{source_words:number;article_words:number};
+};
 
 const types=[['news','News'],['breaking_news','Breaking news'],['analysis','Analysis'],['opinion','Opinion'],['editorial','Editorial'],['explainer','Explainer'],['feature','Feature'],['interview','Interview'],['community','Community'],['press_release','Press release']];
 
@@ -40,6 +44,9 @@ export default function ArticleWorkspace({
   const [mediaItems,setMediaItems]=useState<Media[]>([]);
   const [mediaSearch,setMediaSearch]=useState('');
   const [mediaBusy,setMediaBusy]=useState(false);
+  const [releaseText,setReleaseText]=useState('');
+  const [converterBusy,setConverterBusy]=useState(false);
+  const [converterResult,setConverterResult]=useState<ConverterResult|null>(null);
 
   const [form,setForm]=useState({
     subtitle:article?.subtitle||'',excerpt:article?.excerpt||'',content_html:article?.content_html||'',
@@ -95,6 +102,50 @@ export default function ArticleWorkspace({
 
   function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
 
+  async function convertRelease(){
+    if(releaseText.trim().length<40){setMessage('Paste the full media release before converting.');return}
+    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing a media release.');return}
+    setConverterBusy(true);setMessage('');
+    try{
+      const r=await fetch('/api/admin/media-release-converter',{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({raw_text:releaseText,categories})
+      });
+      const d=await r.json();
+      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
+      const draft=d.draft;
+      setTitle(draft.title||'');
+      setSlug(draft.slug||slugify(draft.title||''));
+      setSlugTouched(true);
+      setStatus('draft');
+      setArticleType(draft.article_type||'news');
+      setTags((draft.tag_names||[]).join(', '));
+      setCategoryIds(draft.category_ids||[]);
+      setForm(current=>({
+        ...current,
+        subtitle:draft.subtitle||'',
+        excerpt:draft.excerpt||'',
+        content_html:draft.content_html||'',
+        primary_category_id:draft.primary_category_id||'',
+        seo_title:draft.seo_title||'',
+        meta_description:draft.meta_description||'',
+        social_title:draft.social_title||'',
+        social_description:draft.social_description||'',
+        canonical_url:'',
+        is_breaking:Boolean(draft.is_breaking)
+      }));
+      setConverterResult({
+        source_name:draft.source_name||null,
+        release_date:draft.release_date||null,
+        warnings:draft.warnings||[],
+        stats:draft.stats||{source_words:0,article_words:0}
+      });
+      setMessage('Media release converted into a draft. Review the story, attribution, category and SEO before publishing.');
+    }catch(e:any){setMessage(e.message||'Could not convert media release')}
+    finally{setConverterBusy(false)}
+  }
+
   function buildPayload(finalStatus:string){
     return {
       title,slug:slug||slugify(title),status:finalStatus,article_type:articleType,
@@ -144,6 +195,24 @@ export default function ArticleWorkspace({
 
     <div className={styles.layout}>
       <main className={styles.main}>
+        {!isEdit&&<section className={`${styles.card} ${styles.converterCard}`}>
+          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Media release converter</h2></div><small>No external AI service. Drafts stay unpublished until you review them.</small></header>
+          <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
+          <div className={styles.converterActions}>
+            <button className={styles.convertButton} disabled={converterBusy||releaseText.trim().length<40} onClick={convertRelease}>{converterBusy?'Preparing draft...':'Prepare article draft'}</button>
+            <button disabled={converterBusy||!releaseText} onClick={()=>{setReleaseText('');setConverterResult(null)}}>Clear source</button>
+            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Nothing is sent to ChatGPT or another AI provider.'}</small>
+          </div>
+          {converterResult&&<div className={styles.converterResult}>
+            <div className={styles.converterFacts}>
+              <span><b>Source</b>{converterResult.source_name||'Check manually'}</span>
+              <span><b>Release date</b>{converterResult.release_date||'Check manually'}</span>
+              <span><b>Draft size</b>{converterResult.stats.article_words} words</span>
+            </div>
+            {converterResult.warnings.length>0&&<div className={styles.converterWarnings}><strong>Review before publishing</strong>{converterResult.warnings.map((warning,index)=><p key={`${warning}-${index}`}>{warning}</p>)}</div>}
+          </div>}
+        </section>}
+
         <section className={styles.card}>
           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Write and edit without leaving this page.</small></header>
           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>

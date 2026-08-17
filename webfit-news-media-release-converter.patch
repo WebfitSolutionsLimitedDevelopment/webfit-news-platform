@@ -1,0 +1,454 @@
+diff --git a/components/admin/ArticleWorkspace.tsx b/components/admin/ArticleWorkspace.tsx
+index d6d1864..1c405db 100644
+--- a/components/admin/ArticleWorkspace.tsx
++++ b/components/admin/ArticleWorkspace.tsx
+@@ -7,6 +7,10 @@ import styles from './ArticleWorkspace.module.css';
+ type Option={id:string;name:string};
+ type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
+ type Revision={id:string;title:string;created_at:string};
++type ConverterResult={
++  source_name:string|null;release_date:string|null;warnings:string[];
++  stats:{source_words:number;article_words:number};
++};
+ 
+ const types=[['news','News'],['breaking_news','Breaking news'],['analysis','Analysis'],['opinion','Opinion'],['editorial','Editorial'],['explainer','Explainer'],['feature','Feature'],['interview','Interview'],['community','Community'],['press_release','Press release']];
+ 
+@@ -40,6 +44,9 @@ export default function ArticleWorkspace({
+   const [mediaItems,setMediaItems]=useState<Media[]>([]);
+   const [mediaSearch,setMediaSearch]=useState('');
+   const [mediaBusy,setMediaBusy]=useState(false);
++  const [releaseText,setReleaseText]=useState('');
++  const [converterBusy,setConverterBusy]=useState(false);
++  const [converterResult,setConverterResult]=useState<ConverterResult|null>(null);
+ 
+   const [form,setForm]=useState({
+     subtitle:article?.subtitle||'',excerpt:article?.excerpt||'',content_html:article?.content_html||'',
+@@ -95,6 +102,50 @@ export default function ArticleWorkspace({
+ 
+   function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
+ 
++  async function convertRelease(){
++    if(releaseText.trim().length<40){setMessage('Paste the full media release before converting.');return}
++    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing a media release.');return}
++    setConverterBusy(true);setMessage('');
++    try{
++      const r=await fetch('/api/admin/media-release-converter',{
++        method:'POST',
++        headers:{'content-type':'application/json'},
++        body:JSON.stringify({raw_text:releaseText,categories})
++      });
++      const d=await r.json();
++      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
++      const draft=d.draft;
++      setTitle(draft.title||'');
++      setSlug(draft.slug||slugify(draft.title||''));
++      setSlugTouched(true);
++      setStatus('draft');
++      setArticleType(draft.article_type||'news');
++      setTags((draft.tag_names||[]).join(', '));
++      setCategoryIds(draft.category_ids||[]);
++      setForm(current=>({
++        ...current,
++        subtitle:draft.subtitle||'',
++        excerpt:draft.excerpt||'',
++        content_html:draft.content_html||'',
++        primary_category_id:draft.primary_category_id||'',
++        seo_title:draft.seo_title||'',
++        meta_description:draft.meta_description||'',
++        social_title:draft.social_title||'',
++        social_description:draft.social_description||'',
++        canonical_url:'',
++        is_breaking:Boolean(draft.is_breaking)
++      }));
++      setConverterResult({
++        source_name:draft.source_name||null,
++        release_date:draft.release_date||null,
++        warnings:draft.warnings||[],
++        stats:draft.stats||{source_words:0,article_words:0}
++      });
++      setMessage('Media release converted into a draft. Review the story, attribution, category and SEO before publishing.');
++    }catch(e:any){setMessage(e.message||'Could not convert media release')}
++    finally{setConverterBusy(false)}
++  }
++
+   function buildPayload(finalStatus:string){
+     return {
+       title,slug:slug||slugify(title),status:finalStatus,article_type:articleType,
+@@ -144,6 +195,24 @@ export default function ArticleWorkspace({
+ 
+     <div className={styles.layout}>
+       <main className={styles.main}>
++        {!isEdit&&<section className={`${styles.card} ${styles.converterCard}`}>
++          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Media release converter</h2></div><small>No external AI service. Drafts stay unpublished until you review them.</small></header>
++          <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
++          <div className={styles.converterActions}>
++            <button className={styles.convertButton} disabled={converterBusy||releaseText.trim().length<40} onClick={convertRelease}>{converterBusy?'Preparing draft...':'Prepare article draft'}</button>
++            <button disabled={converterBusy||!releaseText} onClick={()=>{setReleaseText('');setConverterResult(null)}}>Clear source</button>
++            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Nothing is sent to ChatGPT or another AI provider.'}</small>
++          </div>
++          {converterResult&&<div className={styles.converterResult}>
++            <div className={styles.converterFacts}>
++              <span><b>Source</b>{converterResult.source_name||'Check manually'}</span>
++              <span><b>Release date</b>{converterResult.release_date||'Check manually'}</span>
++              <span><b>Draft size</b>{converterResult.stats.article_words} words</span>
++            </div>
++            {converterResult.warnings.length>0&&<div className={styles.converterWarnings}><strong>Review before publishing</strong>{converterResult.warnings.map((warning,index)=><p key={`${warning}-${index}`}>{warning}</p>)}</div>}
++          </div>}
++        </section>}
++
+         <section className={styles.card}>
+           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Write and edit without leaving this page.</small></header>
+           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>
+diff --git a/components/admin/ArticleWorkspace.module.css b/components/admin/ArticleWorkspace.module.css
+index e19b2ea..9896d30 100644
+--- a/components/admin/ArticleWorkspace.module.css
++++ b/components/admin/ArticleWorkspace.module.css
+@@ -2,3 +2,5 @@
+ @media(max-width:1050px){.layout{grid-template-columns:1fr}.side{position:static;max-height:none;overflow:visible;grid-template-columns:repeat(2,minmax(0,1fr))}}
+ @media(max-width:760px){.top{position:static;align-items:flex-start;flex-direction:column;padding:13px}.actions{width:100%}.actions a,.actions button{flex:1;text-align:center}.layout{width:calc(100% - 18px);margin-top:10px}.side{grid-template-columns:1fr}.card{padding:15px}.two{grid-template-columns:1fr}.headline{font-size:25px!important}.body{min-height:430px;font-size:16px!important}.upload{grid-template-columns:1fr}.mediaGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ @media(max-width:500px){.mediaGrid{grid-template-columns:repeat(2,minmax(0,1fr));padding-left:10px;padding-right:10px}.mediaSearch{padding-left:10px;padding-right:10px}.toggles{grid-template-columns:1fr 1fr}}
++.converterCard{border-color:#cfd6dc;background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%)}.releaseInput{min-height:250px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace!important;font-size:12px!important;line-height:1.55!important;background:#fcfcfd!important}.converterActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.converterActions button{border:1px solid #cbd1d7;background:#fff;border-radius:8px;padding:10px 13px;font-size:10px;font-weight:850;cursor:pointer}.converterActions button:disabled{opacity:.5;cursor:not-allowed}.converterActions .convertButton{background:#111317;color:#fff;border-color:#111317}.converterActions small{margin-left:auto;color:#747c86;font-size:9px}.converterResult{margin-top:14px;border-top:1px solid #e4e8eb;padding-top:14px}.converterFacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.converterFacts span{display:grid;gap:3px;border:1px solid #e0e4e8;border-radius:8px;background:#fff;padding:9px 10px;font-size:10px;color:#4e5660}.converterFacts b{text-transform:uppercase;letter-spacing:.08em;font-size:8px;color:#7c848d}.converterWarnings{margin-top:9px;border:1px solid #ecd7ab;background:#fff9ec;border-radius:8px;padding:10px 12px}.converterWarnings strong{display:block;font-size:10px;margin-bottom:5px}.converterWarnings p{margin:3px 0;font-size:10px;line-height:1.45;color:#665226}.converterWarnings p:before{content:'• ';font-weight:900}
++@media(max-width:760px){.converterFacts{grid-template-columns:1fr}.converterActions small{width:100%;margin-left:0}.releaseInput{min-height:220px}}
+diff --git a/tmp/webfit_patchbuild/work/webfit-news-platform-main/lib/media-release-converter.ts b/lib/media-release-converter.ts
+new file mode 100644
+index 0000000..6ec2cff
+--- /dev/null
++++ b/lib/media-release-converter.ts
+@@ -0,0 +1,308 @@
++export type ConverterCategory = { id: string; name: string };
++
++export type MediaReleaseDraft = {
++  title: string;
++  slug: string;
++  subtitle: string;
++  excerpt: string;
++  content_html: string;
++  seo_title: string;
++  meta_description: string;
++  social_title: string;
++  social_description: string;
++  tag_names: string[];
++  primary_category_id: string | null;
++  category_ids: string[];
++  article_type: 'news' | 'breaking_news';
++  is_breaking: boolean;
++  source_name: string | null;
++  release_date: string | null;
++  stats: { source_words: number; article_words: number };
++  warnings: string[];
++};
++
++const MONTHS = 'January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec';
++const LABEL_RE = /^(media\s+(release|statement|advisory)|press\s+release|news\s+release|for\s+immediate\s+release|immediate\s+release|embargoed|release|statement|ends?|notes?\s+to\s+(editors?|media)|media\s+contact|contact|issued\s+by)\b[:\s-]*/i;
++const CONTACT_RE = /(^|\b)(media\s+contact|communications?\s+contact|press\s+contact|for\s+more\s+information|enquiries|email|phone|mobile|ph)\b/i;
++const BOILERPLATE_RE = /^(about\s+(us|the|[A-Z])|background|editor'?s?\s+notes?|notes?\s+to\s+(editors?|media))\b/i;
++const ROLE_RE = /\b(minister|mp|chief executive|ceo|chair|director|president|commissioner|mayor|spokesperson|leader|deputy|hon\.?|dr\.?|professor)\b/i;
++const URGENT_RE = /\b(breaking|urgent|evacuate|evacuation|lockdown|major incident|state of emergency|immediate danger|shelter in place)\b/i;
++
++const CATEGORY_RULES: Array<{ names: string[]; terms: string[] }> = [
++  { names: ['Politics', 'New Zealand Politics', 'Government'], terms: ['government','minister','parliament','cabinet','prime minister','opposition','national party','labour party','act party','green party','new zealand first','beehive'] },
++  { names: ['Auckland', 'Auckland News'], terms: ['auckland','tāmaki makaurau','tamaki makaurau','manukau','papakura','waitematā','waitemata','north shore','rodney','howick','mt wellington','mount wellington'] },
++  { names: ['Business', 'Economy', 'Business & Economy'], terms: ['business','company','economy','economic','investment','revenue','jobs','employment','inflation','commerce','industry','export','trade','financial'] },
++  { names: ['Crime', 'Police', 'Crime & Justice'], terms: ['police','arrest','arrested','charged','court','investigation','offender','homicide','robbery','assault','sentenced','crime'] },
++  { names: ['Health', 'Health & Wellbeing'], terms: ['health','hospital','doctor','nurse','patient','medical','medicine','health new zealand','te whatu ora','mental health','insurance'] },
++  { names: ['Environment', 'Climate'], terms: ['environment','climate','conservation','waste','recycling','emissions','biodiversity','marine','flood','severe weather'] },
++  { names: ['Transport', 'Infrastructure'], terms: ['transport','rail','road','motorway','bus','train','airport','infrastructure','harbour crossing','city rail link'] },
++  { names: ['Technology', 'Tech'], terms: ['technology','tech','software','artificial intelligence','cyber','startup','digital','innovation','drone'] },
++  { names: ['Education'], terms: ['education','school','student','teacher','university','tertiary','curriculum'] },
++  { names: ['Sport', 'Sports'], terms: ['sport','rugby','cricket','football','basketball','match','tournament','team','athlete'] },
++  { names: ['Community'], terms: ['community','festival','celebration','cultural','charity','local residents','volunteer'] },
++  { names: ['World', 'International'], terms: ['international','global','united nations','australia','india','china','united states','europe','pacific'] },
++];
++
++const TAG_TERMS = [
++  'Auckland','New Zealand','Government','Parliament','Police','Health','Environment','Climate','Transport','Infrastructure','Technology','Education','Business','Economy','Community','Housing','Immigration','Defence','Trade','Weather','Council','Local Government','Cost of Living','Public Service'
++];
++
++function cleanLine(line: string) {
++  return line
++    .replace(/^\s*[|>]+\s*/, '')
++    .replace(/^\s*[-*•]+\s*/, '')
++    .replace(/\*\*/g, '')
++    .replace(/__+/g, '')
++    .replace(/\u00a0/g, ' ')
++    .replace(/\s+/g, ' ')
++    .trim();
++}
++
++function escapeHtml(value: string) {
++  return value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
++}
++
++function plainText(value: string) {
++  return value
++    .replace(/<[^>]*>/g, ' ')
++    .replace(/https?:\/\/\S+/g, ' ')
++    .replace(/\s+/g, ' ')
++    .trim();
++}
++
++function words(value: string) {
++  return plainText(value).split(/\s+/).filter(Boolean);
++}
++
++function truncate(value: string, max: number) {
++  const text = value.replace(/\s+/g, ' ').trim();
++  if (text.length <= max) return text;
++  const slice = text.slice(0, max + 1);
++  const cut = slice.lastIndexOf(' ');
++  return `${slice.slice(0, cut > max * 0.65 ? cut : max).replace(/[,:;\s-]+$/,'')}...`;
++}
++
++function slugify(value: string) {
++  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,120).replace(/-$/,'');
++}
++
++function findReleaseDate(lines: string[]) {
++  const patterns = [
++    new RegExp(`\\b(\\d{1,2})\\s+(${MONTHS})\\s+(20\\d{2})\\b`, 'i'),
++    new RegExp(`\\b(${MONTHS})\\s+(\\d{1,2}),?\\s+(20\\d{2})\\b`, 'i'),
++    /\b(20\d{2})[-\/]([01]?\d)[-\/]([0-3]?\d)\b/,
++    /\b([0-3]?\d)[-\/]([01]?\d)[-\/](20\d{2})\b/,
++  ];
++  for (const line of lines.slice(0, 25)) {
++    for (const pattern of patterns) {
++      const match = line.match(pattern);
++      if (match) return match[0];
++    }
++  }
++  return null;
++}
++
++function headlineScore(line: string, index: number) {
++  const count = words(line).length;
++  if (line.length < 12 || line.length > 180 || count < 3 || count > 22) return -100;
++  if (LABEL_RE.test(line) || CONTACT_RE.test(line)) return -100;
++  if (/^https?:|@/.test(line) || /^[\d\s./-]+$/.test(line)) return -100;
++  if (new RegExp(`^\\d{1,2}\\s+(${MONTHS})\\s+20\\d{2}$`, 'i').test(line)) return -100;
++  let score = 25 - index;
++  if (!/[.!?]$/.test(line)) score += 12;
++  if (count >= 5 && count <= 14) score += 10;
++  if (ROLE_RE.test(line) && count <= 8) score -= 14;
++  if (/\b(source|minister for|office of|department of|ministry of)\b/i.test(line)) score -= 8;
++  return score;
++}
++
++function findHeadline(lines: string[]) {
++  const candidates = lines.slice(0, 24).map((line,index)=>({line,index,score:headlineScore(line,index)})).sort((a,b)=>b.score-a.score);
++  return candidates[0]?.score > 0 ? candidates[0].line.replace(/^["“]|["”]$/g,'').trim() : null;
++}
++
++function findSource(lines: string[], fullText: string) {
++  const explicit = lines.slice(0, 30).find(line => /^source\s*:/i.test(line));
++  if (explicit) return explicit.replace(/^source\s*:\s*/i,'').trim() || null;
++
++  const organisations = [
++    /\b(New Zealand Police|NZ Police)\b/i,
++    /\b(Health New Zealand|Te Whatu Ora)\b/i,
++    /\b(Auckland Council|Auckland Transport)\b/i,
++    /\b(New Zealand Defence Force|NZDF)\b/i,
++    /\b(Department of Conservation|DOC)\b/i,
++    /\b(Ministry for the Environment)\b/i,
++    /\b(Ministry of Business, Innovation and Employment|MBIE)\b/i,
++    /\b(Ministry of Foreign Affairs and Trade|MFAT)\b/i,
++    /\b(Ministry of Education)\b/i,
++    /\b(Ministry of Health)\b/i,
++    /\b(Stats NZ)\b/i,
++    /\b(Reserve Bank of New Zealand|RBNZ)\b/i,
++    /\b(Public Service Association|PSA)\b/i,
++  ];
++  for (const pattern of organisations) {
++    const match = fullText.match(pattern);
++    if (match) return match[1];
++  }
++
++  const office = lines.slice(0,18).find(line => /^(office of|ministry of|department of|commission|council|association|authority)\b/i.test(line) && line.length < 100);
++  if (office) return office;
++
++  const ministerRole = lines.slice(0,12).find(line => /^minister\s+(for|of)\s+/i.test(line) && line.length < 100);
++  if (ministerRole) return `Office of the ${ministerRole}`;
++
++  return null;
++}
++
++function stripHeaderAndFooter(lines: string[], headline: string | null) {
++  let start = 0;
++  if (headline) {
++    const index = lines.findIndex(line => line === headline);
++    if (index >= 0) start = index + 1;
++  }
++  while (start < lines.length && (LABEL_RE.test(lines[start]) || lines[start].length < 3 || /^[\d\s./-]+$/.test(lines[start]))) start++;
++
++  let end = lines.length;
++  for (let i = Math.max(start + 1, 0); i < lines.length; i++) {
++    if (CONTACT_RE.test(lines[i]) || /^ends?$/i.test(lines[i]) || BOILERPLATE_RE.test(lines[i])) {
++      if (i > Math.max(start + 2, Math.floor(lines.length * 0.45))) { end = i; break; }
++    }
++  }
++  return lines.slice(start, end);
++}
++
++function toParagraphs(lines: string[]) {
++  const paragraphs: string[] = [];
++  let buffer: string[] = [];
++  const flush = () => {
++    const text = buffer.join(' ').replace(/\s+/g,' ').trim();
++    if (text) paragraphs.push(text);
++    buffer = [];
++  };
++  for (const line of lines) {
++    if (!line) { flush(); continue; }
++    if (LABEL_RE.test(line)) continue;
++    if (/^(https?:\/\/|www\.)/i.test(line)) continue;
++    buffer.push(line);
++    if (/[.!?”"]$/.test(line) && buffer.join(' ').length >= 170) flush();
++  }
++  flush();
++  return paragraphs.filter(p => p.length > 2);
++}
++
++function sentenceSummary(paragraphs: string[]) {
++  const first = paragraphs.find(p => p.length >= 45) || paragraphs[0] || '';
++  return first.replace(/^[-–]+\s*/,'').trim();
++}
++
++function titleCaseHeadline(value: string) {
++  const text = value.replace(/\s+/g,' ').replace(/[.!]+$/,'').trim();
++  if (!text) return text;
++  if (text === text.toUpperCase()) return text.toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g,(_,p1,p2)=>p1+p2.toUpperCase());
++  return text;
++}
++
++function extractTags(text: string, headline: string) {
++  const haystack = `${headline} ${text}`;
++  const tags: string[] = [];
++  const add = (tag: string) => { if (tag && !tags.some(x => x.toLowerCase() === tag.toLowerCase())) tags.push(tag); };
++
++  for (const term of TAG_TERMS) {
++    if (new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')}\\b`,'i').test(haystack)) add(term);
++  }
++
++  const sourceLines = text.split(/\r?\n/).map(cleanLine).filter(Boolean);
++  for (let i = 0; i < Math.min(sourceLines.length - 1, 16); i++) {
++    if (/^(?:Hon\.?\s+)?[A-Z][a-zÀ-ž'’-]+(?:\s+[A-Z][a-zÀ-ž'’-]+){1,3}$/.test(sourceLines[i]) && ROLE_RE.test(sourceLines[i + 1])) {
++      add(sourceLines[i].replace(/^Hon\.?\s+/i,''));
++    }
++  }
++
++  const proper = haystack.match(/\b(?:Hon\.?[ \t]+)?(?:[A-Z][a-zÀ-ž'’-]+(?:[ \t]+|$)){2,5}/g) || [];
++  for (const raw of proper) {
++    const tag = raw.trim().replace(/[,:;.]+$/,'');
++    if (
++      tag.length >= 6 &&
++      tag.length <= 55 &&
++      !/^(Media Release|Press Release|New Zealand Government|The Government)$/i.test(tag) &&
++      !/^(Environment|Government|Infrastructure|Technology|Education|Business|Economy|Community|Health|Transport|Police)\b/i.test(tag) &&
++      !ROLE_RE.test(tag)
++    ) add(tag);
++    if (tags.length >= 12) break;
++  }
++
++  return tags.slice(0,12);
++}
++
++function mapCategories(text: string, categories: ConverterCategory[]) {
++  const lower = text.toLowerCase();
++  const scored = CATEGORY_RULES.map(rule => {
++    const score = rule.terms.reduce((sum,term)=>sum + (lower.includes(term) ? (term.includes(' ') ? 3 : 1) : 0), 0);
++    const category = categories.find(c => rule.names.some(name => c.name.toLowerCase() === name.toLowerCase()))
++      || categories.find(c => rule.names.some(name => c.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(c.name.toLowerCase())));
++    return { category, score };
++  }).filter((x): x is { category: ConverterCategory; score: number } => Boolean(x.category) && x.score > 0)
++    .sort((a,b)=>b.score-a.score);
++
++  const unique: ConverterCategory[] = [];
++  for (const item of scored) if (!unique.some(c => c.id === item.category.id)) unique.push(item.category);
++  return { primary: unique[0] || null, secondary: unique.slice(1,4) };
++}
++
++function sourceNote(source: string | null) {
++  return source ? `<p><strong>Source:</strong> ${escapeHtml(source)}</p>` : '';
++}
++
++export function convertMediaRelease(rawText: string, categories: ConverterCategory[] = []): MediaReleaseDraft {
++  const normalised = rawText.replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ').replace(/\t/g,' ');
++  const linesWithBlanks = normalised.split('\n').map(cleanLine);
++  const compactLines = linesWithBlanks.filter(Boolean);
++  const releaseDate = findReleaseDate(compactLines);
++  const detectedHeadline = findHeadline(compactLines);
++  const title = titleCaseHeadline(detectedHeadline || sentenceSummary(toParagraphs(linesWithBlanks)) || 'Untitled news release');
++  const source = findSource(compactLines, normalised);
++
++  const bodyLines = stripHeaderAndFooter(linesWithBlanks, detectedHeadline);
++  const paragraphs = toParagraphs(bodyLines).filter(p => p !== detectedHeadline);
++  const summary = sentenceSummary(paragraphs);
++  const bodyHtml = paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('\n');
++  const contentHtml = `${bodyHtml}${bodyHtml && source ? '\n' : ''}${sourceNote(source)}`.trim();
++  const yearMatch = releaseDate?.match(/20\d{2}/)?.[0];
++  const slugBase = yearMatch && !title.includes(yearMatch) ? `${title} ${yearMatch}` : title;
++  const tags = extractTags(normalised, title);
++  const categoryMatch = mapCategories(`${title} ${normalised}`, categories);
++  const isBreaking = URGENT_RE.test(`${title} ${summary}`);
++  const warnings: string[] = [];
++
++  if (!source) warnings.push('Source organisation was not confidently detected. Check attribution before publishing.');
++  if (!releaseDate) warnings.push('Release date was not confidently detected. Check the publication date.');
++  if (paragraphs.length < 2) warnings.push('Very little publishable body copy was detected. Review the pasted release.');
++  if (isBreaking) warnings.push('Breaking-news language was detected. Confirm urgency manually before publishing.');
++
++  const meta = truncate(summary || title, 155);
++  const excerpt = truncate(summary || title, 190);
++  const subtitle = truncate(summary || title, 230);
++  const socialDescription = truncate(summary || title, 200);
++  const seoTitle = truncate(title, 60);
++
++  return {
++    title,
++    slug: slugify(slugBase),
++    subtitle,
++    excerpt,
++    content_html: contentHtml,
++    seo_title: seoTitle,
++    meta_description: meta,
++    social_title: truncate(title, 90),
++    social_description: socialDescription,
++    tag_names: tags,
++    primary_category_id: categoryMatch.primary?.id || null,
++    category_ids: categoryMatch.secondary.map(c => c.id),
++    article_type: isBreaking ? 'breaking_news' : 'news',
++    is_breaking: isBreaking,
++    source_name: source,
++    release_date: releaseDate,
++    stats: { source_words: words(normalised).length, article_words: words(contentHtml).length },
++    warnings,
++  };
++}
+diff --git a/tmp/webfit_patchbuild/work/webfit-news-platform-main/app/api/admin/media-release-converter/route.ts b/app/api/admin/media-release-converter/route.ts
+new file mode 100644
+index 0000000..27f7837
+--- /dev/null
++++ b/app/api/admin/media-release-converter/route.ts
+@@ -0,0 +1,23 @@
++import { NextResponse } from 'next/server';
++import { z } from 'zod';
++import { createClient } from '../../../../../lib/supabase-server';
++import { convertMediaRelease } from '../../../../../lib/media-release-converter';
++
++const Input = z.object({
++  raw_text: z.string().trim().min(40, 'Paste the full media release.').max(120000, 'Media release is too large.'),
++  categories: z.array(z.object({ id: z.string().uuid(), name: z.string().trim().min(1).max(120) })).max(250).default([]),
++});
++
++export async function POST(req: Request) {
++  const supabase = await createClient();
++  const { data: { user } } = await supabase.auth.getUser();
++  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++
++  const { data: profile } = await supabase.from('profiles').select('is_active').eq('id', user.id).maybeSingle();
++  if (!profile?.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
++
++  const parsed = Input.safeParse(await req.json());
++  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
++
++  return NextResponse.json({ draft: convertMediaRelease(parsed.data.raw_text, parsed.data.categories) });
++}

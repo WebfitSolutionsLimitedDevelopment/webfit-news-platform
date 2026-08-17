@@ -1,0 +1,16 @@
+diff --git a/supabase/migrations/20260818_allow_public_read_native_complete_media.sql b/supabase/migrations/20260818_allow_public_read_native_complete_media.sql
+new file mode 100644
+index 0000000..4b7bb54
+--- /dev/null
++++ b/supabase/migrations/20260818_allow_public_read_native_complete_media.sql
+@@ -0,0 +1,10 @@
++drop policy if exists "public read media" on public.media;
++
++create policy "public read media"
++on public.media
++for select
++to public
++using (
++  migration_status is null
++  or migration_status in ('done','pending','migrated','native','complete')
++);
