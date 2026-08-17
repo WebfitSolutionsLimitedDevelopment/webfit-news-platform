@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getPublicSiteSettings } from '@/lib/public-settings';
+import { SupportBanner } from './SupportBanner';
 
 const links=[['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
 
@@ -8,6 +9,7 @@ export async function SiteHeader(){
   const siteName=settings.identity.name||'Webfit News';
   const today=new Intl.DateTimeFormat('en-NZ',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date());
   return <>
+    <SupportBanner/>
     <div className="utility-premium"><div className="shell utility-premium-inner"><span>{today}</span><div><Link href="/about">About</Link><Link href="/editorial-policy">Editorial policy</Link>{settings.footer.media_council_member!==false?<span>Member, New Zealand Media Council</span>:null}</div></div></div>
     <header className="masthead-premium"><div className="shell masthead-premium-inner">
       <button className="menu-chip" aria-label="Menu">Menu</button>
