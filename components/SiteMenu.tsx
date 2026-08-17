@@ -59,7 +59,9 @@ export function SiteMenu({label='Menu',mobile=false}:{label?:string;mobile?:bool
       onClick={()=>setOpen(value=>!value)}
     >
       <span className={styles.triggerLabel}>{label}</span>
-      <span className={styles.icon} aria-hidden="true"><i></i><i></i><i></i></span>
+      <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6.5h18M3 12h18M3 17.5h18"/>
+      </svg>
     </button>
 
     {open?<div className={styles.layer}>
