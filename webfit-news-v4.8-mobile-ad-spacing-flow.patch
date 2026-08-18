@@ -1,0 +1,152 @@
+diff --git a/app/HomeAdFlow.module.css b/app/HomeAdFlow.module.css
+new file mode 100644
+index 0000000..9360e7a
+--- /dev/null
++++ b/app/HomeAdFlow.module.css
+@@ -0,0 +1,67 @@
++.homepage {
++  position: relative;
++}
++
++.mobileAdBreak {
++  display: none;
++}
++
++.sectionAdBreak {
++  margin: 34px 0 12px;
++}
++
++.desktopTopAd,
++.desktopAfterHeroAd {
++  display: block;
++}
++
++@media (max-width: 720px) {
++  /*
++   * Keep the first mobile viewport editorial.
++   * The homepage should open with branding, navigation and journalism,
++   * not a large display ad.
++   */
++  .desktopTopAd,
++  .desktopAfterHeroAd {
++    display: none;
++  }
++
++  /*
++   * Mobile ad opportunities start only after readers have reached the
++   * editorial feed. The AdSlot component renders nothing when no campaign
++   * is assigned, so these wrappers do not create empty white holes.
++   */
++  .mobileAdBreak,
++  .sectionAdBreak {
++    display: block;
++    margin: 34px 0 18px;
++    padding: 18px 0;
++    border-top: 1px solid #e2e5e8;
++    border-bottom: 1px solid #e2e5e8;
++  }
++
++  .mobileAdBreak:empty,
++  .sectionAdBreak:empty {
++    display: none;
++  }
++
++  .mobileAdBreak :global(.ad-zone),
++  .sectionAdBreak :global(.ad-zone) {
++    margin: 0 auto;
++    max-width: 100%;
++  }
++
++  .mobileAdBreak :global(.ad-zone-live),
++  .sectionAdBreak :global(.ad-zone-live) {
++    padding-top: 24px;
++    background: #fafafa;
++  }
++
++  .mobileAdBreak :global(.ad-zone-live img),
++  .sectionAdBreak :global(.ad-zone-live img) {
++    width: auto;
++    max-width: 100%;
++    max-height: 520px;
++    object-fit: contain;
++  }
++}
+diff --git a/app/page.tsx b/app/page.tsx
+index 5347351..dadc42b 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -6,6 +6,7 @@ import { BreakingStrip } from '@/components/BreakingStrip';
+ import { AdSlot } from '@/components/AdSlot';
+ import { VideoSection } from '@/components/VideoSection';
+ import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
++import adFlow from './HomeAdFlow.module.css';
+ 
+ export const revalidate=60;
+ 
+@@ -31,22 +32,42 @@ export default async function Home(){
+   const hero=sections.find(s=>s.key==='hero'&&s.stories?.length)||sections.find(s=>s.stories?.length);
+   const rest=sections.filter(s=>s!==hero&&s.stories?.length);
+   const latest=hero?.stories?.length?hero.stories:[];
++
+   return <>
+     <SiteHeader/>
+     <BreakingStrip stories={breaking}/>
+-    <main className="shell homepage-premium">
+-      <AdSlot slotKey="HEADER_LEADERBOARD" className="ad-top"/>
++
++    <main className={`shell homepage-premium ${adFlow.homepage}`}>
++      <div className={adFlow.desktopTopAd}>
++        <AdSlot slotKey="HEADER_LEADERBOARD" className="ad-top"/>
++      </div>
++
+       <section className="edition-bar"><div><span>Independent New Zealand newsroom</span><strong>Context. Community. Consequence.</strong></div><div className="edition-links"><Link href="/category/new-zealand">New Zealand</Link><Link href="/category/auckland">Auckland</Link><Link href="/category/immigration">Immigration</Link></div></section>
++
+       {hero?.stories?.length?<section className="lead-layout">
+         <div className="lead-main"><StoryCard story={hero.stories[0]} variant="lead"/></div>
+         <div className="lead-rail">{hero.stories.slice(1,5).map((s:any)=><StoryCard key={s.id} story={s} variant="compact"/>)}</div>
+       </section>:null}
++
+       {latest.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{latest.slice(1,5).map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{s.title}</span></Link>)}</section>:null}
+-      <AdSlot slotKey="HOME_AFTER_HERO"/>
+-      {rest.map((s:any,i:number)=><div key={s.id||s.key}>{i===1?<AdSlot slotKey="HOME_MIDDLE"/>:null}<StandardSection title={s.title} stories={s.stories} index={i}/></div>)}
++
++      <div className={adFlow.desktopAfterHeroAd}>
++        <AdSlot slotKey="HOME_AFTER_HERO"/>
++      </div>
++
++      {rest.map((s:any,i:number)=><div key={s.id||s.key}>
++        <StandardSection title={s.title} stories={s.stories} index={i}/>
++
++        {i===0?<div className={adFlow.mobileAdBreak}><AdSlot slotKey="HOME_AFTER_HERO"/></div>:null}
++        {i===1?<div className={adFlow.sectionAdBreak}><AdSlot slotKey="HOME_MIDDLE"/></div>:null}
++        {i===3?<div className={adFlow.mobileAdBreak}><AdSlot slotKey="HOME_SIDEBAR_1"/></div>:null}
++      </div>)}
++
+       <VideoSection videos={videos}/>
++
+       {!hero&&!rest.length?<section className="prelaunch"><img src="/webfit-news-logo.png" alt="Webfit News"/><h1>Webfit News newsroom is connected.</h1><p>Editorial content is ready for homepage curation.</p></section>:null}
+     </main>
++
+     <PublicFooter/>
+   </>;
+ }
+diff --git a/components/SiteHeader.tsx b/components/SiteHeader.tsx
+index 1c372f3..20f1517 100644
+--- a/components/SiteHeader.tsx
++++ b/components/SiteHeader.tsx
+@@ -10,7 +10,7 @@ export async function SiteHeader(){
+   const settings=await getPublicSiteSettings();
+   const siteName=settings.identity.name||'Webfit News';
+   const today=new Intl.DateTimeFormat('en-NZ',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date());
+-  return <>
++  return <div className="wf-auto-ads-exclude-top">
+     <SupportBanner/>
+ 
+     <div className={`utility-premium ${styles.utility}`}>
+@@ -50,5 +50,5 @@ export async function SiteHeader(){
+     <div className={`nav-premium-wrap ${styles.desktopNav}`}>
+       <nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav>
+     </div>
+-  </>;
++  </div>;
+ }

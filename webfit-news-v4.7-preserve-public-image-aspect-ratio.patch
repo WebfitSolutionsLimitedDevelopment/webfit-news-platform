@@ -1,0 +1,66 @@
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 2c82695..1e0e7ea 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -1,4 +1,5 @@
+ import './globals.css';
++import './public-image-fit.css';
+ import type { Metadata } from 'next';
+ import Script from 'next/script';
+ import { getSiteUrl } from '../lib/env';
+diff --git a/app/public-image-fit.css b/app/public-image-fit.css
+new file mode 100644
+index 0000000..72d92af
+--- /dev/null
++++ b/app/public-image-fit.css
+@@ -0,0 +1,50 @@
++/*
++ * Public newsroom image fit policy.
++ *
++ * Source images arrive in many aspect ratios. Public story cards should
++ * preserve the complete editorial image instead of cropping it to fill a
++ * fixed frame.
++ */
++
++.story-image {
++  background: #f2f3f4 !important;
++  display: grid !important;
++  place-items: center !important;
++}
++
++.story-image img {
++  width: 100% !important;
++  height: 100% !important;
++  object-fit: contain !important;
++  object-position: center center !important;
++  transform: none !important;
++}
++
++.story-card:hover .story-image img {
++  transform: none !important;
++}
++
++/* Legacy/public card selectors still used by older homepage sections. */
++.card img {
++  object-fit: contain !important;
++  object-position: center center !important;
++  background: #f2f3f4 !important;
++}
++
++/* Small latest-news thumbnails should also show the full supplied image. */
++.latest-item img {
++  object-fit: contain !important;
++  object-position: center center !important;
++  background: #f2f3f4 !important;
++}
++
++/*
++ * Full article hero images already use natural height, but these rules make
++ * the intent explicit and protect against future fixed-height overrides.
++ */
++.article-hero img {
++  width: 100% !important;
++  height: auto !important;
++  object-fit: contain !important;
++  object-position: center center !important;
++}

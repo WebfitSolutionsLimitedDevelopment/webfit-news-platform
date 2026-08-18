@@ -11,6 +11,7 @@ const GA_MEASUREMENT_ID = 'G-YP1WWRYGHY';
 export async function generateMetadata(): Promise<Metadata> {
   const siteUrl = getSiteUrl();
   const settings = await getPublicSiteSettings();
+
   const siteName =
     settings.identity.name ||
     settings.seo.site_name ||
@@ -26,11 +27,39 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(siteUrl),
+
     title: {
       default: siteName,
       template: `%s${suffix}`,
     },
+
     description: tagline,
+
+    icons: {
+      icon: [
+        {
+          url: '/favicon.ico',
+        },
+        {
+          url: '/icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          url: '/icon-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
+      ],
+      apple: [
+        {
+          url: '/apple-touch-icon.png',
+          sizes: '180x180',
+          type: 'image/png',
+        },
+      ],
+    },
+
     openGraph: {
       siteName,
       locale: settings.seo.default_locale || 'en_NZ',
@@ -38,6 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
       url: siteUrl,
       description: tagline,
     },
+
     alternates: {
       canonical: '/',
     },

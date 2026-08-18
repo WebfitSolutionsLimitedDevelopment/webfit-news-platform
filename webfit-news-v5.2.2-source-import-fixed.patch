@@ -1,0 +1,428 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -13,15 +13,18 @@
+     "fast-xml-parser": "^4.5.3",
+     "next": "^16.0.0",
++    "pdf-parse": "^2.4.5",
+     "react": "^19.0.0",
+     "react-dom": "^19.0.0",
+     "sanitize-html": "^2.14.0",
+     "slugify": "^1.6.6",
++    "word-extractor": "^1.0.4",
+     "zod": "^3.24.2"
+   },
+   "devDependencies": {
+     "@types/node": "^22.13.10",
+     "@types/react": "^19.0.10",
+     "@types/react-dom": "^19.0.4",
+     "@types/sanitize-html": "^2.16.1",
++    "@types/word-extractor": "^1.0.6",
+     "typescript": "^5.8.2"
+   },
+diff --git a/app/api/admin/source-import/route.ts b/app/api/admin/source-import/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/admin/source-import/route.ts
+@@ -0,0 +1,246 @@
++import { isIP } from 'node:net';
++import { lookup } from 'node:dns/promises';
++import { NextResponse } from 'next/server';
++import { z } from 'zod';
++import { PDFParse } from 'pdf-parse';
++import WordExtractor from 'word-extractor';
++import { createClient } from '../../../../lib/supabase-server';
++import { convertMediaRelease } from '../../../../lib/media-release-converter';
++
++export const runtime = 'nodejs';
++
++const MAX_UPLOAD_BYTES = 4_000_000;
++const MAX_REMOTE_BYTES = 12_000_000;
++const MAX_TEXT_CHARS = 120_000;
++const MAX_REDIRECTS = 4;
++
++const Categories = z.array(
++  z.object({
++    id: z.string().uuid(),
++    name: z.string().trim().min(1).max(120),
++  }),
++).max(250);
++
++function tidyText(value: string) {
++  return value
++    .replace(/\r\n?/g, '\n')
++    .replace(/[ \t]+\n/g, '\n')
++    .replace(/\n[ \t]+/g, '\n')
++    .replace(/\n{3,}/g, '\n\n')
++    .replace(/[ \t]{2,}/g, ' ')
++    .trim()
++    .slice(0, MAX_TEXT_CHARS);
++}
++
++function decodeEntities(value: string) {
++  const named: Record<string, string> = {
++    amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
++    ndash: '-', mdash: '-', hellip: '...', rsquo: "'", lsquo: "'",
++    rdquo: '"', ldquo: '"',
++  };
++  return value
++    .replace(/&([a-zA-Z]+);/g, (match, name) => named[name.toLowerCase()] ?? match)
++    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
++    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)));
++}
++
++function htmlToText(html: string) {
++  const preferred =
++    html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ||
++    html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ||
++    html;
++
++  const text = preferred
++    .replace(/<(script|style|noscript|svg|form|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
++    .replace(/<br\s*\/?>/gi, '\n')
++    .replace(/<\/(p|div|section|article|main|h[1-6]|li|tr|blockquote)>/gi, '\n')
++    .replace(/<li\b[^>]*>/gi, '- ')
++    .replace(/<[^>]+>/g, ' ');
++
++  return tidyText(decodeEntities(text));
++}
++
++function isPrivateV4(ip: string) {
++  const p = ip.split('.').map(Number);
++  if (p.length !== 4 || p.some(Number.isNaN)) return true;
++  return (
++    p[0] === 10 ||
++    p[0] === 127 ||
++    p[0] === 0 ||
++    (p[0] === 169 && p[1] === 254) ||
++    (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
++    (p[0] === 192 && p[1] === 168) ||
++    (p[0] === 100 && p[1] >= 64 && p[1] <= 127) ||
++    p[0] >= 224
++  );
++}
++
++function isPrivateAddress(address: string) {
++  const lower = address.toLowerCase();
++  if (lower.startsWith('::ffff:')) return isPrivateV4(lower.slice(7));
++  if (isIP(address) === 4) return isPrivateV4(address);
++  if (isIP(address) === 6) {
++    return (
++      lower === '::1' ||
++      lower === '::' ||
++      lower.startsWith('fc') ||
++      lower.startsWith('fd') ||
++      lower.startsWith('fe8') ||
++      lower.startsWith('fe9') ||
++      lower.startsWith('fea') ||
++      lower.startsWith('feb')
++    );
++  }
++  return true;
++}
++
++async function assertPublicUrl(url: URL) {
++  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Only http and https URLs are supported.');
++  if (url.username || url.password) throw new Error('URLs containing credentials are not supported.');
++  if (url.hostname === 'localhost' || url.hostname.endsWith('.local')) throw new Error('Local network URLs are not allowed.');
++
++  if (isIP(url.hostname)) {
++    if (isPrivateAddress(url.hostname)) throw new Error('Private network URLs are not allowed.');
++    return;
++  }
++
++  const records = await lookup(url.hostname, { all: true, verbatim: true });
++  if (!records.length || records.some(record => isPrivateAddress(record.address))) {
++    throw new Error('This URL resolves to a private or unavailable network address.');
++  }
++}
++
++async function safeFetch(startUrl: string) {
++  let url = new URL(startUrl);
++  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
++    await assertPublicUrl(url);
++    const response = await fetch(url, {
++      redirect: 'manual',
++      signal: AbortSignal.timeout(15_000),
++      headers: {
++        'user-agent': 'WebfitNews-Newsroom-Importer/1.0',
++        accept: 'text/html,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document;q=0.9,*/*;q=0.5',
++      },
++    });
++
++    if ([301, 302, 303, 307, 308].includes(response.status)) {
++      const location = response.headers.get('location');
++      if (!location) throw new Error('Source URL redirected without a destination.');
++      url = new URL(location, url);
++      continue;
++    }
++
++    if (!response.ok) throw new Error(`Source URL returned HTTP ${response.status}.`);
++    const length = Number(response.headers.get('content-length') || 0);
++    if (length && length > MAX_REMOTE_BYTES) throw new Error('Remote source is too large to import.');
++    const data = Buffer.from(await response.arrayBuffer());
++    if (data.length > MAX_REMOTE_BYTES) throw new Error('Remote source is too large to import.');
++    return {
++      data,
++      contentType: (response.headers.get('content-type') || '').toLowerCase(),
++      finalUrl: url,
++    };
++  }
++  throw new Error('Source URL redirected too many times.');
++}
++
++async function textFromBuffer(buffer: Buffer, filename: string, contentType = '') {
++  const lower = filename.toLowerCase();
++  const isPdf = lower.endsWith('.pdf') || contentType.includes('application/pdf');
++  const isWord =
++    lower.endsWith('.doc') ||
++    lower.endsWith('.docx') ||
++    contentType.includes('application/msword') ||
++    contentType.includes('wordprocessingml.document');
++
++  if (isPdf) {
++    const parser = new PDFParse({ data: buffer });
++    try {
++      const result = await parser.getText();
++      return tidyText(result.text || '');
++    } finally {
++      await parser.destroy();
++    }
++  }
++
++  if (isWord) {
++    const extractor = new WordExtractor();
++    const document = await extractor.extract(buffer);
++    return tidyText(document.getBody());
++  }
++
++  if (
++    lower.endsWith('.txt') ||
++    lower.endsWith('.md') ||
++    contentType.includes('text/plain') ||
++    contentType.includes('text/markdown')
++  ) {
++    return tidyText(buffer.toString('utf8'));
++  }
++
++  if (
++    lower.endsWith('.html') ||
++    lower.endsWith('.htm') ||
++    contentType.includes('text/html') ||
++    contentType.includes('application/xhtml')
++  ) {
++    return htmlToText(buffer.toString('utf8'));
++  }
++
++  throw new Error('Unsupported source. Use PDF, Word (.doc/.docx), TXT, or a normal webpage URL.');
++}
++
++export async function POST(req: Request) {
++  const supabase = await createClient();
++  const { data: { user } } = await supabase.auth.getUser();
++  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++
++  const { data: profile } = await supabase.from('profiles').select('is_active').eq('id', user.id).maybeSingle();
++  if (!profile?.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
++
++  try {
++    const form = await req.formData();
++    const categoryInput = String(form.get('categories') || '[]');
++    const parsedCategories = Categories.safeParse(JSON.parse(categoryInput));
++    if (!parsedCategories.success) {
++      return NextResponse.json({ error: 'Invalid category data.' }, { status: 422 });
++    }
++
++    const file = form.get('file');
++    const sourceUrl = String(form.get('url') || '').trim();
++    let rawText = '';
++    let sourceLabel = '';
++
++    if (file instanceof File && file.size > 0) {
++      if (file.size > MAX_UPLOAD_BYTES) {
++        return NextResponse.json({ error: 'Uploaded source must be smaller than 4 MB. For a larger document, use a public URL to the file.' }, { status: 413 });
++      }
++      const buffer = Buffer.from(await file.arrayBuffer());
++      rawText = await textFromBuffer(buffer, file.name, file.type);
++      sourceLabel = file.name;
++    } else if (sourceUrl) {
++      const fetched = await safeFetch(sourceUrl);
++      const filename = decodeURIComponent(fetched.finalUrl.pathname.split('/').pop() || 'webpage.html');
++      rawText = await textFromBuffer(fetched.data, filename, fetched.contentType);
++      sourceLabel = fetched.finalUrl.toString();
++    } else {
++      return NextResponse.json({ error: 'Choose a file or enter a source URL.' }, { status: 422 });
++    }
++
++    if (rawText.length < 40) {
++      return NextResponse.json({
++        error: 'No readable article text was found. If this is a scanned/image-only PDF, it needs OCR before it can be imported.',
++      }, { status: 422 });
++    }
++
++    const draft = convertMediaRelease(rawText, parsedCategories.data);
++    return NextResponse.json({
++      raw_text: rawText,
++      source_label: sourceLabel,
++      draft,
++    });
++  } catch (error: any) {
++    const message = error instanceof Error ? error.message : 'Could not import source.';
++    return NextResponse.json({ error: message }, { status: 422 });
++  }
++}
+diff --git a/components/admin/ArticleWorkspace.tsx b/components/admin/ArticleWorkspace.tsx
+--- a/components/admin/ArticleWorkspace.tsx
++++ b/components/admin/ArticleWorkspace.tsx
+@@ -16,5 +16,13 @@
+ 
+ function slugify(value:string){return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,180)}
+ function localDate(value?:string|null){if(!value)return'';const d=new Date(value);const p=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
++function currentAucklandDate(){
++  const parts=new Intl.DateTimeFormat('en-NZ',{
++    timeZone:'Pacific/Auckland',year:'numeric',month:'2-digit',day:'2-digit',
++    hour:'2-digit',minute:'2-digit',hourCycle:'h23'
++  }).formatToParts(new Date());
++  const get=(type:Intl.DateTimeFormatPartTypes)=>parts.find(part=>part.type===type)?.value||'';
++  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
++}
+ 
+ export default function ArticleWorkspace({
+@@ -27,5 +37,6 @@
+ }){
+   const router=useRouter();
+   const fileRef=useRef<HTMLInputElement>(null);
++  const sourceFileRef=useRef<HTMLInputElement>(null);
+   const isEdit=Boolean(article?.id);
+ 
+@@ -44,6 +55,7 @@
+   const [mediaSearch,setMediaSearch]=useState('');
+   const [mediaBusy,setMediaBusy]=useState(false);
+   const [releaseText,setReleaseText]=useState('');
++  const [sourceUrl,setSourceUrl]=useState('');
+   const [converterBusy,setConverterBusy]=useState(false);
+   const [converterResult,setConverterResult]=useState<ConverterResult|null>(null);
+ 
+@@ -54,6 +66,6 @@
+     seo_title:article?.seo_title||'',meta_description:article?.meta_description||'',social_title:article?.social_title||'',
+     social_description:article?.social_description||'',canonical_url:article?.canonical_url||'',
+-    published_at:localDate(article?.published_at),scheduled_at:localDate(article?.scheduled_at),
++    published_at:article?.published_at?localDate(article.published_at):currentAucklandDate(),scheduled_at:localDate(article?.scheduled_at),
+     is_breaking:Boolean(article?.is_breaking),is_featured:Boolean(article?.is_featured),
+     is_editor_pick:Boolean(article?.is_editor_pick),is_homepage_hero:Boolean(article?.is_homepage_hero)
+   });
+@@ -109,5 +121,54 @@
+ 
+   function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
+ 
++  function applyImportedDraft(draft:any,rawText?:string){
++    if(rawText)setReleaseText(rawText);
++    setTitle(draft.title||'');
++    setSlug(draft.slug||slugify(draft.title||''));
++    setSlugTouched(true);
++    setStatus('draft');
++    setArticleType(draft.article_type||'news');
++    setTags((draft.tag_names||[]).join(', '));
++    setCategoryIds(draft.category_ids||[]);
++    setForm(current=>({
++      ...current,
++      subtitle:draft.subtitle||'',
++      excerpt:draft.excerpt||'',
++      content_html:draft.content_html||'',
++      primary_category_id:draft.primary_category_id||'',
++      seo_title:draft.seo_title||'',
++      meta_description:draft.meta_description||'',
++      social_title:draft.social_title||'',
++      social_description:draft.social_description||'',
++      canonical_url:'',
++      is_breaking:Boolean(draft.is_breaking)
++    }));
++    setConverterResult({
++      source_name:draft.source_name||null,
++      release_date:draft.release_date||null,
++      warnings:draft.warnings||[],
++      stats:draft.stats||{source_words:0,article_words:0}
++    });
++  }
++
++  async function importSource(){
++    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing another source.');return}
++    const file=sourceFileRef.current?.files?.[0];
++    if(!file&&!sourceUrl.trim()){setMessage('Choose a PDF, Word or TXT file, or enter a source URL.');return}
++    setConverterBusy(true);setMessage('');
++    try{
++      const fd=new FormData();
++      if(file)fd.set('file',file);
++      else fd.set('url',sourceUrl.trim());
++      fd.set('categories',JSON.stringify(categories));
++      const r=await fetch('/api/admin/source-import',{method:'POST',body:fd});
++      const d=await r.json();
++      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
++      applyImportedDraft(d.draft,d.raw_text);
++      setMessage(`Source imported from ${d.source_label||'document'}. Review the article, attribution, category and SEO before publishing.`);
++    }catch(e:any){setMessage(e.message||'Could not import source')}
++    finally{setConverterBusy(false)}
++  }
++
+   async function convertRelease(){
+     if(releaseText.trim().length<40){setMessage('Paste the full media release before converting.');return}
+@@ -122,31 +189,6 @@
+       const d=await r.json();
+       if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
+       const draft=d.draft;
+-      setTitle(draft.title||'');
+-      setSlug(draft.slug||slugify(draft.title||''));
+-      setSlugTouched(true);
+-      setStatus('draft');
+-      setArticleType(draft.article_type||'news');
+-      setTags((draft.tag_names||[]).join(', '));
+-      setCategoryIds(draft.category_ids||[]);
+-      setForm(current=>({
+-        ...current,
+-        subtitle:draft.subtitle||'',
+-        excerpt:draft.excerpt||'',
+-        content_html:draft.content_html||'',
+-        primary_category_id:draft.primary_category_id||'',
+-        seo_title:draft.seo_title||'',
+-        meta_description:draft.meta_description||'',
+-        social_title:draft.social_title||'',
+-        social_description:draft.social_description||'',
+-        canonical_url:'',
+-        is_breaking:Boolean(draft.is_breaking)
+-      }));
+-      setConverterResult({
+-        source_name:draft.source_name||null,
+-        release_date:draft.release_date||null,
+-        warnings:draft.warnings||[],
+-        stats:draft.stats||{source_words:0,article_words:0}
+-      });
++      applyImportedDraft(draft);
+       setMessage('Media release converted into a draft. Review the story, attribution, category and SEO before publishing.');
+     }catch(e:any){setMessage(e.message||'Could not convert media release')}
+@@ -200,10 +240,23 @@
+     <div className={styles.layout}>
+       <main className={styles.main}>
+         {!isEdit&&<section className={`${styles.card} ${styles.converterCard}`}>
+-          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Media release converter</h2></div><small>No external AI service. Drafts stay unpublished until you review them.</small></header>
++          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Source importer</h2></div><small>Paste text, upload a document, or use a URL. Drafts stay unpublished until you review them.</small></header>
++          <div className={styles.two}>
++            <label className={styles.field}>PDF, Word or TXT file
++              <input ref={sourceFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.md,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
++              <small>PDF, DOC, DOCX or TXT. Uploads up to 4 MB.</small>
++            </label>
++            <label className={styles.field}>Source URL
++              <input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.govt.nz/media-release"/>
++              <small>Web pages and direct PDF/Word/TXT links are supported.</small>
++            </label>
++          </div>
++          <div className={styles.converterActions}>
++            <button className={styles.convertButton} disabled={converterBusy} onClick={importSource}>{converterBusy?'Reading source...':'Prepare from file or URL'}</button>
++          </div>
+           <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
+           <div className={styles.converterActions}>
+             <button className={styles.convertButton} disabled={converterBusy||releaseText.trim().length<40} onClick={convertRelease}>{converterBusy?'Preparing draft...':'Prepare article draft'}</button>
+-            <button disabled={converterBusy||!releaseText} onClick={()=>{setReleaseText('');setConverterResult(null)}}>Clear source</button>
+-            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Nothing is sent to ChatGPT or another AI provider.'}</small>
++            <button disabled={converterBusy||(!releaseText&&!sourceUrl)} onClick={()=>{setReleaseText('');setSourceUrl('');setConverterResult(null);if(sourceFileRef.current)sourceFileRef.current.value=''}}>Clear source</button>
++            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Files and URLs are extracted by Webfit News. Nothing is sent to ChatGPT or another AI provider.'}</small>
+           </div>
