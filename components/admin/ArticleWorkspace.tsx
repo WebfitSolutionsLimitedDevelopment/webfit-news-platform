@@ -16,6 +16,14 @@ const types=[['news','News'],['breaking_news','Breaking news'],['analysis','Anal
 
 function slugify(value:string){return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,180)}
 function localDate(value?:string|null){if(!value)return'';const d=new Date(value);const p=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+function currentAucklandDate(){
+  const parts=new Intl.DateTimeFormat('en-NZ',{
+    timeZone:'Pacific/Auckland',year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).formatToParts(new Date());
+  const get=(type:Intl.DateTimeFormatPartTypes)=>parts.find(part=>part.type===type)?.value||'';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
 
 export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
@@ -27,6 +35,7 @@ export default function ArticleWorkspace({
 }){
   const router=useRouter();
   const fileRef=useRef<HTMLInputElement>(null);
+  const sourceFileRef=useRef<HTMLInputElement>(null);
   const isEdit=Boolean(article?.id);
 
   const [busy,setBusy]=useState(false);
@@ -45,6 +54,7 @@ export default function ArticleWorkspace({
   const [mediaSearch,setMediaSearch]=useState('');
   const [mediaBusy,setMediaBusy]=useState(false);
   const [releaseText,setReleaseText]=useState('');
+  const [sourceUrl,setSourceUrl]=useState('');
   const [converterBusy,setConverterBusy]=useState(false);
   const [converterResult,setConverterResult]=useState<ConverterResult|null>(null);
 
@@ -53,7 +63,7 @@ export default function ArticleWorkspace({
     author_id:article?.author_id||'',primary_category_id:initialPrimaryCategoryId,featured_media_id:article?.featured_media_id||'',
     seo_title:article?.seo_title||'',meta_description:article?.meta_description||'',social_title:article?.social_title||'',
     social_description:article?.social_description||'',canonical_url:article?.canonical_url||'',
-    published_at:localDate(article?.published_at),scheduled_at:localDate(article?.scheduled_at),
+    published_at:article?.published_at?localDate(article.published_at):currentAucklandDate(),scheduled_at:localDate(article?.scheduled_at),
     is_breaking:Boolean(article?.is_breaking),is_featured:Boolean(article?.is_featured),
     is_editor_pick:Boolean(article?.is_editor_pick),is_homepage_hero:Boolean(article?.is_homepage_hero)
   });
@@ -102,6 +112,55 @@ export default function ArticleWorkspace({
 
   function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
 
+  function applyImportedDraft(draft:any,rawText?:string){
+    if(rawText)setReleaseText(rawText);
+    setTitle(draft.title||'');
+    setSlug(draft.slug||slugify(draft.title||''));
+    setSlugTouched(true);
+    setStatus('draft');
+    setArticleType(draft.article_type||'news');
+    setTags((draft.tag_names||[]).join(', '));
+    setCategoryIds(draft.category_ids||[]);
+    setForm(current=>({
+      ...current,
+      subtitle:draft.subtitle||'',
+      excerpt:draft.excerpt||'',
+      content_html:draft.content_html||'',
+      primary_category_id:draft.primary_category_id||'',
+      seo_title:draft.seo_title||'',
+      meta_description:draft.meta_description||'',
+      social_title:draft.social_title||'',
+      social_description:draft.social_description||'',
+      canonical_url:'',
+      is_breaking:Boolean(draft.is_breaking)
+    }));
+    setConverterResult({
+      source_name:draft.source_name||null,
+      release_date:draft.release_date||null,
+      warnings:draft.warnings||[],
+      stats:draft.stats||{source_words:0,article_words:0}
+    });
+  }
+
+  async function importSource(){
+    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing another source.');return}
+    const file=sourceFileRef.current?.files?.[0];
+    if(!file&&!sourceUrl.trim()){setMessage('Choose a PDF, Word or TXT file, or enter a source URL.');return}
+    setConverterBusy(true);setMessage('');
+    try{
+      const fd=new FormData();
+      if(file)fd.set('file',file);
+      else fd.set('url',sourceUrl.trim());
+      fd.set('categories',JSON.stringify(categories));
+      const r=await fetch('/api/admin/source-import',{method:'POST',body:fd});
+      const d=await r.json();
+      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
+      applyImportedDraft(d.draft,d.raw_text);
+      setMessage(`Source imported from ${d.source_label||'document'}. Review the article, attribution, category and SEO before publishing.`);
+    }catch(e:any){setMessage(e.message||'Could not import source')}
+    finally{setConverterBusy(false)}
+  }
+
   async function convertRelease(){
     if(releaseText.trim().length<40){setMessage('Paste the full media release before converting.');return}
     if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing a media release.');return}
@@ -115,32 +174,7 @@ export default function ArticleWorkspace({
       const d=await r.json();
       if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
       const draft=d.draft;
-      setTitle(draft.title||'');
-      setSlug(draft.slug||slugify(draft.title||''));
-      setSlugTouched(true);
-      setStatus('draft');
-      setArticleType(draft.article_type||'news');
-      setTags((draft.tag_names||[]).join(', '));
-      setCategoryIds(draft.category_ids||[]);
-      setForm(current=>({
-        ...current,
-        subtitle:draft.subtitle||'',
-        excerpt:draft.excerpt||'',
-        content_html:draft.content_html||'',
-        primary_category_id:draft.primary_category_id||'',
-        seo_title:draft.seo_title||'',
-        meta_description:draft.meta_description||'',
-        social_title:draft.social_title||'',
-        social_description:draft.social_description||'',
-        canonical_url:'',
-        is_breaking:Boolean(draft.is_breaking)
-      }));
-      setConverterResult({
-        source_name:draft.source_name||null,
-        release_date:draft.release_date||null,
-        warnings:draft.warnings||[],
-        stats:draft.stats||{source_words:0,article_words:0}
-      });
+      applyImportedDraft(draft);
       setMessage('Media release converted into a draft. Review the story, attribution, category and SEO before publishing.');
     }catch(e:any){setMessage(e.message||'Could not convert media release')}
     finally{setConverterBusy(false)}
@@ -196,12 +230,25 @@ export default function ArticleWorkspace({
     <div className={styles.layout}>
       <main className={styles.main}>
         {!isEdit&&<section className={`${styles.card} ${styles.converterCard}`}>
-          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Media release converter</h2></div><small>No external AI service. Drafts stay unpublished until you review them.</small></header>
+          <header className={styles.cardHead}><div><span>IMPORT</span><h2>Source importer</h2></div><small>Paste text, upload a document, or use a URL. Drafts stay unpublished until you review them.</small></header>
+          <div className={styles.two}>
+            <label className={styles.field}>PDF, Word or TXT file
+              <input ref={sourceFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.md,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
+              <small>PDF, DOC, DOCX or TXT. Uploads up to 4 MB.</small>
+            </label>
+            <label className={styles.field}>Source URL
+              <input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.govt.nz/media-release"/>
+              <small>Web pages and direct PDF/Word/TXT links are supported.</small>
+            </label>
+          </div>
+          <div className={styles.converterActions}>
+            <button className={styles.convertButton} disabled={converterBusy} onClick={importSource}>{converterBusy?'Reading source...':'Prepare from file or URL'}</button>
+          </div>
           <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
           <div className={styles.converterActions}>
             <button className={styles.convertButton} disabled={converterBusy||releaseText.trim().length<40} onClick={convertRelease}>{converterBusy?'Preparing draft...':'Prepare article draft'}</button>
-            <button disabled={converterBusy||!releaseText} onClick={()=>{setReleaseText('');setConverterResult(null)}}>Clear source</button>
-            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Nothing is sent to ChatGPT or another AI provider.'}</small>
+            <button disabled={converterBusy||(!releaseText&&!sourceUrl)} onClick={()=>{setReleaseText('');setSourceUrl('');setConverterResult(null);if(sourceFileRef.current)sourceFileRef.current.value=''}}>Clear source</button>
+            <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Files and URLs are extracted by Webfit News. Nothing is sent to ChatGPT or another AI provider.'}</small>
           </div>
           {converterResult&&<div className={styles.converterResult}>
             <div className={styles.converterFacts}>
