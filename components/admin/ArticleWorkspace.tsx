@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './ArticleWorkspace.module.css';
+import { RichArticleEditor } from './RichArticleEditor';
 
 type Option={id:string;name:string};
 type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
@@ -261,10 +262,10 @@ export default function ArticleWorkspace({
         </section>}
 
         <section className={styles.card}>
-          <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Write and edit without leaving this page.</small></header>
+          <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Visual editor. What you see here is close to the published article.</small></header>
           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>
           <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>update('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
-          <label className={styles.field}>Article body<textarea className={styles.body} rows={30} value={form.content_html} onChange={e=>update('content_html',e.target.value)} placeholder="Write or paste the article here"/></label>
+          <div className={styles.field}><span>Article body</span><RichArticleEditor value={form.content_html} onChange={html=>update('content_html',html)} placeholder="Write or paste the article here"/></div>
           <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>update('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
         </section>
 

@@ -1,0 +1,11 @@
+diff --git a/components/admin/RichArticleEditor.tsx b/components/admin/RichArticleEditor.tsx
+--- a/components/admin/RichArticleEditor.tsx
++++ b/components/admin/RichArticleEditor.tsx
+@@ -147,7 +147,7 @@ const BLOCK_TAGS = new Set([
+   'TABLE','THEAD','TBODY','TFOOT','TR','TD','TH'
+ ]);
+
+-function containsBlockChild(element: Element) {
++function containsBlockChild(element: Element): boolean {
+   return Array.from(element.children).some(child => BLOCK_TAGS.has(child.tagName.toUpperCase()) || containsBlockChild(child));
+ }

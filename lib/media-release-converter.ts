@@ -1,3 +1,4 @@
+import { structuredTextToHtml } from './structured-text';
 export type ConverterCategory = { id: string; name: string };
 
 export type MediaReleaseDraft = {
@@ -265,7 +266,8 @@ export function convertMediaRelease(rawText: string, categories: ConverterCatego
   const bodyLines = stripHeaderAndFooter(linesWithBlanks, detectedHeadline);
   const paragraphs = toParagraphs(bodyLines).filter(p => p !== detectedHeadline);
   const summary = sentenceSummary(paragraphs);
-  const bodyHtml = paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('\n');
+  const structuredBody = bodyLines.join('\n').trim();
+  const bodyHtml = structuredTextToHtml(structuredBody || paragraphs.join('\n\n'));
   const contentHtml = `${bodyHtml}${bodyHtml && source ? '\n' : ''}${sourceNote(source)}`.trim();
   const yearMatch = releaseDate?.match(/20\d{2}/)?.[0];
   const slugBase = yearMatch && !title.includes(yearMatch) ? `${title} ${yearMatch}` : title;

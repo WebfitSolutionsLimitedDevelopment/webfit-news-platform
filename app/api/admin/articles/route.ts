@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../lib/editorial-revalidate';
+import { sanitizeArticleHtml } from '../../../../lib/article-html';
 
 const ArticleInput = z.object({
   title: z.string().trim().min(5),
@@ -56,7 +57,8 @@ export async function POST(req: Request) {
   const now = new Date().toISOString();
   const publishedAt = input.status === 'published' ? (input.published_at || now) : input.published_at;
   const { category_ids, primary_category_id, tag_names, ...article } = input;
-  const { data: created, error } = await ctx.supabase.from('articles').insert({ ...article, canonical_url: article.canonical_url || null, published_at: publishedAt }).select('id,slug').single();
+  const cleanArticle = { ...article, content_html: sanitizeArticleHtml(article.content_html || '') };
+  const { data: created, error } = await ctx.supabase.from('articles').insert({ ...cleanArticle, canonical_url: cleanArticle.canonical_url || null, published_at: publishedAt }).select('id,slug').single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const cats = Array.from(new Set([...category_ids, ...(primary_category_id ? [primary_category_id] : [])]));

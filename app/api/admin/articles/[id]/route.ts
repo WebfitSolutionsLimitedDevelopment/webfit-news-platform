@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
+import { sanitizeArticleHtml } from '../../../../../lib/article-html';
 
 const Patch = z.object({
   title:z.string().min(5).optional(),
@@ -60,6 +61,7 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
 
   const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
   const changes:any={...articleChanges};
+  if(typeof articleChanges.content_html==='string') changes.content_html=sanitizeArticleHtml(articleChanges.content_html);
   if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
 
   const {data,error}=await c.supabase.from('articles').update(changes).eq('id',id).select('id,slug,status').single();
