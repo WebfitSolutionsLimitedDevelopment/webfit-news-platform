@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
     "fast-xml-parser": "^4.5.3",
+    "google-auth-library": "^10.3.0",
     "next": "^16.0.0",
     "pdf-parse": "^2.4.5",
     "react": "^19.0.0",

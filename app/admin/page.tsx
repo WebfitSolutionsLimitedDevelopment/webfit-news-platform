@@ -1,18 +1,87 @@
 import Link from 'next/link';
 import { AdminHeader, AdminShell, StatusBadge } from '../../components/admin/AdminShell';
 import { getAdminDashboard } from '../../lib/admin-data';
+import { getGoogleAnalyticsDashboard } from '../../lib/google-analytics';
+import './dashboard-analytics.css';
+
+function compact(value:number){
+  return new Intl.NumberFormat('en-NZ',{notation:value>=10000?'compact':'standard',maximumFractionDigits:1}).format(value);
+}
+
+function duration(seconds:number){
+  if(!seconds)return '0s';
+  const minutes=Math.floor(seconds/60);
+  const remainder=Math.round(seconds%60);
+  return minutes?`${minutes}m ${remainder}s`:`${remainder}s`;
+}
+
+function shortDate(value:string){
+  if(!/^\d{8}$/.test(value))return value;
+  return `${value.slice(6,8)}/${value.slice(4,6)}`;
+}
 
 export default async function AdminDashboard(){
-  const d=await getAdminDashboard();
-  return <AdminShell active="Dashboard"><AdminHeader title="Newsroom Dashboard" description="Publish, curate and operate Webfit News from one place." actions={<Link className="admin-primary" href="/admin/articles/new">+ New Article</Link>}/>
+  const [d,ga]=await Promise.all([getAdminDashboard(),getGoogleAnalyticsDashboard()]);
+  const trendMax=Math.max(1,...ga.trend.map(point=>point.views));
+  const deviceTotal=Math.max(1,ga.devices.reduce((sum,item)=>sum+item.users,0));
+
+  const headerActions=<div className="dashboard-actions">
+    <a className="dashboard-secondary" href={ga.analyticsUrl} target="_blank" rel="noreferrer">Google Analytics</a>
+    <Link className="admin-primary" href="/admin/articles/new">+ New Article</Link>
+  </div>;
+
+  return <AdminShell active="Dashboard"><AdminHeader title="Newsroom Dashboard" description="Publish, curate and understand Webfit News from one place." actions={headerActions}/>
     <section className="admin-metrics">
       <div><span>Published today</span><strong>{d.publishedToday}</strong></div><div><span>In review</span><strong>{d.inReview}</strong></div><div><span>Drafts</span><strong>{d.drafts}</strong></div><div><span>Scheduled</span><strong>{d.scheduled}</strong></div><div><span>Total articles</span><strong>{d.articles}</strong></div><div><span>Media assets</span><strong>{d.media}</strong></div>
     </section>
-    <section className="admin-two-col"><div className="admin-card"><div className="admin-card-head"><h2>Recent articles</h2><Link href="/admin/articles">View all</Link></div><div className="admin-table-wrap"><table><thead><tr><th>Headline</th><th>Status</th><th>Updated</th></tr></thead><tbody>{d.recent.length?d.recent.map((a:any)=><tr key={a.id}><td><Link href={`/admin/articles/${a.id}`}>{a.title}</Link><small>/{a.slug}/</small></td><td><StatusBadge status={a.status}/></td><td>{new Date(a.updated_at).toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}</td></tr>):<tr><td colSpan={3}>No articles yet.</td></tr>}</tbody></table></div></div>
+
+    <section className="admin-two-col"><div className="admin-card"><div className="admin-card-head"><h2>Recent articles</h2><Link href="/admin/articles">View all</Link></div><div className="admin-table-wrap"><table><thead><tr><th>Headline</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{d.recent.length?d.recent.map((a:any)=><tr key={a.id}><td className="recent-title"><Link href={`/admin/articles/${a.id}`}>{a.title}</Link><small>/{a.slug}/</small></td><td><StatusBadge status={a.status}/></td><td>{new Date(a.updated_at).toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}</td><td><div className="recent-actions"><Link href={`/admin/articles/${a.id}`}>Edit</Link>{a.status==='published'?<a href={`/${a.slug}/`} target="_blank" rel="noreferrer">View</a>:null}</div></td></tr>):<tr><td colSpan={4}>No articles yet.</td></tr>}</tbody></table></div></div>
       <div className="admin-card"><div className="admin-card-head"><h2>Next scheduled</h2><Link href="/admin/articles?status=scheduled">Open queue</Link></div>{d.nextScheduled.length?<div className="schedule-list">{d.nextScheduled.map((a:any)=><div className="schedule-item" key={a.id}><div><Link href={`/admin/articles/${a.id}`}>{a.title}</Link><small>/{a.slug}/</small></div><time>{a.scheduled_at?new Date(a.scheduled_at).toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'}):'No time'}</time></div>)}</div>:<p className="admin-note">Nothing is scheduled. Scheduled stories publish automatically from Supabase at their due time.</p>}</div>
     </section>
+
+    <section className="analytics-section">
+      <div className="analytics-head">
+        <div><h2>Audience intelligence</h2><p>Google Analytics 4 property <span className="analytics-property">{ga.propertyId}</span>. Reporting refreshes when the dashboard loads.</p></div>
+        <div className="analytics-actions"><a className="analytics-link primary" href={ga.analyticsUrl} target="_blank" rel="noreferrer">Open full Google Analytics</a></div>
+      </div>
+
+      {!ga.configured?<div className="analytics-setup"><strong>Google Analytics reporting is ready to connect</strong><p>{ga.error} The CMS dashboard itself is fully operational. Once the service account has Viewer access to this GA4 property and the two server environment variables are added, these cards populate automatically.</p></div>:null}
+
+      <div className="analytics-metrics">
+        <div className="analytics-metric"><span>Live now</span><strong>{compact(ga.realtimeUsers)}</strong><small>Active users, realtime</small></div>
+        <div className="analytics-metric"><span>Users</span><strong>{compact(ga.users7d)}</strong><small>Last 7 days</small></div>
+        <div className="analytics-metric"><span>Users</span><strong>{compact(ga.users28d)}</strong><small>Last 28 days</small></div>
+        <div className="analytics-metric"><span>Page views</span><strong>{compact(ga.views28d)}</strong><small>Last 28 days</small></div>
+        <div className="analytics-metric"><span>Sessions</span><strong>{compact(ga.sessions28d)}</strong><small>Last 28 days</small></div>
+        <div className="analytics-metric"><span>Avg session</span><strong>{duration(ga.averageSessionDuration)}</strong><small>Last 28 days</small></div>
+      </div>
+
+      <div className="analytics-grid">
+        <div>
+          <div className="analytics-card">
+            <div className="analytics-card-head"><h3>Traffic trend</h3><small>Page views, last 28 days</small></div>
+            {ga.trend.length?<div className="analytics-trend" aria-label="Page view trend">{ga.trend.map(point=><div key={point.date} className="analytics-bar" title={`${shortDate(point.date)}: ${point.views} views`} style={{height:`${Math.max(4,(point.views/trendMax)*100)}%`}}/>)}</div>:<div className="analytics-empty">Traffic trend appears here when Google Analytics reporting is connected.</div>}
+          </div>
+          <div className="analytics-card">
+            <div className="analytics-card-head"><h3>Top content</h3><small>Last 28 days</small></div>
+            {ga.topPages.length?<div className="analytics-list">{ga.topPages.map((page,index)=><div className="analytics-row" key={`${page.path}-${index}`}><div><strong>{page.title}</strong><small>{page.path}</small></div><span>{compact(page.views)} views</span></div>)}</div>:<div className="analytics-empty">Top-performing pages will appear here.</div>}
+          </div>
+        </div>
+        <div>
+          <div className="analytics-card">
+            <div className="analytics-card-head"><h3>Traffic sources</h3><small>Sessions, last 28 days</small></div>
+            {ga.sources.length?<div className="analytics-list">{ga.sources.map((item,index)=><div className="analytics-row" key={`${item.source}-${index}`}><strong>{item.source}</strong><span>{compact(item.sessions)}</span></div>)}</div>:<div className="analytics-empty">Acquisition sources will appear here.</div>}
+          </div>
+          <div className="analytics-card">
+            <div className="analytics-card-head"><h3>Devices</h3><small>Active users, last 28 days</small></div>
+            {ga.devices.length?<div>{ga.devices.map(item=><div className="analytics-device" key={item.device}><strong>{item.device}</strong><div className="analytics-device-track"><div className="analytics-device-fill" style={{width:`${Math.max(2,(item.users/deviceTotal)*100)}%`}}/></div><span>{Math.round((item.users/deviceTotal)*100)}%</span></div>)}</div>:<div className="analytics-empty">Mobile, desktop and tablet usage will appear here.</div>}
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section className="admin-two-col"><div className="admin-card"><h2>Newsroom shortcuts</h2><div className="admin-shortcuts"><Link href="/admin/articles?status=in_review"><strong>{d.inReview}</strong><span>Stories awaiting review</span></Link><Link href="/admin/articles?status=draft"><strong>{d.drafts}</strong><span>Draft stories</span></Link><Link href="/admin/media"><strong>{d.failedMedia}</strong><span>Media needing attention</span></Link><Link href="/admin/homepage"><strong>Home</strong><span>Curate homepage</span></Link></div></div>
-      <div className="admin-card"><h2>Platform status</h2><div className="migration-check"><span>Own database</span><b>Ready</b></div><div className="migration-check"><span>Own newsroom CMS</span><b>Ready</b></div><div className="migration-check"><span>Scheduled publishing</span><b>Active</b></div><div className="migration-check"><span>Archive transfer tooling</span><b>Prepared</b></div><p className="admin-note">Normal publishing runs entirely from Webfit News CMS, Supabase and the Next.js frontend. The old publishing platform is only a temporary archive source until transfer and verification are complete.</p></div>
+      <div className="admin-card"><h2>Platform status</h2><div className="migration-check"><span>Own database</span><b>Ready</b></div><div className="migration-check"><span>Own newsroom CMS</span><b>Ready</b></div><div className="migration-check"><span>Scheduled publishing</span><b>Active</b></div><div className="migration-check"><span>Google Analytics</span><b>{ga.configured?'Connected':'Setup needed'}</b></div><p className="admin-note">Normal publishing runs from Webfit News CMS, Supabase and the Next.js frontend. Audience reporting is read server-side from GA4 and no Google credential is exposed to the browser.</p></div>
     </section>
   </AdminShell>
 }
