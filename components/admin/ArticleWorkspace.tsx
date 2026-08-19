@@ -26,6 +26,27 @@ function currentAucklandDate(){
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
+function hasMeaningfulArticleContent(html:string){
+  const value=(html||'').trim();
+  if(!value)return false;
+
+  // Media and structural content are meaningful even if there is little text.
+  if(/<(img|iframe|video|table|figure)\b/i.test(value))return true;
+
+  // Rich-text editors commonly leave empty paragraph/div markup behind.
+  // Strip tags, non-breaking spaces and zero-width characters before deciding
+  // whether a supposedly blank editor actually contains story text.
+  const text=value
+    .replace(/<br\s*\/?>/gi,' ')
+    .replace(/&nbsp;|&#160;/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  return text.length>0;
+}
+
 export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
   initialCategoryIds=[],initialPrimaryCategoryId='',
@@ -145,10 +166,10 @@ export default function ArticleWorkspace({
   }
 
   async function importSource(){
-    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing another source.');return}
+    if(title.trim()||hasMeaningfulArticleContent(form.content_html)){setMessageKind('error');setMessage('This article already has story content. Start from a blank new article before importing another source.');return}
     const file=sourceFileRef.current?.files?.[0];
     if(!file&&!sourceUrl.trim()){setMessage('Choose a PDF, Word or TXT file, or enter a source URL.');return}
-    setConverterBusy(true);setMessage('');
+    setConverterBusy(true);setMessageKind('info');setMessage('Reading source and preparing article draft...');
     try{
       const fd=new FormData();
       if(file)fd.set('file',file);
@@ -158,15 +179,15 @@ export default function ArticleWorkspace({
       const d=await r.json();
       if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
       applyImportedDraft(d.draft,d.raw_text);
-      setMessage(`Source imported from ${d.source_label||'document'}. Review the article, attribution, category and SEO before publishing.`);
-    }catch(e:any){setMessage(e.message||'Could not import source')}
+      setMessageKind('success');setMessage(`Source imported from ${d.source_label||'document'}. Headline, story body and SEO fields are ready for review.`);
+    }catch(e:any){setMessageKind('error');setMessage(e.message||'Could not import source')}
     finally{setConverterBusy(false)}
   }
 
   async function convertRelease(){
     if(releaseText.trim().length<40){setMessage('Paste the full media release before converting.');return}
-    if(title.trim()||form.content_html.trim()){setMessage('This article already has story content. Start from a blank new article before importing a media release.');return}
-    setConverterBusy(true);setMessage('');
+    if(title.trim()||hasMeaningfulArticleContent(form.content_html)){setMessageKind('error');setMessage('This article already has story content. Start from a blank new article before importing a media release.');return}
+    setConverterBusy(true);setMessageKind('info');setMessage('Preparing article draft...');
     try{
       const r=await fetch('/api/admin/media-release-converter',{
         method:'POST',
@@ -177,8 +198,9 @@ export default function ArticleWorkspace({
       if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
       const draft=d.draft;
       applyImportedDraft(draft);
-      setMessage('Media release converted into a draft. Review the story, attribution, category and SEO before publishing.');
-    }catch(e:any){setMessage(e.message||'Could not convert media release')}
+      setMessageKind('success');
+      setMessage('Media release converted into a draft. Headline, story body, excerpt and SEO fields have been prepared for review.');
+    }catch(e:any){setMessageKind('error');setMessage(e.message||'Could not convert media release')}
     finally{setConverterBusy(false)}
   }
 
