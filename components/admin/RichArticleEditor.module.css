@@ -12,3 +12,21 @@
 .quickMedia button+button{background:#fff;color:#111317;border:1px solid #cbd1d7}
 .quickMedia button:hover{transform:translateY(-1px)}
 @media(max-width:760px){.toolbar{position:sticky;top:0}.quickMedia{bottom:12px;width:calc(100% - 28px);justify-content:center}.quickMedia button{flex:1}}
+
+.editor figure[data-editor-selected="true"]{
+  outline:3px solid #111317;
+  outline-offset:4px;
+  border-radius:8px;
+}
+.editor .article-gallery-item[data-editor-selected="true"]{
+  outline:3px solid #111317;
+  outline-offset:2px;
+}
+.quickMedia .removeMedia{
+  background:#fff0f0;
+  color:#9b1c1c;
+  border:1px solid #efb5b5;
+}
+.quickMedia .removeMedia:hover{
+  background:#ffe3e3;
+}

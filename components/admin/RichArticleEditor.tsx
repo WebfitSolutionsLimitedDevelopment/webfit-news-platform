@@ -351,6 +351,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   const editorRef = useRef<HTMLDivElement>(null);
   const mediaFileRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const selectedMediaRef = useRef<HTMLElement | null>(null);
   const lastValue = useRef(value);
 
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -361,6 +362,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   const [mediaMessage, setMediaMessage] = useState('');
   const [galleryIds, setGalleryIds] = useState<string[]>([]);
   const [editorNotice, setEditorNotice] = useState('');
+  const [selectedMediaLabel, setSelectedMediaLabel] = useState('');
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -643,6 +645,68 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     }
   }
 
+  function clearSelectedMedia() {
+    const current = selectedMediaRef.current;
+    if (current) current.removeAttribute('data-editor-selected');
+    selectedMediaRef.current = null;
+    setSelectedMediaLabel('');
+  }
+
+  function handleEditorClick(event: React.MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    const media = target.closest('figure.article-inline-image, figure.article-gallery-item') as HTMLElement | null;
+
+    if (!media) {
+      clearSelectedMedia();
+      return;
+    }
+
+    if (selectedMediaRef.current && selectedMediaRef.current !== media) {
+      selectedMediaRef.current.removeAttribute('data-editor-selected');
+    }
+
+    selectedMediaRef.current = media;
+    media.setAttribute('data-editor-selected', 'true');
+    setSelectedMediaLabel(
+      media.classList.contains('article-gallery-item') ? 'gallery image' : 'inline image'
+    );
+  }
+
+  function removeSelectedMedia() {
+    const media = selectedMediaRef.current;
+    const editor = editorRef.current;
+    if (!media || !editor || !editor.contains(media)) {
+      clearSelectedMedia();
+      setEditorNotice('Click an image in the article first, then choose Remove image.');
+      return;
+    }
+
+    const isGalleryItem = media.classList.contains('article-gallery-item');
+    const parentGallery = isGalleryItem ? media.closest('.article-gallery') as HTMLElement | null : null;
+    const next = media.nextElementSibling;
+
+    media.remove();
+
+    // Remove an empty gallery automatically.
+    if (parentGallery && !parentGallery.querySelector('.article-gallery-item')) {
+      const galleryNext = parentGallery.nextElementSibling;
+      parentGallery.remove();
+      if (galleryNext?.tagName === 'P' && !galleryNext.textContent?.trim()) galleryNext.remove();
+    } else if (!isGalleryItem && next?.tagName === 'P' && !next.textContent?.trim()) {
+      // Inline image insertion adds a spacer paragraph. Remove it with the image.
+      next.remove();
+    }
+
+    selectedMediaRef.current = null;
+    setSelectedMediaLabel('');
+    emit();
+    setEditorNotice(
+      isGalleryItem
+        ? 'Gallery image removed from the article body. Save or update the article to publish this change.'
+        : 'Image removed from the article body. Save or update the article to publish this change.'
+    );
+  }
+
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
     const html = event.clipboardData.getData('text/html');
     const text = event.clipboardData.getData('text/plain');
@@ -688,7 +752,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery to select or upload up to 20 images. Word formatting, tables, lists, quotes, links and YouTube embeds remain supported.</div>
+    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery for multiple images. To remove an image, click it in the article and choose Remove image from the floating controls.</div>
     {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
@@ -699,12 +763,14 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       onInput={emit}
       onBlur={emit}
       onPaste={handlePaste}
+      onClick={handleEditorClick}
       dangerouslySetInnerHTML={{__html:value || ''}}
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
       <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image')}}>+ Image</button>
       <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery')}}>Gallery</button>
+      {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>Remove image</button> : null}
     </div>
 
     {mediaOpen && <div className={styles.mediaModal}>
