@@ -41,6 +41,7 @@ export default function ArticleWorkspace({
 
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [messageKind,setMessageKind]=useState<'info'|'success'|'error'>('info');
   const [title,setTitle]=useState(article?.title||'');
   const [slug,setSlug]=useState(article?.slug||'');
   const [slugTouched,setSlugTouched]=useState(Boolean(article?.slug));
@@ -199,23 +200,35 @@ export default function ArticleWorkspace({
   }
 
   async function save(finalStatus=status){
-    if(title.trim().length<5){setMessage('Add a clear headline before saving.');return}
-    if(finalStatus==='scheduled'&&!form.scheduled_at){setMessage('Choose a schedule date and time.');return}
-    setBusy(true);setMessage('');
+    if(title.trim().length<5){setMessageKind('error');setMessage('Add a clear headline before saving.');return}
+    if(finalStatus==='scheduled'&&!form.scheduled_at){setMessageKind('error');setMessage('Choose a schedule date and time.');return}
+    setBusy(true);
+    setMessageKind('info');
+    setMessage(finalStatus==='published'?'Publishing article...':finalStatus==='scheduled'?'Scheduling article...':'Saving changes...');
     try{
       const r=await fetch(isEdit?`/api/admin/articles/${article.id}`:'/api/admin/articles',{
         method:isEdit?'PATCH':'POST',
         headers:{'content-type':'application/json'},
         body:JSON.stringify(buildPayload(finalStatus))
       });
-      const d=await r.json();
-      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
+      const d=await r.json().catch(()=>({error:`Server returned ${r.status}`}));      
+      if(!r.ok){
+        const detail=typeof d.error==='string'?d.error:d.error?.fieldErrors?Object.entries(d.error.fieldErrors).map(([key,value])=>`${key}: ${(value as string[]).join(', ')}`).join(' | '):JSON.stringify(d.error||d);
+        throw new Error(detail||`Could not ${finalStatus==='published'?'publish':'save'} article.`);
+      }
+      if(finalStatus==='published'&&d.article?.status&&d.article.status!=='published'){
+        throw new Error(`Publish request completed but the database returned status "${d.article.status}". The article was not published.`);
+      }
       setStatus(finalStatus);
+      setMessageKind('success');
       setMessage(finalStatus==='published'?(isEdit?'Published article updated successfully.':'Article published successfully.'):finalStatus==='scheduled'?'Article scheduled successfully.':'Changes saved.');
-      if(!isEdit)router.push(`/admin/articles/${d.article.id}`);
+      if(!isEdit&&d.article?.id)router.push(`/admin/articles/${d.article.id}`);
       router.refresh();
-    }catch(e:any){setMessage(e.message||'Could not save article')}
-    finally{setBusy(false)}
+    }catch(e:any){
+      setMessageKind('error');
+      setMessage(e.message||'Could not save article');
+      window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
+    }finally{setBusy(false)}
   }
 
   const selectedCategories=categories.filter(c=>categoryIds.includes(c.id)||c.id===form.primary_category_id);
@@ -223,10 +236,10 @@ export default function ArticleWorkspace({
   return <div className={styles.page}>
     <header className={styles.top}>
       <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
-      <div className={styles.actions}>{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Saving...':isEdit?'Save changes':'Save draft'}</button><button className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
+      <div className={styles.actions}>{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
     </header>
 
-    {message&&<div className={styles.message}>{message}</div>}
+    {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
 
     <div className={styles.layout}>
       <main className={styles.main}>

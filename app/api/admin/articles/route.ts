@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const publishedAt = input.status === 'published' ? (input.published_at || now) : input.published_at;
   const { category_ids, primary_category_id, tag_names, ...article } = input;
   const cleanArticle = { ...article, content_html: sanitizeArticleHtml(article.content_html || '') };
-  const { data: created, error } = await ctx.supabase.from('articles').insert({ ...cleanArticle, canonical_url: cleanArticle.canonical_url || null, published_at: publishedAt }).select('id,slug').single();
+  const { data: created, error } = await ctx.supabase.from('articles').insert({ ...cleanArticle, canonical_url: cleanArticle.canonical_url || null, published_at: publishedAt }).select('id,slug,status').single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const cats = Array.from(new Set([...category_ids, ...(primary_category_id ? [primary_category_id] : [])]));

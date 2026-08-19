@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './RichArticleEditor.module.css';
 
 type Props = {
@@ -93,10 +93,10 @@ function plainTextToHtml(value: string) {
       continue;
     }
 
-    if (/^[-*â€¢]\s+/.test(line)) {
+    if (/^[-*•]\s+/.test(line)) {
       const items: string[] = [];
-      while (i < lines.length && /^[-*â€¢]\s+/.test(lines[i].trim())) {
-        items.push(lines[i].trim().replace(/^[-*â€¢]\s+/, ''));
+      while (i < lines.length && /^[-*•]\s+/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^[-*•]\s+/, ''));
         i += 1;
       }
       out.push(`<ul>${items.map(item => `<li>${inlinePlain(item)}</li>`).join('')}</ul>`);
@@ -127,7 +127,7 @@ function plainTextToHtml(value: string) {
     i += 1;
     while (i < lines.length && lines[i].trim()) {
       const next = lines[i].trim();
-      if (/^(#{1,4})\s+/.test(next) || /^[-*â€¢]\s+/.test(next) || /^\d+[.)]\s+/.test(next) || /^>\s?/.test(next)) break;
+      if (/^(#{1,4})\s+/.test(next) || /^[-*•]\s+/.test(next) || /^\d+[.)]\s+/.test(next) || /^>\s?/.test(next)) break;
       if (next.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1])) break;
       if (youtubeEmbed(next)) break;
       paragraph.push(next);
@@ -182,7 +182,7 @@ function removeLeadingListMarker(element: Element) {
   const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const first = walker.nextNode();
   if (!first) return;
-  first.textContent = (first.textContent || '').replace(/^\s*(?:[â€¢Â·â–ªâ—¦o]|\d+[.)])\s*/, '');
+  first.textContent = (first.textContent || '').replace(/^\s*(?:[•·▪◦o]|\d+[.)])\s*/, '');
 }
 
 function normalizeWordLists(doc: Document) {
@@ -333,9 +333,33 @@ function sanitizePastedHtml(html: string) {
   return doc.body.innerHTML;
 }
 
+
+type MediaItem = {
+  id: string;
+  public_url: string | null;
+  alt_text: string | null;
+  caption?: string | null;
+  credit?: string | null;
+  filename: string | null;
+  width: number | null;
+  height: number | null;
+};
+
+type MediaMode = 'image' | 'gallery';
+
 export function RichArticleEditor({ value, onChange, placeholder = 'Write or paste the article here' }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const mediaFileRef = useRef<HTMLInputElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const lastValue = useRef(value);
+
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [mediaMode, setMediaMode] = useState<MediaMode>('image');
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [mediaMessage, setMediaMessage] = useState('');
+  const [galleryIds, setGalleryIds] = useState<string[]>([]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -356,10 +380,44 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     emit();
   }
 
+  function rememberSelection() {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    if (!editor || !selection || !selection.rangeCount) {
+      savedRangeRef.current = null;
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer as Element
+      : range.commonAncestorContainer.parentElement;
+    savedRangeRef.current = container && editor.contains(container) ? range.cloneRange() : null;
+  }
+
+  function restoreSelection() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    if (savedRangeRef.current) {
+      try {
+        selection.addRange(savedRangeRef.current);
+        return;
+      } catch {}
+    }
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.addRange(range);
+  }
+
   function insertHtml(html: string) {
-    editorRef.current?.focus();
+    restoreSelection();
     document.execCommand('insertHTML', false, html);
     emit();
+    savedRangeRef.current = null;
   }
 
   function addLink() {
@@ -380,15 +438,143 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     if (!url) return;
     const embed = youtubeEmbed(url);
     if (!embed) { window.alert('That does not look like a valid YouTube URL.'); return; }
+    rememberSelection();
     insertHtml(embed);
   }
 
   function addTable() {
-    const rows = Math.min(12, Math.max(2, Number(window.prompt('Number of rows', '3')) || 3));
-    const columns = Math.min(8, Math.max(2, Number(window.prompt('Number of columns', '3')) || 3));
+    const rows = Math.min(20, Math.max(2, Number(window.prompt('Number of rows', '3')) || 3));
+    const columns = Math.min(10, Math.max(2, Number(window.prompt('Number of columns', '3')) || 3));
     const header = `<thead><tr>${Array.from({length:columns},(_,index)=>`<th>Heading ${index+1}</th>`).join('')}</tr></thead>`;
     const body = `<tbody>${Array.from({length:rows-1},()=>`<tr>${Array.from({length:columns},()=>'<td><br></td>').join('')}</tr>`).join('')}</tbody>`;
+    rememberSelection();
     insertHtml(`<table>${header}${body}</table><p><br></p>`);
+  }
+
+  async function loadMedia(q = '') {
+    setMediaBusy(true);
+    setMediaMessage('');
+    try {
+      const response = await fetch(`/api/admin/media?q=${encodeURIComponent(q)}&limit=100`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load media library.');
+      setMediaItems(data.media || []);
+    } catch (error: any) {
+      setMediaMessage(error.message || 'Could not load media library.');
+    } finally {
+      setMediaBusy(false);
+    }
+  }
+
+  async function openMedia(mode: MediaMode) {
+    rememberSelection();
+    setMediaMode(mode);
+    setGalleryIds([]);
+    setMediaMessage('');
+    setMediaOpen(true);
+    if (!mediaItems.length) await loadMedia('');
+  }
+
+  function imageHtml(item: MediaItem) {
+    if (!item.public_url) return '';
+    const alt = escapeHtml(item.alt_text || item.filename || '');
+    const caption = (item.caption || '').trim();
+    const credit = (item.credit || '').trim();
+    const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
+    return `<figure class="article-inline-image"><img src="${escapeHtml(item.public_url)}" alt="${alt}" loading="lazy">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure><p><br></p>`;
+  }
+
+  function galleryHtml(items: MediaItem[]) {
+    const figures = items
+      .filter(item => item.public_url)
+      .map(item => {
+        const alt = escapeHtml(item.alt_text || item.filename || '');
+        const caption = (item.caption || '').trim();
+        const credit = (item.credit || '').trim();
+        const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
+        return `<figure class="article-gallery-item"><img src="${escapeHtml(item.public_url!)}" alt="${alt}" loading="lazy">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure>`;
+      })
+      .join('');
+    return figures ? `<div class="article-gallery">${figures}</div><p><br></p>` : '';
+  }
+
+  function chooseImage(item: MediaItem) {
+    if (mediaMode === 'image') {
+      const html = imageHtml(item);
+      if (html) insertHtml(html);
+      setMediaOpen(false);
+      return;
+    }
+    setGalleryIds(current => {
+      if (current.includes(item.id)) return current.filter(id => id !== item.id);
+      if (current.length >= 20) {
+        setMediaMessage('A gallery can contain up to 20 images.');
+        return current;
+      }
+      return [...current, item.id];
+    });
+  }
+
+  function insertSelectedGallery() {
+    const selected = galleryIds
+      .map(id => mediaItems.find(item => item.id === id))
+      .filter(Boolean) as MediaItem[];
+    if (!selected.length) {
+      setMediaMessage('Select at least one image for the gallery.');
+      return;
+    }
+    const html = galleryHtml(selected);
+    if (html) insertHtml(html);
+    setMediaOpen(false);
+    setGalleryIds([]);
+  }
+
+  async function uploadMediaFiles() {
+    const files = Array.from(mediaFileRef.current?.files || []);
+    if (!files.length) {
+      setMediaMessage('Choose one or more image files first.');
+      return;
+    }
+    if (mediaMode === 'image' && files.length > 1) {
+      setMediaMessage('Choose one image for a full-width inline image, or use Gallery for multiple images.');
+      return;
+    }
+    if (mediaMode === 'gallery' && files.length + galleryIds.length > 20) {
+      setMediaMessage('A gallery can contain up to 20 images.');
+      return;
+    }
+
+    setMediaBusy(true);
+    setMediaMessage('');
+    const uploaded: MediaItem[] = [];
+    try {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) throw new Error(`${file.name} is not an image.`);
+        const form = new FormData();
+        form.set('file', file);
+        form.set('alt_text', file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' '));
+        const response = await fetch('/api/admin/media', { method: 'POST', body: form });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `Could not upload ${file.name}.`);
+        uploaded.push(data.media);
+      }
+
+      setMediaItems(current => [...uploaded, ...current.filter(item => !uploaded.some(upload => upload.id === item.id))]);
+
+      if (mediaMode === 'image') {
+        const html = imageHtml(uploaded[0]);
+        if (html) insertHtml(html);
+        setMediaOpen(false);
+      } else {
+        setGalleryIds(current => [...current, ...uploaded.map(item => item.id)].slice(0, 20));
+        setMediaMessage(`${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded and selected.`);
+      }
+      if (mediaFileRef.current) mediaFileRef.current.value = '';
+    } catch (error: any) {
+      setMediaMessage(error.message || 'Image upload failed.');
+    } finally {
+      setMediaBusy(false);
+    }
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
@@ -396,6 +582,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     const text = event.clipboardData.getData('text/plain');
     const singleYoutube = text.trim() && !text.trim().includes('\n') ? youtubeEmbed(text.trim()) : '';
     event.preventDefault();
+    rememberSelection();
     if (singleYoutube) insertHtml(singleYoutube);
     else if (html) insertHtml(sanitizePastedHtml(html));
     else insertHtml(plainTextToHtml(text));
@@ -423,6 +610,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Quote',()=>command('formatBlock','blockquote'))}
       </div>
       <div className={styles.group}>
+        {toolbarButton('Image',()=>openMedia('image'),'Insert an image at the cursor')}
+        {toolbarButton('Gallery',()=>openMedia('gallery'),'Insert up to 20 images as a gallery')}
         {toolbarButton('Table',addTable)}
         {toolbarButton('YouTube',addYoutube)}
         {toolbarButton('Line',()=>command('insertHorizontalRule'))}
@@ -433,7 +622,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Paste formatted text directly from Word or the web. Bold, italic, headings, links, lists, quotes and tables are preserved without turning normal text bold. Paste a YouTube URL on its own line to embed the video.</div>
+    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery to select or upload up to 20 images. Word formatting, tables, lists, quotes, links and YouTube embeds remain supported.</div>
     <div
       ref={editorRef}
       className={styles.editor}
@@ -445,6 +634,56 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       onPaste={handlePaste}
       dangerouslySetInnerHTML={{__html:value || ''}}
     />
+
+    {mediaOpen && <div className={styles.mediaModal}>
+      <button type="button" className={styles.mediaBackdrop} aria-label="Close image library" onClick={()=>setMediaOpen(false)}/>
+      <div className={styles.mediaDialog}>
+        <header className={styles.mediaHeader}>
+          <div>
+            <span>ARTICLE MEDIA</span>
+            <h3>{mediaMode === 'gallery' ? 'Build image gallery' : 'Insert image'}</h3>
+            <p>{mediaMode === 'gallery' ? `${galleryIds.length}/20 selected. Images will appear where your cursor was.` : 'Choose or upload an image. It will be inserted where your cursor was.'}</p>
+          </div>
+          <button type="button" onClick={()=>setMediaOpen(false)}>Close</button>
+        </header>
+
+        <div className={styles.mediaUpload}>
+          <div><strong>Upload {mediaMode === 'gallery' ? 'images' : 'image'}</strong><small>JPG, PNG, WebP or AVIF. Maximum 20 MB each.</small></div>
+          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery'}/>
+          <button type="button" disabled={mediaBusy} onClick={uploadMediaFiles}>{mediaBusy ? 'Uploading...' : 'Upload'}</button>
+        </div>
+
+        <div className={styles.mediaSearch}>
+          <input value={mediaSearch} onChange={event=>setMediaSearch(event.target.value)} onKeyDown={event=>{if(event.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/>
+          <button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch)}>Search</button>
+        </div>
+
+        {mediaMessage && <div className={styles.mediaMessage}>{mediaMessage}</div>}
+
+        {mediaBusy && !mediaItems.length ? <div className={styles.mediaLoading}>Loading images...</div> :
+          <div className={styles.mediaGrid}>
+            {mediaItems.map(item => {
+              const selected = galleryIds.includes(item.id);
+              return <button
+                type="button"
+                key={item.id}
+                className={selected ? styles.mediaSelected : ''}
+                onClick={()=>chooseImage(item)}
+              >
+                <span>{item.public_url ? <img src={item.public_url} alt={item.alt_text || item.filename || ''}/> : null}</span>
+                <strong>{item.filename || 'Untitled image'}</strong>
+                <small>{item.width && item.height ? `${item.width} x ${item.height}` : 'Image'}</small>
+                {mediaMode === 'gallery' && <b>{selected ? 'Selected' : 'Select'}</b>}
+              </button>;
+            })}
+          </div>
+        }
+
+        {mediaMode === 'gallery' && <footer className={styles.mediaFooter}>
+          <span>{galleryIds.length} image{galleryIds.length === 1 ? '' : 's'} selected</span>
+          <button type="button" disabled={!galleryIds.length || mediaBusy} onClick={insertSelectedGallery}>Insert gallery</button>
+        </footer>}
+      </div>
+    </div>}
   </div>;
 }
-
