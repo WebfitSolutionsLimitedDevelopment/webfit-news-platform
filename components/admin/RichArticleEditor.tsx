@@ -360,6 +360,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaMessage, setMediaMessage] = useState('');
   const [galleryIds, setGalleryIds] = useState<string[]>([]);
+  const [editorNotice, setEditorNotice] = useState('');
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -414,10 +415,58 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   }
 
   function insertHtml(html: string) {
-    restoreSelection();
-    document.execCommand('insertHTML', false, html);
+    const editor = editorRef.current;
+    if (!editor || !html) return;
+
+    let range = savedRangeRef.current?.cloneRange() || null;
+    const rangeContainer = range
+      ? (range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+          ? range.commonAncestorContainer as Element
+          : range.commonAncestorContainer.parentElement)
+      : null;
+
+    if (!range || !rangeContainer || !editor.contains(rangeContainer)) {
+      range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+    }
+
+    // Block media should sit between paragraphs rather than becoming an invalid
+    // child of a paragraph, heading or list item.
+    const isBlockInsert = /^\s*<(figure|div\s+class=["']article-gallery|table|iframe|hr)\b/i.test(html);
+    if (isBlockInsert) {
+      const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer as Element
+        : range.startContainer.parentElement;
+      const block = startElement?.closest('p,li,h2,h3,h4,blockquote');
+      if (block && editor.contains(block)) {
+        range.setStartAfter(block);
+        range.collapse(true);
+      }
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const fragment = template.content;
+    const lastInserted = fragment.lastChild;
+
+    range.deleteContents();
+    range.insertNode(fragment);
+
+    const selection = window.getSelection();
+    if (selection && lastInserted && lastInserted.parentNode) {
+      const after = document.createRange();
+      after.setStartAfter(lastInserted);
+      after.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(after);
+      savedRangeRef.current = after.cloneRange();
+    } else {
+      savedRangeRef.current = null;
+    }
+
+    editor.normalize();
     emit();
-    savedRangeRef.current = null;
   }
 
   function addLink() {
@@ -501,7 +550,10 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   function chooseImage(item: MediaItem) {
     if (mediaMode === 'image') {
       const html = imageHtml(item);
-      if (html) insertHtml(html);
+      if (html) {
+        insertHtml(html);
+        setEditorNotice('Image inserted into the article body. Save or update the article to publish this change.');
+      }
       setMediaOpen(false);
       return;
     }
@@ -524,7 +576,10 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       return;
     }
     const html = galleryHtml(selected);
-    if (html) insertHtml(html);
+    if (html) {
+      insertHtml(html);
+      setEditorNotice(`${selected.length} images inserted as a gallery. Save or update the article to publish this change.`);
+    }
     setMediaOpen(false);
     setGalleryIds([]);
   }
@@ -563,7 +618,10 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
       if (mediaMode === 'image') {
         const html = imageHtml(uploaded[0]);
-        if (html) insertHtml(html);
+        if (html) {
+          insertHtml(html);
+          setEditorNotice('Image uploaded and inserted into the article body. Save or update the article to publish this change.');
+        }
         setMediaOpen(false);
       } else {
         setGalleryIds(current => [...current, ...uploaded.map(item => item.id)].slice(0, 20));
@@ -623,6 +681,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       </div>
     </div>
     <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery to select or upload up to 20 images. Word formatting, tables, lists, quotes, links and YouTube embeds remain supported.</div>
+    {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
       className={styles.editor}
@@ -634,6 +693,11 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       onPaste={handlePaste}
       dangerouslySetInnerHTML={{__html:value || ''}}
     />
+
+    <div className={styles.quickMedia} aria-label="Quick article media controls">
+      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image')}}>+ Image</button>
+      <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery')}}>Gallery</button>
+    </div>
 
     {mediaOpen && <div className={styles.mediaModal}>
       <button type="button" className={styles.mediaBackdrop} aria-label="Close image library" onClick={()=>setMediaOpen(false)}/>

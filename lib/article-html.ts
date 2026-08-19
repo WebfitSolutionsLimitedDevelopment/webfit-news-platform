@@ -2,7 +2,7 @@ import sanitizeHtml from 'sanitize-html';
 
 const ARTICLE_TAGS = Array.from(new Set([
   ...sanitizeHtml.defaults.allowedTags,
-  'figure','figcaption','iframe','video','source','picture','thead','tbody','tfoot','caption',
+  'figure','figcaption','iframe','video','source','picture','img','div','thead','tbody','tfoot','caption',
 ]));
 
 export function sanitizeArticleHtml(value: string) {
