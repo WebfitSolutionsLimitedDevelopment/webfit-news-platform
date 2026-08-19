@@ -165,6 +165,83 @@ export default function ArticleWorkspace({
     });
   }
 
+  function clearSourceOnly(){
+    setReleaseText('');
+    setSourceUrl('');
+    setConverterResult(null);
+    if(sourceFileRef.current)sourceFileRef.current.value='';
+    setMessageKind('success');
+    setMessage('Source cleared. The prepared article fields were left unchanged.');
+  }
+
+  function clearArticleBodyOnly(){
+    if(hasMeaningfulArticleContent(form.content_html)){
+      const confirmed=window.confirm('Clear the article body only? Headline, excerpt, SEO fields, source text and featured image will be kept.');
+      if(!confirmed)return;
+    }
+    update('content_html','');
+    setMessageKind('success');
+    setMessage('Article body cleared. Other article fields were left unchanged.');
+  }
+
+  function clearAllFields(){
+    const hasAnything=
+      Boolean(title.trim()||subtitleOrExcerptPresent()||hasMeaningfulArticleContent(form.content_html)||
+      releaseText.trim()||sourceUrl.trim()||slug.trim()||tags.trim()||categoryIds.length||
+      form.primary_category_id||form.featured_media_id||form.seo_title||form.meta_description||
+      form.social_title||form.social_description||form.canonical_url);
+
+    if(hasAnything){
+      const confirmed=window.confirm(
+        'Clear this entire new article? This will remove the source, headline, subheadline, article body, excerpt, SEO/social fields, categories, tags and featured image from this unsaved form.'
+      );
+      if(!confirmed)return;
+    }
+
+    setTitle('');
+    setSlug('');
+    setSlugTouched(false);
+    setStatus('draft');
+    setArticleType('news');
+    setTags('');
+    setCategoryIds([]);
+    setCategorySearch('');
+    setMedia(null);
+    setReleaseText('');
+    setSourceUrl('');
+    setConverterResult(null);
+    setForm({
+      subtitle:'',
+      excerpt:'',
+      content_html:'',
+      author_id:'',
+      primary_category_id:'',
+      featured_media_id:'',
+      seo_title:'',
+      meta_description:'',
+      social_title:'',
+      social_description:'',
+      canonical_url:'',
+      published_at:currentAucklandDate(),
+      scheduled_at:'',
+      is_breaking:false,
+      is_featured:false,
+      is_editor_pick:false,
+      is_homepage_hero:false
+    });
+
+    if(fileRef.current)fileRef.current.value='';
+    if(sourceFileRef.current)sourceFileRef.current.value='';
+
+    setMessageKind('success');
+    setMessage('All new-article fields cleared. You can start again with a fresh source.');
+    window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
+  }
+
+  function subtitleOrExcerptPresent(){
+    return Boolean(form.subtitle.trim()||form.excerpt.trim());
+  }
+
   async function importSource(){
     if(title.trim()||hasMeaningfulArticleContent(form.content_html)){setMessageKind('error');setMessage('This article already has story content. Start from a blank new article before importing another source.');return}
     const file=sourceFileRef.current?.files?.[0];
@@ -258,7 +335,7 @@ export default function ArticleWorkspace({
   return <div className={styles.page}>
     <header className={styles.top}>
       <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
-      <div className={styles.actions}>{isEdit?<a href="/admin/articles/new">+ New Article</a>:null}{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
+      <div className={styles.actions}>{!isEdit?<button type="button" className={styles.clearAllButton} disabled={busy||converterBusy} onClick={clearAllFields}>Clear all fields</button>:null}{isEdit?<a href="/admin/articles/new">+ New Article</a>:null}{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
     </header>
 
     {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
@@ -283,7 +360,7 @@ export default function ArticleWorkspace({
           <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
           <div className={styles.converterActions}>
             <button className={styles.convertButton} disabled={converterBusy||releaseText.trim().length<40} onClick={convertRelease}>{converterBusy?'Preparing draft...':'Prepare article draft'}</button>
-            <button disabled={converterBusy||(!releaseText&&!sourceUrl)} onClick={()=>{setReleaseText('');setSourceUrl('');setConverterResult(null);if(sourceFileRef.current)sourceFileRef.current.value=''}}>Clear source</button>
+            <button type="button" disabled={converterBusy||(!releaseText&&!sourceUrl&&!sourceFileRef.current?.files?.length)} onClick={clearSourceOnly}>Clear source only</button>
             <small>{releaseText.trim()?`${releaseText.trim().split(/\s+/).length} source words`:'Files and URLs are extracted by Webfit News. Nothing is sent to ChatGPT or another AI provider.'}</small>
           </div>
           {converterResult&&<div className={styles.converterResult}>
@@ -300,7 +377,7 @@ export default function ArticleWorkspace({
           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Visual editor. What you see here is close to the published article.</small></header>
           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>
           <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>update('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
-          <div className={styles.field}><span>Article body</span><RichArticleEditor value={form.content_html} onChange={html=>update('content_html',html)} placeholder="Write or paste the article here"/></div>
+          <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div><RichArticleEditor value={form.content_html} onChange={html=>update('content_html',html)} placeholder="Write or paste the article here"/></div>
           <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>update('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
         </section>
 
