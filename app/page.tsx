@@ -24,14 +24,26 @@ function StandardSection({title,stories,index}:{title:string;stories:any[];index
 export default async function Home(){
   let breaking:any[]=[];try{breaking=await getBreakingStories(4)}catch{breaking=[]}
   let videos:any[]=[];try{videos=await getPublishedVideos(8)}catch{videos=[]}
+  let latestStories:any[]=[];try{latestStories=await getLatestStories(40)}catch{latestStories=[]}
   let sections:any[]=[];try{sections=await getHomepageFeed()}catch{sections=[]}
+
   if(!sections.some(s=>s.stories?.length)){
-    let stories:any[]=[];try{stories=await getLatestStories(32)}catch{stories=[]}
-    sections=stories.length?[{key:'hero',title:'Top Stories',stories:stories.slice(0,5)},{key:'latest',title:'Latest News',stories:stories.slice(5,13)},{key:'new-zealand',title:'New Zealand',stories:stories.slice(13,21)},{key:'more',title:'More from Webfit News',stories:stories.slice(21,29)}]:[];
+    sections=latestStories.length?[{key:'hero',title:'Top Stories',stories:latestStories.slice(0,5)},{key:'new-zealand',title:'New Zealand',stories:latestStories.slice(13,21)},{key:'more',title:'More from Webfit News',stories:latestStories.slice(21,29)}]:[];
   }
-  const hero=sections.find(s=>s.key==='hero'&&s.stories?.length)||sections.find(s=>s.stories?.length);
-  const rest=sections.filter(s=>s!==hero&&s.stories?.length);
-  const newsroomRibbonStories=hero?.stories?.slice(1,5)??[];
+
+  const configuredHero=sections.find(s=>s.key==='hero'&&s.stories?.length)||sections.find(s=>s.stories?.length);
+  const explicitHero=latestStories.find(s=>s.is_homepage_hero);
+  const hero=explicitHero
+    ? {key:'hero',title:'Top Stories',stories:[explicitHero,...latestStories.filter(s=>s.id!==explicitHero.id)].slice(0,5)}
+    : configuredHero;
+
+  const heroIds=new Set((hero?.stories||[]).map((s:any)=>s.id));
+  const automaticLatest=latestStories.filter(s=>!heroIds.has(s.id)).slice(0,8);
+  const configuredRest=sections.filter(s=>s!==configuredHero&&s.stories?.length&&s.key!=='latest');
+  const rest=automaticLatest.length
+    ? [{key:'latest',title:'Latest News',stories:automaticLatest},...configuredRest]
+    : configuredRest;
+  const newsroomRibbonStories=latestStories.slice(0,4);
 
   return <>
     <SiteHeader/>

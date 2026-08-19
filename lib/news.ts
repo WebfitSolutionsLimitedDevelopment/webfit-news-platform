@@ -8,10 +8,13 @@ export type Story = {
   published_at: string | null;
   featured_media_id: string | null;
   article_type: string;
+  is_homepage_hero?: boolean;
+  is_featured?: boolean;
+  is_editor_pick?: boolean;
   media?: { public_url: string | null; alt_text: string | null } | null;
 };
 
-const storyFields='id,title,slug,excerpt,published_at,featured_media_id,article_type,media:media!articles_featured_media_id_fkey(public_url,alt_text)';
+const storyFields='id,title,slug,excerpt,published_at,featured_media_id,article_type,is_homepage_hero,is_featured,is_editor_pick,media:media!articles_featured_media_id_fkey(public_url,alt_text)';
 
 export async function getLatestStories(limit = 12) {
   const supabase = await createClient();
