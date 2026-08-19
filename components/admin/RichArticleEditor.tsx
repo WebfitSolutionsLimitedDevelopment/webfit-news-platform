@@ -524,16 +524,24 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     if (!mediaItems.length) await loadMedia('');
   }
 
+  function newInlineInstance() {
+    return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `inline-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
   function imageHtml(item: MediaItem) {
     if (!item.public_url) return '';
+    const inlineInstance = newInlineInstance();
     const alt = escapeHtml(item.alt_text || item.filename || '');
     const caption = (item.caption || '').trim();
     const credit = (item.credit || '').trim();
     const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
-    return `<figure class="article-inline-image"><img src="${escapeHtml(item.public_url)}" alt="${alt}" loading="lazy">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure><p><br></p>`;
+    return `<figure class="article-inline-image" data-inline-instance="${escapeHtml(inlineInstance)}"><img data-media-id="${escapeHtml(item.id)}" src="${escapeHtml(item.public_url)}" alt="${alt}" loading="lazy" decoding="async">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure><p><br></p>`;
   }
 
   function galleryHtml(items: MediaItem[]) {
+    const inlineInstance = newInlineInstance();
     const figures = items
       .filter(item => item.public_url)
       .map(item => {
@@ -541,10 +549,10 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         const caption = (item.caption || '').trim();
         const credit = (item.credit || '').trim();
         const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
-        return `<figure class="article-gallery-item"><img src="${escapeHtml(item.public_url!)}" alt="${alt}" loading="lazy">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure>`;
+        return `<figure class="article-gallery-item"><img data-media-id="${escapeHtml(item.id)}" src="${escapeHtml(item.public_url!)}" alt="${alt}" loading="lazy" decoding="async">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure>`;
       })
       .join('');
-    return figures ? `<div class="article-gallery">${figures}</div><p><br></p>` : '';
+    return figures ? `<div class="article-gallery" data-inline-instance="${escapeHtml(inlineInstance)}">${figures}</div><p><br></p>` : '';
   }
 
   function chooseImage(item: MediaItem) {

@@ -45,6 +45,57 @@ export async function getArticleBySlug(slug: string) {
   return data;
 }
 
+function inlineStoragePathFromUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    const marker = '/storage/v1/object/public/news-media/';
+    const index = parsed.pathname.indexOf(marker);
+    if (index < 0) return null;
+    return decodeURIComponent(parsed.pathname.slice(index + marker.length));
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveInlineArticleMedia(html: string) {
+  if (!html || !/<img\b/i.test(html)) return html;
+
+  const supabase = await createClient();
+  const ids = Array.from(
+    new Set(
+      Array.from(html.matchAll(/data-media-id=["']([0-9a-f-]{36})["']/gi))
+        .map(match => match[1])
+    )
+  );
+
+  const mediaById = new Map<string, { storage_path: string | null }>();
+  if (ids.length) {
+    const { data } = await supabase
+      .from('media')
+      .select('id,storage_path')
+      .in('id', ids);
+    for (const row of data || []) mediaById.set(row.id, row);
+  }
+
+  return html.replace(/<img\b([^>]*)>/gi, (full, rawAttributes: string) => {
+    const id = rawAttributes.match(/\bdata-media-id=["']([^"']+)["']/i)?.[1] || null;
+    const src = rawAttributes.match(/\bsrc=["']([^"']+)["']/i)?.[1] || '';
+    const storagePath = (id ? mediaById.get(id)?.storage_path : null) || inlineStoragePathFromUrl(src);
+    if (!storagePath) return full;
+
+    const { data } = supabase.storage.from('news-media').getPublicUrl(storagePath);
+    const publicUrl = data.publicUrl;
+    if (!publicUrl) return full;
+
+    const escapedUrl = publicUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const nextAttributes = /\bsrc=["'][^"']*["']/i.test(rawAttributes)
+      ? rawAttributes.replace(/\bsrc=["'][^"']*["']/i, `src="${escapedUrl}"`)
+      : `${rawAttributes} src="${escapedUrl}"`;
+
+    return `<img${nextAttributes}>`;
+  });
+}
+
 export async function getRelatedStories(articleId:string,categoryIds:string[],limit=4){
   if(!categoryIds.length) return [] as Story[];
   const supabase=await createClient();
