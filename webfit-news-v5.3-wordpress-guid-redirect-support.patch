@@ -1,0 +1,54 @@
+diff --git a/proxy.ts b/proxy.ts
+index 1daee22..7d068f0 100644
+--- a/proxy.ts
++++ b/proxy.ts
+@@ -4,11 +4,16 @@ import { getPublicEnv } from './lib/env';
+ 
+ type CookieToSet = { name: string; value: string; options?: any };
+ 
+-function redirectCandidates(pathname: string) {
+-  if (pathname === '/') return ['/'];
+-  const withoutTrailing = pathname.replace(/\/+$/, '') || '/';
++function redirectCandidates(pathname: string, search = '') {
++  const withoutTrailing = pathname === '/' ? '/' : (pathname.replace(/\/+$/, '') || '/');
+   const withTrailing = withoutTrailing === '/' ? '/' : `${withoutTrailing}/`;
+-  return [...new Set([pathname, withoutTrailing, withTrailing])];
++  const pathCandidates = [...new Set([pathname, withoutTrailing, withTrailing])];
++
++  if (!search) return pathCandidates;
++
++  const exactWithQuery = `${pathname}${search}`;
++  const normalizedWithQuery = pathCandidates.map((candidate) => `${candidate}${search}`);
++  return [...new Set([exactWithQuery, ...normalizedWithQuery, ...pathCandidates])];
+ }
+ 
+ export async function proxy(request: NextRequest) {
+@@ -30,17 +35,25 @@ export async function proxy(request: NextRequest) {
+   );
+ 
+   const path = request.nextUrl.pathname;
++  const search = request.nextUrl.search;
+ 
+   // Historical redirects are database-managed and must execute before route rendering.
++  // Query-string sources such as legacy WordPress /?p=123 URLs are matched first.
+   if (!path.startsWith('/admin') && (request.method === 'GET' || request.method === 'HEAD')) {
++    const candidates = redirectCandidates(path, search);
++    const exactSource = `${path}${search}`;
++
+     const { data: redirectRows } = await supabase
+       .from('redirects')
+       .select('source_path,destination_path,status_code')
+       .eq('is_active', true)
+-      .in('source_path', redirectCandidates(path))
+-      .limit(3);
++      .in('source_path', candidates)
++      .limit(candidates.length);
+ 
+-    const redirectRow = redirectRows?.find((row) => row.source_path === path) || redirectRows?.[0];
++    const redirectRow =
++      redirectRows?.find((row) => row.source_path === exactSource) ||
++      redirectRows?.find((row) => row.source_path === path) ||
++      redirectRows?.find((row) => candidates.includes(row.source_path));
+     if (redirectRow?.destination_path) {
+       const destination = new URL(redirectRow.destination_path, request.nextUrl.origin);
+       const status = [301, 302, 307, 308].includes(Number(redirectRow.status_code))

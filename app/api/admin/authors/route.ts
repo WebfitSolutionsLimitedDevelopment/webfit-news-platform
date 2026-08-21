@@ -1,0 +1,7 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createClient } from '../../../../lib/supabase-server';
+
+const Input=z.object({name:z.string().trim().min(2),slug:z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),email:z.string().email().nullable().optional(),title:z.string().trim().max(120).nullable().optional(),bio:z.string().max(5000).nullable().optional(),avatar_url:z.string().url().nullable().optional(),is_active:z.boolean().default(true)});
+async function ctx(){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return null;const {data:p}=await supabase.from('profiles').select('role,is_active').eq('id',user.id).maybeSingle();if(!p?.is_active||!['super_admin','editor'].includes(p.role))return null;return{supabase,user}}
+export async function POST(req:Request){const c=await ctx();if(!c)return NextResponse.json({error:'Editor permission required'},{status:403});const parsed=Input.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:parsed.error.flatten()},{status:422});const {data,error}=await c.supabase.from('authors').insert(parsed.data).select('*').single();if(error)return NextResponse.json({error:error.message},{status:400});await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'author.create',entity_type:'author',entity_id:data.id,metadata:{name:data.name}});return NextResponse.json({author:data},{status:201})}

@@ -1,0 +1,378 @@
+diff --git a/app/admin/articles/[id]/page.tsx b/app/admin/articles/[id]/page.tsx
+index 6385ef3..7a45f6f 100644
+--- a/app/admin/articles/[id]/page.tsx
++++ b/app/admin/articles/[id]/page.tsx
+@@ -1,4 +1,19 @@
+ import { notFound } from 'next/navigation';
+-import ArticleQuickEdit from '../../../../components/admin/ArticleQuickEdit';
++import ArticleWorkspace from '../../../../components/admin/ArticleWorkspace';
+ import { createClient } from '../../../../lib/supabase-server';
+-export default async function EditArticle({params}:{params:Promise<{id:string}>}){const {id}=await params;const supabase=await createClient();const [{data},{data:revisions}]=await Promise.all([supabase.from('articles').select('*').eq('id',id).maybeSingle(),supabase.from('article_revisions').select('id,title,created_at').eq('article_id',id).order('created_at',{ascending:false}).limit(20)]);if(!data)notFound();return <ArticleQuickEdit article={data} revisions={revisions||[]}/>}
++
++export default async function EditArticle({params}:{params:Promise<{id:string}>}){
++  const {id}=await params;
++  const supabase=await createClient();
++  const [{data:article},{data:categories},{data:authors},{data:revisions}]=await Promise.all([
++    supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).maybeSingle(),
++    supabase.from('categories').select('id,name').eq('is_active',true).order('name'),
++    supabase.from('authors').select('id,name').eq('is_active',true).order('name'),
++    supabase.from('article_revisions').select('id,title,created_at').eq('article_id',id).order('created_at',{ascending:false}).limit(20)
++  ]);
++  if(!article)notFound();
++  const rows=(article.article_categories||[]) as Array<{category_id:string;is_primary:boolean}>;
++  const primary=rows.find(row=>row.is_primary)?.category_id||'';
++  const tags=(article.article_tags||[]).map((row:any)=>row.tags?.name).filter(Boolean);
++  return <ArticleWorkspace article={article} categories={categories||[]} authors={authors||[]} revisions={revisions||[]} initialCategoryIds={rows.map(row=>row.category_id)} initialPrimaryCategoryId={primary} initialTags={tags} initialMedia={(article as any).media||null}/>;
++}
+diff --git a/app/admin/articles/new/page.tsx b/app/admin/articles/new/page.tsx
+index e787206..a87c8f8 100644
+--- a/app/admin/articles/new/page.tsx
++++ b/app/admin/articles/new/page.tsx
+@@ -1,3 +1,11 @@
+-import ArticleEditor from '../../../../components/admin/ArticleEditor';
++import ArticleWorkspace from '../../../../components/admin/ArticleWorkspace';
+ import { createClient } from '../../../../lib/supabase-server';
+-export default async function NewArticle(){const supabase=await createClient();const [{data:categories},{data:authors}]=await Promise.all([supabase.from('categories').select('id,name').eq('is_active',true).order('name'),supabase.from('authors').select('id,name').eq('is_active',true).order('name')]);return <ArticleEditor categories={categories||[]} authors={authors||[]}/>}
++
++export default async function NewArticle(){
++  const supabase=await createClient();
++  const [{data:categories},{data:authors}]=await Promise.all([
++    supabase.from('categories').select('id,name').eq('is_active',true).order('name'),
++    supabase.from('authors').select('id,name').eq('is_active',true).order('name')
++  ]);
++  return <ArticleWorkspace categories={categories||[]} authors={authors||[]}/>;
++}
+diff --git a/app/api/admin/articles/[id]/route.ts b/app/api/admin/articles/[id]/route.ts
+index b576dbd..ca8523e 100644
+--- a/app/api/admin/articles/[id]/route.ts
++++ b/app/api/admin/articles/[id]/route.ts
+@@ -3,18 +3,102 @@ import { z } from 'zod';
+ import { createClient } from '../../../../../lib/supabase-server';
+ 
+ const Patch = z.object({
+-  title: z.string().min(5).optional(), subtitle: z.string().nullable().optional(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(), excerpt: z.string().nullable().optional(), content_html: z.string().optional(),
+-  status: z.enum(['draft','in_review','scheduled','published','archived']).optional(), article_type: z.enum(['news','breaking_news','analysis','opinion','editorial','explainer','feature','interview','community','press_release']).optional(),
+-  author_id: z.string().uuid().nullable().optional(), featured_media_id: z.string().uuid().nullable().optional(), published_at: z.string().datetime().nullable().optional(), scheduled_at: z.string().datetime().nullable().optional(),
+-  is_breaking: z.boolean().optional(), is_featured: z.boolean().optional(), is_editor_pick: z.boolean().optional(), is_homepage_hero: z.boolean().optional(), seo_title: z.string().nullable().optional(), meta_description: z.string().nullable().optional(), canonical_url: z.string().nullable().optional(), social_title: z.string().nullable().optional(), social_description: z.string().nullable().optional()
++  title:z.string().min(5).optional(),
++  subtitle:z.string().nullable().optional(),
++  slug:z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
++  excerpt:z.string().nullable().optional(),
++  content_html:z.string().optional(),
++  status:z.enum(['draft','in_review','scheduled','published','archived']).optional(),
++  article_type:z.enum(['news','breaking_news','analysis','opinion','editorial','explainer','feature','interview','community','press_release']).optional(),
++  author_id:z.string().uuid().nullable().optional(),
++  featured_media_id:z.string().uuid().nullable().optional(),
++  published_at:z.string().datetime().nullable().optional(),
++  scheduled_at:z.string().datetime().nullable().optional(),
++  is_breaking:z.boolean().optional(),
++  is_featured:z.boolean().optional(),
++  is_editor_pick:z.boolean().optional(),
++  is_homepage_hero:z.boolean().optional(),
++  seo_title:z.string().nullable().optional(),
++  meta_description:z.string().nullable().optional(),
++  canonical_url:z.string().nullable().optional(),
++  social_title:z.string().nullable().optional(),
++  social_description:z.string().nullable().optional(),
++  category_ids:z.array(z.string().uuid()).optional(),
++  primary_category_id:z.string().uuid().nullable().optional(),
++  tag_names:z.array(z.string().trim().min(1)).optional()
+ });
+ 
+-async function ctx() {
+-  const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user) return null;
+-  const {data:profile}=await supabase.from('profiles').select('role,is_active').eq('id',user.id).maybeSingle(); if(!profile?.is_active) return null;
+-  return {supabase,user,profile};
++async function ctx(){
++  const supabase=await createClient();
++  const {data:{user}}=await supabase.auth.getUser();
++  if(!user)return null;
++  const {data:profile}=await supabase.from('profiles').select('role,is_active').eq('id',user.id).maybeSingle();
++  if(!profile?.is_active)return null;
++  return{supabase,user,profile};
+ }
+ 
+-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const c=await ctx();if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});const {id}=await params;const {data,error}=await c.supabase.from('articles').select('*,article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).single();if(error)return NextResponse.json({error:error.message},{status:404});return NextResponse.json({article:data});}
+-export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){const c=await ctx();if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});const {id}=await params;const p=Patch.safeParse(await req.json());if(!p.success)return NextResponse.json({error:p.error.flatten()},{status:422});if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});const changes:any={...p.data};if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();const {data,error}=await c.supabase.from('articles').update(changes).eq('id',id).select('id,slug,status').single();if(error)return NextResponse.json({error:error.message},{status:400});await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'article.update',entity_type:'article',entity_id:id,metadata:{fields:Object.keys(changes)}});return NextResponse.json({article:data});}
+-export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){const c=await ctx();if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});if(c.profile.role!=='super_admin')return NextResponse.json({error:'Super admin required'},{status:403});const {id}=await params;const {error}=await c.supabase.from('articles').delete().eq('id',id);if(error)return NextResponse.json({error:error.message},{status:400});return NextResponse.json({ok:true});}
++export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
++  const c=await ctx();
++  if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
++  const {id}=await params;
++  const {data,error}=await c.supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).single();
++  if(error)return NextResponse.json({error:error.message},{status:404});
++  return NextResponse.json({article:data});
++}
++
++export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
++  const c=await ctx();
++  if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
++  const {id}=await params;
++  const p=Patch.safeParse(await req.json());
++  if(!p.success)return NextResponse.json({error:p.error.flatten()},{status:422});
++  if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
++  if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
++
++  const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
++  const changes:any={...articleChanges};
++  if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
++
++  const {data,error}=await c.supabase.from('articles').update(changes).eq('id',id).select('id,slug,status').single();
++  if(error)return NextResponse.json({error:error.message},{status:400});
++
++  if(category_ids!==undefined||primary_category_id!==undefined){
++    const cats=Array.from(new Set([...(category_ids||[]),...(primary_category_id?[primary_category_id]:[])]));
++    const {error:clearError}=await c.supabase.from('article_categories').delete().eq('article_id',id);
++    if(clearError)return NextResponse.json({error:clearError.message},{status:400});
++    if(cats.length){
++      const {error:catError}=await c.supabase.from('article_categories').insert(cats.map(category_id=>({article_id:id,category_id,is_primary:category_id===primary_category_id})));
++      if(catError)return NextResponse.json({error:catError.message},{status:400});
++    }
++  }
++
++  if(tag_names!==undefined){
++    const {error:clearTagError}=await c.supabase.from('article_tags').delete().eq('article_id',id);
++    if(clearTagError)return NextResponse.json({error:clearTagError.message},{status:400});
++    for(const raw of tag_names){
++      const name=raw.trim();
++      if(!name)continue;
++      const tagSlug=name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
++      if(!tagSlug)continue;
++      const {data:tag,error:tagError}=await c.supabase.from('tags').upsert({name,slug:tagSlug},{onConflict:'slug'}).select('id').single();
++      if(tagError)return NextResponse.json({error:tagError.message},{status:400});
++      if(tag){
++        const {error:linkError}=await c.supabase.from('article_tags').upsert({article_id:id,tag_id:tag.id},{onConflict:'article_id,tag_id'});
++        if(linkError)return NextResponse.json({error:linkError.message},{status:400});
++      }
++    }
++  }
++
++  await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'article.update',entity_type:'article',entity_id:id,metadata:{fields:Object.keys(p.data)}});
++  return NextResponse.json({article:data});
++}
++
++export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){
++  const c=await ctx();
++  if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
++  if(c.profile.role!=='super_admin')return NextResponse.json({error:'Super admin required'},{status:403});
++  const {id}=await params;
++  const {error}=await c.supabase.from('articles').delete().eq('id',id);
++  if(error)return NextResponse.json({error:error.message},{status:400});
++  return NextResponse.json({ok:true});
++}
+diff --git a/components/admin/ArticleWorkspace.module.css b/components/admin/ArticleWorkspace.module.css
+new file mode 100644
+index 0000000..e19b2ea
+--- /dev/null
++++ b/components/admin/ArticleWorkspace.module.css
+@@ -0,0 +1,4 @@
++.page{min-height:100vh;background:#f3f5f7;color:#15171a}.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-bottom:1px solid #dfe3e7;padding:15px 24px;display:flex;justify-content:space-between;gap:24px;align-items:center}.back{display:inline-block;font-size:11px;font-weight:800;color:#5d6570;margin-bottom:7px}.kicker{display:block;font-size:9px;letter-spacing:.15em;font-weight:900;color:#7b838d}.top h1{margin:3px 0 0;font-size:25px;letter-spacing:-.03em}.state{display:flex;gap:8px;align-items:center;margin-top:6px}.state span{background:#e2f5e9;color:#17613b;border-radius:999px;padding:4px 8px;text-transform:uppercase;font-size:9px;font-weight:900}.state small{color:#727a84}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions a,.actions button{border:1px solid #cbd1d7;background:#fff;border-radius:8px;padding:10px 13px;font-size:11px;font-weight:800;cursor:pointer}.actions .publish{background:#111317;color:#fff;border-color:#111317}.actions button:disabled{opacity:.55}.message{width:min(1480px,calc(100% - 36px));margin:15px auto 0;background:#eaf4ff;border:1px solid #cfe3f6;color:#205677;border-radius:8px;padding:10px 13px;font-size:12px;font-weight:750}.layout{width:min(1480px,calc(100% - 36px));margin:18px auto 60px;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:18px;align-items:start}.main,.side{display:grid;gap:16px}.side{position:sticky;top:104px;max-height:calc(100vh - 118px);overflow:auto;padding-right:2px}.card{background:#fff;border:1px solid #dde1e5;border-radius:11px;padding:20px;box-shadow:0 1px 2px rgba(16,24,40,.03)}.cardHead{display:flex;justify-content:space-between;gap:14px;margin-bottom:17px}.cardHead span{font-size:8px;letter-spacing:.14em;font-weight:900;color:#7d858f}.cardHead h2{margin:3px 0 0;font-size:16px}.cardHead small{color:#868d96;font-size:9px}.field{display:grid;gap:7px;margin-bottom:16px;font-size:11px;font-weight:800;color:#373b40}.field:last-child{margin-bottom:0}.field input,.field textarea,.field select,.categoryBox>input,.mediaSearch input{width:100%;border:1px solid #ccd2d8;border-radius:8px;background:#fff;padding:11px 12px;font:inherit;outline:none}.field input:focus,.field textarea:focus,.field select:focus,.categoryBox>input:focus,.mediaSearch input:focus{border-color:#111317;box-shadow:0 0 0 3px rgba(17,19,23,.07)}.field textarea{resize:vertical;line-height:1.55}.headline{font-family:Georgia,'Times New Roman',serif!important;font-size:31px!important;line-height:1.12!important;font-weight:700!important;padding:14px!important}.body{min-height:560px;font-family:Georgia,'Times New Roman',serif!important;font-size:17px!important;line-height:1.72!important}.field small{font-weight:500;color:#818893}.over{color:#a32323!important;font-weight:800!important}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.featured{border:1px solid #d9dde2;border-radius:9px;overflow:hidden;background:#f8f9fa}.featured img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#eceff2}.featured>strong,.featured>small{display:block;margin:8px 10px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.featured>strong{font-size:10px}.featured>small{font-size:9px;color:#7b838d;margin-top:3px}.featured>div{display:flex;gap:7px;padding:9px 10px 10px}.featured button{flex:1;border:1px solid #cbd1d7;background:#fff;border-radius:7px;padding:8px;font-size:10px;font-weight:800;cursor:pointer}.addImage{width:100%;min-height:145px;border:1px dashed #bfc6cd;border-radius:9px;background:#f8f9fa;display:grid;place-items:center;align-content:center;gap:5px;cursor:pointer}.addImage b{width:31px;height:31px;border-radius:50%;background:#111317;color:#fff;display:grid;place-items:center;font-size:18px}.addImage strong{font-size:11px}.addImage small{font-size:9px;color:#7b838d}.chips{display:flex;gap:5px;flex-wrap:wrap;margin:-2px 0 10px}.chips span{background:#eef1f4;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:800}.categoryBox{border:1px solid #dde1e5;border-radius:8px;overflow:hidden;margin-bottom:16px}.categoryBox>input{border:0;border-bottom:1px solid #e5e8eb;border-radius:0}.categoryBox>div{max-height:210px;overflow:auto;padding:5px}.categoryBox label{display:flex;gap:8px;align-items:center;padding:8px 7px;border-radius:6px;font-size:11px;cursor:pointer}.categoryBox label:hover{background:#f5f6f7}.toggles{display:grid;grid-template-columns:1fr 1fr;gap:7px}.toggles label{display:flex;gap:8px;align-items:center;border:1px solid #e0e3e7;border-radius:8px;padding:10px;font-size:10px;font-weight:800;cursor:pointer}.revisions{display:grid}.revisions>div{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid #edf0f2;padding:10px 0;font-size:10px}.revisions span{color:#777f89;text-align:right}.note{font-size:11px;color:#747c86}.modal{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px}.backdrop{position:absolute;inset:0;border:0;background:rgba(8,11,15,.68)}.dialog{position:relative;width:min(1120px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:13px;box-shadow:0 30px 80px rgba(0,0,0,.3)}.dialog>header{position:sticky;top:0;z-index:3;background:#fff;border-bottom:1px solid #e0e3e6;padding:16px 19px;display:flex;justify-content:space-between;gap:15px}.dialog>header span{font-size:8px;letter-spacing:.14em;font-weight:900;color:#7a828c}.dialog>header h2{margin:3px 0;font-size:20px}.dialog>header p{margin:0;color:#737b85;font-size:10px}.dialog>header button{align-self:flex-start;border:1px solid #ccd2d8;background:#fff;border-radius:8px;padding:8px 11px;font-size:10px;font-weight:800}.upload{margin:16px 18px 8px;border:1px solid #d9dde2;border-radius:9px;background:#f7f8fa;padding:12px;display:grid;grid-template-columns:1fr minmax(220px,420px) auto;align-items:center;gap:12px}.upload strong,.upload small{display:block}.upload strong{font-size:11px}.upload small{font-size:9px;color:#78808a;margin-top:3px}.upload input{font-size:10px}.upload button,.mediaSearch button{border:0;background:#111317;color:#fff;border-radius:7px;padding:9px 12px;font-size:10px;font-weight:800}.mediaSearch{display:flex;gap:8px;padding:8px 18px 13px}.mediaGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;padding:0 18px 20px}.mediaGrid button{min-width:0;border:2px solid transparent;border-radius:9px;background:#f6f7f8;padding:6px;text-align:left;cursor:pointer}.mediaGrid button:hover{background:#eef1f3}.mediaGrid button>span{display:block;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:#e5e8eb}.mediaGrid img{width:100%;height:100%;object-fit:cover}.mediaGrid strong,.mediaGrid small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mediaGrid strong{font-size:9px;margin:7px 2px 2px}.mediaGrid small{font-size:8px;color:#7b828c;margin:0 2px 3px}.loading{padding:50px;text-align:center;color:#747c86;font-size:11px}
++@media(max-width:1050px){.layout{grid-template-columns:1fr}.side{position:static;max-height:none;overflow:visible;grid-template-columns:repeat(2,minmax(0,1fr))}}
++@media(max-width:760px){.top{position:static;align-items:flex-start;flex-direction:column;padding:13px}.actions{width:100%}.actions a,.actions button{flex:1;text-align:center}.layout{width:calc(100% - 18px);margin-top:10px}.side{grid-template-columns:1fr}.card{padding:15px}.two{grid-template-columns:1fr}.headline{font-size:25px!important}.body{min-height:430px;font-size:16px!important}.upload{grid-template-columns:1fr}.mediaGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
++@media(max-width:500px){.mediaGrid{grid-template-columns:repeat(2,minmax(0,1fr));padding-left:10px;padding-right:10px}.mediaSearch{padding-left:10px;padding-right:10px}.toggles{grid-template-columns:1fr 1fr}}
+diff --git a/components/admin/ArticleWorkspace.tsx b/components/admin/ArticleWorkspace.tsx
+new file mode 100644
+index 0000000..d6d1864
+--- /dev/null
++++ b/components/admin/ArticleWorkspace.tsx
+@@ -0,0 +1,200 @@
++'use client';
++
++import { useMemo, useRef, useState } from 'react';
++import { useRouter } from 'next/navigation';
++import styles from './ArticleWorkspace.module.css';
++
++type Option={id:string;name:string};
++type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
++type Revision={id:string;title:string;created_at:string};
++
++const types=[['news','News'],['breaking_news','Breaking news'],['analysis','Analysis'],['opinion','Opinion'],['editorial','Editorial'],['explainer','Explainer'],['feature','Feature'],['interview','Interview'],['community','Community'],['press_release','Press release']];
++
++function slugify(value:string){return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,180)}
++function localDate(value?:string|null){if(!value)return'';const d=new Date(value);const p=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
++
++export default function ArticleWorkspace({
++  categories,authors,article=null,revisions=[],
++  initialCategoryIds=[],initialPrimaryCategoryId='',
++  initialTags=[],initialMedia=null
++}:{
++  categories:Option[];authors:Option[];article?:any;revisions?:Revision[];
++  initialCategoryIds?:string[];initialPrimaryCategoryId?:string;initialTags?:string[];initialMedia?:Media|null;
++}){
++  const router=useRouter();
++  const fileRef=useRef<HTMLInputElement>(null);
++  const isEdit=Boolean(article?.id);
++
++  const [busy,setBusy]=useState(false);
++  const [message,setMessage]=useState('');
++  const [title,setTitle]=useState(article?.title||'');
++  const [slug,setSlug]=useState(article?.slug||'');
++  const [slugTouched,setSlugTouched]=useState(Boolean(article?.slug));
++  const [status,setStatus]=useState(article?.status||'draft');
++  const [articleType,setArticleType]=useState(article?.article_type||'news');
++  const [tags,setTags]=useState(initialTags.join(', '));
++  const [categoryIds,setCategoryIds]=useState<string[]>(initialCategoryIds);
++  const [categorySearch,setCategorySearch]=useState('');
++  const [media,setMedia]=useState<Media|null>(initialMedia);
++  const [mediaOpen,setMediaOpen]=useState(false);
++  const [mediaItems,setMediaItems]=useState<Media[]>([]);
++  const [mediaSearch,setMediaSearch]=useState('');
++  const [mediaBusy,setMediaBusy]=useState(false);
++
++  const [form,setForm]=useState({
++    subtitle:article?.subtitle||'',excerpt:article?.excerpt||'',content_html:article?.content_html||'',
++    author_id:article?.author_id||'',primary_category_id:initialPrimaryCategoryId,featured_media_id:article?.featured_media_id||'',
++    seo_title:article?.seo_title||'',meta_description:article?.meta_description||'',social_title:article?.social_title||'',
++    social_description:article?.social_description||'',canonical_url:article?.canonical_url||'',
++    published_at:localDate(article?.published_at),scheduled_at:localDate(article?.scheduled_at),
++    is_breaking:Boolean(article?.is_breaking),is_featured:Boolean(article?.is_featured),
++    is_editor_pick:Boolean(article?.is_editor_pick),is_homepage_hero:Boolean(article?.is_homepage_hero)
++  });
++
++  const update=(key:string,value:any)=>setForm(current=>({...current,[key]:value}));
++  const filteredCategories=useMemo(()=>{
++    const q=categorySearch.trim().toLowerCase();
++    return q?categories.filter(c=>c.name.toLowerCase().includes(q)):categories;
++  },[categorySearch,categories]);
++
++  function toggleCategory(id:string){setCategoryIds(current=>current.includes(id)?current.filter(x=>x!==id):[...current,id])}
++
++  async function loadMedia(q=''){
++    setMediaBusy(true);
++    try{
++      const r=await fetch(`/api/admin/media?q=${encodeURIComponent(q)}&limit=80`);
++      const d=await r.json();
++      if(!r.ok)throw new Error(d.error||'Could not load media');
++      setMediaItems(d.media||[]);
++    }catch(e:any){setMessage(e.message||'Could not load media')}
++    finally{setMediaBusy(false)}
++  }
++
++  async function openMedia(){setMediaOpen(true);if(!mediaItems.length)await loadMedia('')}
++
++  async function uploadMedia(){
++    const file=fileRef.current?.files?.[0];
++    if(!file){setMessage('Choose an image first.');return}
++    if(!file.type.startsWith('image/')){setMessage('Featured media must be an image.');return}
++    setMediaBusy(true);setMessage('');
++    try{
++      const fd=new FormData();
++      fd.set('file',file);
++      fd.set('alt_text',file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' '));
++      const r=await fetch('/api/admin/media',{method:'POST',body:fd});
++      const d=await r.json();
++      if(!r.ok)throw new Error(d.error||'Upload failed');
++      setMedia(d.media);
++      update('featured_media_id',d.media.id);
++      setMediaItems(current=>[d.media,...current]);
++      setMediaOpen(false);
++      if(fileRef.current)fileRef.current.value='';
++    }catch(e:any){setMessage(e.message||'Upload failed')}
++    finally{setMediaBusy(false)}
++  }
++
++  function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
++
++  function buildPayload(finalStatus:string){
++    return {
++      title,slug:slug||slugify(title),status:finalStatus,article_type:articleType,
++      subtitle:form.subtitle||null,excerpt:form.excerpt||null,content_html:form.content_html,
++      author_id:form.author_id||null,featured_media_id:form.featured_media_id||null,
++      primary_category_id:form.primary_category_id||null,
++      category_ids:categoryIds.filter(id=>id!==form.primary_category_id),
++      tag_names:tags.split(',').map(x=>x.trim()).filter(Boolean),
++      seo_title:form.seo_title||null,meta_description:form.meta_description||null,
++      social_title:form.social_title||null,social_description:form.social_description||null,
++      canonical_url:form.canonical_url||null,
++      published_at:form.published_at?new Date(form.published_at).toISOString():null,
++      scheduled_at:finalStatus==='scheduled'&&form.scheduled_at?new Date(form.scheduled_at).toISOString():null,
++      is_breaking:form.is_breaking,is_featured:form.is_featured,is_editor_pick:form.is_editor_pick,is_homepage_hero:form.is_homepage_hero
++    };
++  }
++
++  async function save(finalStatus=status){
++    if(title.trim().length<5){setMessage('Add a clear headline before saving.');return}
++    if(finalStatus==='scheduled'&&!form.scheduled_at){setMessage('Choose a schedule date and time.');return}
++    setBusy(true);setMessage('');
++    try{
++      const r=await fetch(isEdit?`/api/admin/articles/${article.id}`:'/api/admin/articles',{
++        method:isEdit?'PATCH':'POST',
++        headers:{'content-type':'application/json'},
++        body:JSON.stringify(buildPayload(finalStatus))
++      });
++      const d=await r.json();
++      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
++      setStatus(finalStatus);
++      setMessage(finalStatus==='published'?(isEdit?'Published article updated successfully.':'Article published successfully.'):finalStatus==='scheduled'?'Article scheduled successfully.':'Changes saved.');
++      if(!isEdit)router.push(`/admin/articles/${d.article.id}`);
++      router.refresh();
++    }catch(e:any){setMessage(e.message||'Could not save article')}
++    finally{setBusy(false)}
++  }
++
++  const selectedCategories=categories.filter(c=>categoryIds.includes(c.id)||c.id===form.primary_category_id);
++
++  return <div className={styles.page}>
++    <header className={styles.top}>
++      <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
++      <div className={styles.actions}>{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Saving...':isEdit?'Save changes':'Save draft'}</button><button className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
++    </header>
++
++    {message&&<div className={styles.message}>{message}</div>}
++
++    <div className={styles.layout}>
++      <main className={styles.main}>
++        <section className={styles.card}>
++          <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Write and edit without leaving this page.</small></header>
++          <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>
++          <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>update('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
++          <label className={styles.field}>Article body<textarea className={styles.body} rows={30} value={form.content_html} onChange={e=>update('content_html',e.target.value)} placeholder="Write or paste the article here"/></label>
++          <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>update('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
++        </section>
++
++        <section className={styles.card}>
++          <header className={styles.cardHead}><div><span>SEO</span><h2>Search and social</h2></div></header>
++          <div className={styles.two}><label className={styles.field}>SEO title<input value={form.seo_title} onChange={e=>update('seo_title',e.target.value)}/><small className={form.seo_title.length>60?styles.over:''}>{form.seo_title.length}/60 recommended</small></label><label className={styles.field}>Slug<input value={slug} onChange={e=>{setSlugTouched(true);setSlug(slugify(e.target.value))}}/></label></div>
++          <label className={styles.field}>Meta description<textarea rows={3} value={form.meta_description} onChange={e=>update('meta_description',e.target.value)}/><small className={form.meta_description.length>160?styles.over:''}>{form.meta_description.length}/160 recommended</small></label>
++          <div className={styles.two}><label className={styles.field}>Social title<input value={form.social_title} onChange={e=>update('social_title',e.target.value)}/></label><label className={styles.field}>Canonical URL<input value={form.canonical_url} onChange={e=>update('canonical_url',e.target.value)} placeholder="Leave blank for article URL"/></label></div>
++          <label className={styles.field}>Social description<textarea rows={3} value={form.social_description} onChange={e=>update('social_description',e.target.value)}/></label>
++        </section>
++
++        {isEdit&&<section className={styles.card}><header className={styles.cardHead}><div><span>HISTORY</span><h2>Revision history</h2></div></header>{revisions.length?<div className={styles.revisions}>{revisions.map(r=><div key={r.id}><strong>{new Date(r.created_at).toLocaleString('en-NZ')}</strong><span>{r.title}</span></div>)}</div>:<p className={styles.note}>No previous revisions yet.</p>}</section>}
++      </main>
++
++      <aside className={styles.side}>
++        <section className={styles.card}><header className={styles.cardHead}><div><span>PUBLISHING</span><h2>Publish settings</h2></div></header>
++          <label className={styles.field}>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="draft">Draft</option><option value="in_review">In review</option><option value="scheduled">Scheduled</option><option value="published">Published</option>{isEdit&&<option value="archived">Archived</option>}</select></label>
++          <label className={styles.field}>Article type<select value={articleType} onChange={e=>setArticleType(e.target.value)}>{types.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
++          <label className={styles.field}>Author<select value={form.author_id} onChange={e=>update('author_id',e.target.value)}><option value="">Webfit News</option>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
++          <label className={styles.field}>Publish date<input type="datetime-local" value={form.published_at} onChange={e=>update('published_at',e.target.value)}/></label>
++          {status==='scheduled'&&<label className={styles.field}>Schedule for<input type="datetime-local" value={form.scheduled_at} onChange={e=>update('scheduled_at',e.target.value)}/></label>}
++        </section>
++
++        <section className={styles.card}><header className={styles.cardHead}><div><span>IMAGE</span><h2>Featured image</h2></div><small>16:9 recommended</small></header>
++          {media?.public_url?<div className={styles.featured}><img src={media.public_url} alt={media.alt_text||media.filename||''}/><strong>{media.filename||'Featured image'}</strong><small>{media.width&&media.height?`${media.width} × ${media.height}`:'Image selected'}</small><div><button onClick={openMedia}>Change image</button><button onClick={()=>{setMedia(null);update('featured_media_id','')}}>Remove</button></div></div>:<button className={styles.addImage} onClick={openMedia}><b>+</b><strong>Add featured image</strong><small>Upload new or browse Media Library</small></button>}
++        </section>
++
++        <section className={styles.card}><header className={styles.cardHead}><div><span>CLASSIFICATION</span><h2>Categories and tags</h2></div></header>
++          <label className={styles.field}>Primary category<select value={form.primary_category_id} onChange={e=>update('primary_category_id',e.target.value)}><option value="">Select primary category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
++          {selectedCategories.length>0&&<div className={styles.chips}>{selectedCategories.map(c=><span key={c.id}>{c.name}{c.id===form.primary_category_id?' • Primary':''}</span>)}</div>}
++          <div className={styles.categoryBox}><input value={categorySearch} onChange={e=>setCategorySearch(e.target.value)} placeholder="Search categories"/><div>{filteredCategories.map(c=><label key={c.id}><input type="checkbox" checked={categoryIds.includes(c.id)||c.id===form.primary_category_id} disabled={c.id===form.primary_category_id} onChange={()=>toggleCategory(c.id)}/><span>{c.name}</span></label>)}</div></div>
++          <label className={styles.field}>Tags<textarea rows={3} value={tags} onChange={e=>setTags(e.target.value)} placeholder="Auckland, politics, community"/><small>Separate tags with commas.</small></label>
++        </section>
++
++        <section className={styles.card}><header className={styles.cardHead}><div><span>PLACEMENT</span><h2>Homepage options</h2></div></header><div className={styles.toggles}>{[['is_breaking','Breaking News'],['is_featured','Featured'],['is_editor_pick',"Editor's Pick"],['is_homepage_hero','Homepage Hero']].map(([k,l])=><label key={k}><input type="checkbox" checked={(form as any)[k]} onChange={e=>update(k,e.target.checked)}/><span>{l}</span></label>)}</div></section>
++      </aside>
++    </div>
++
++    {mediaOpen&&<div className={styles.modal}>
++      <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
++      <div className={styles.dialog}>
++        <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>Upload a new image or select an existing newsroom image.</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
++        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Maximum 20 MB.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
++        <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/><button onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
++        {mediaBusy?<div className={styles.loading}>Loading images...</div>:<div className={styles.mediaGrid}>{mediaItems.map(item=><button key={item.id} onClick={()=>chooseMedia(item)}><span>{item.public_url?<img src={item.public_url} alt={item.alt_text||item.filename||''}/>:null}</span><strong>{item.filename||'Untitled image'}</strong><small>{item.width&&item.height?`${item.width} × ${item.height}`:'Image'}</small></button>)}</div>}
++      </div>
++    </div>}
++  </div>;
++}

@@ -1,0 +1,92 @@
+diff --git a/app/auth/callback/route.ts b/app/auth/callback/route.ts
+index a63de14..57c6aae 100644
+--- a/app/auth/callback/route.ts
++++ b/app/auth/callback/route.ts
+@@ -1,10 +1,20 @@
+ import { NextResponse } from 'next/server';
+ import { createClient } from '@/lib/supabase-server';
+ 
++const PRODUCTION_ORIGIN='https://webfitnews.com';
++
+ export async function GET(request:Request){
+   const url=new URL(request.url);
+   const code=url.searchParams.get('code');
+-  const next=url.searchParams.get('next')||'/';
+-  if(code){const supabase=await createClient();await supabase.auth.exchangeCodeForSession(code);}
+-  return NextResponse.redirect(new URL(next,url.origin));
++  const requestedNext=url.searchParams.get('next')||'/';
++  const next=requestedNext.startsWith('/')&&!requestedNext.startsWith('//')?requestedNext:'/';
++  if(code){
++    const supabase=await createClient();
++    const {error}=await supabase.auth.exchangeCodeForSession(code);
++    if(error){
++      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`,PRODUCTION_ORIGIN));
++    }
++  }
++  const origin=process.env.NODE_ENV==='production'?PRODUCTION_ORIGIN:url.origin;
++  return NextResponse.redirect(new URL(next,origin));
+ }
+diff --git a/app/login/page.tsx b/app/login/page.tsx
+index 31cd52f..0a27c0f 100644
+--- a/app/login/page.tsx
++++ b/app/login/page.tsx
+@@ -3,15 +3,55 @@ import { useState } from 'react';
+ import Link from 'next/link';
+ import { createClient } from '@/lib/supabase-browser';
+ 
++const PRODUCTION_ORIGIN='https://webfitnews.com';
++
++function getAuthOrigin(){
++  if(typeof window==='undefined')return PRODUCTION_ORIGIN;
++  const hostname=window.location.hostname;
++  if(hostname==='localhost'||hostname==='127.0.0.1')return window.location.origin;
++  return PRODUCTION_ORIGIN;
++}
++
++function getAuthCallback(){
++  return `${getAuthOrigin()}/auth/callback?next=/`;
++}
++
+ export default function ReaderLogin(){
+   const [email,setEmail]=useState('');
+   const [message,setMessage]=useState('');
+   const [busy,setBusy]=useState(false);
+-  async function emailLogin(e:React.FormEvent){e.preventDefault();setBusy(true);setMessage('');const supabase=createClient();const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:`${window.location.origin}/auth/callback?next=/`}});setBusy(false);setMessage(error?error.message:'Check your email for a secure sign-in link.');}
+-  async function oauth(provider:'google'|'apple'|'azure') {setMessage('');const supabase=createClient();const {error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:`${window.location.origin}/auth/callback?next=/`}});if(error)setMessage(error.message);}
++  const [googleBusy,setGoogleBusy]=useState(false);
++
++  async function emailLogin(e:React.FormEvent){
++    e.preventDefault();
++    setBusy(true);
++    setMessage('');
++    const supabase=createClient();
++    const {error}=await supabase.auth.signInWithOtp({
++      email,
++      options:{emailRedirectTo:getAuthCallback()}
++    });
++    setBusy(false);
++    setMessage(error?error.message:'Check your email for a secure sign-in link.');
++  }
++
++  async function googleLogin(){
++    setGoogleBusy(true);
++    setMessage('');
++    const supabase=createClient();
++    const {error}=await supabase.auth.signInWithOAuth({
++      provider:'google',
++      options:{redirectTo:getAuthCallback()}
++    });
++    if(error){
++      setGoogleBusy(false);
++      setMessage(error.message);
++    }
++  }
++
+   return <main className="reader-login-page"><div className="reader-login-shell"><Link href="/"><img src="/webfit-news-logo.png" alt="Webfit News"/></Link><span>Reader account</span><h1>Sign in to Webfit News</h1><p>Use one account for reader features and future supporter benefits. Newsroom staff should use the separate newsroom login.</p>
+-    <div className="reader-oauth"><button onClick={()=>oauth('google')}>Continue with Google</button><button onClick={()=>oauth('apple')}>Continue with Apple</button><button onClick={()=>oauth('azure')}>Continue with Microsoft</button></div>
++    <div className="reader-oauth"><button type="button" disabled={googleBusy} onClick={googleLogin}>{googleBusy?'Opening Google...':'Continue with Google'}</button></div>
+     <div className="reader-or"><span>or use email</span></div>
+     <form onSubmit={emailLogin}><label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><button type="submit" disabled={busy}>{busy?'Sending sign-in link...':'Email me a sign-in link'}</button></form>
+-    {message?<p className="reader-message">{message}</p>:null}<small>No password is required for email sign-in. Social providers need to be enabled in Supabase Auth before those buttons can be used.</small><Link className="reader-newsroom-link" href="/admin/login">Newsroom staff sign in</Link></div></main>
++    {message?<p className="reader-message">{message}</p>:null}<small>No password is required for email sign-in.</small><Link className="reader-newsroom-link" href="/admin/login">Newsroom staff sign in</Link></div></main>
+ }

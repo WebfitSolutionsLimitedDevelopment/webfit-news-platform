@@ -1,0 +1,67 @@
+.homepage {
+  position: relative;
+}
+
+.mobileAdBreak {
+  display: none;
+}
+
+.sectionAdBreak {
+  margin: 34px 0 12px;
+}
+
+.desktopTopAd,
+.desktopAfterHeroAd {
+  display: block;
+}
+
+@media (max-width: 720px) {
+  /*
+   * Keep the first mobile viewport editorial.
+   * The homepage should open with branding, navigation and journalism,
+   * not a large display ad.
+   */
+  .desktopTopAd,
+  .desktopAfterHeroAd {
+    display: none;
+  }
+
+  /*
+   * Mobile ad opportunities start only after readers have reached the
+   * editorial feed. The AdSlot component renders nothing when no campaign
+   * is assigned, so these wrappers do not create empty white holes.
+   */
+  .mobileAdBreak,
+  .sectionAdBreak {
+    display: block;
+    margin: 34px 0 18px;
+    padding: 18px 0;
+    border-top: 1px solid #e2e5e8;
+    border-bottom: 1px solid #e2e5e8;
+  }
+
+  .mobileAdBreak:empty,
+  .sectionAdBreak:empty {
+    display: none;
+  }
+
+  .mobileAdBreak :global(.ad-zone),
+  .sectionAdBreak :global(.ad-zone) {
+    margin: 0 auto;
+    max-width: 100%;
+  }
+
+  .mobileAdBreak :global(.ad-zone-live),
+  .sectionAdBreak :global(.ad-zone-live) {
+    padding-top: 24px;
+    background: #fafafa;
+  }
+
+  .mobileAdBreak :global(.ad-zone-live img),
+  .sectionAdBreak :global(.ad-zone-live img) {
+    width: auto;
+    max-width: 100%;
+    max-height: 520px;
+    object-fit: contain;
+  }
+}

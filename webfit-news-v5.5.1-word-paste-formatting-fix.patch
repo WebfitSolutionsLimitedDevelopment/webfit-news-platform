@@ -1,0 +1,178 @@
+diff --git a/app/globals.css b/app/globals.css
+index 5d81c4f..6e890ed 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -70,5 +70,5 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
+ @media(max-width:480px){.support-banner-cta{padding:0 12px;font-size:10px}.support-signin{padding:0 12px;font-size:10px}.support-amount-grid{grid-template-columns:1fr 1fr}.reader-login-shell{padding:30px 22px}.support-intro h1{font-size:34px}}
+ 
+ /* Rich article presentation shared with the newsroom editor */
+-.article-body{font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.72;color:#202124}.article-body p{margin:0 0 1.28em}.article-body h2{font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.14;letter-spacing:-.015em;margin:1.55em 0 .58em;font-weight:800;color:#111}.article-body h3{font-family:Georgia,'Times New Roman',serif;font-size:25px;line-height:1.2;margin:1.4em 0 .52em;font-weight:800;color:#151515}.article-body h4{font-size:21px;line-height:1.25;margin:1.3em 0 .48em;font-weight:800}.article-body strong,.article-body b{font-weight:800}.article-body em,.article-body i{font-style:italic}.article-body a{color:#075fb8;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}.article-body a:hover{color:#043f7b}.article-body ul,.article-body ol{margin:0 0 1.35em;padding-left:1.55em}.article-body li{margin:.42em 0;padding-left:.12em}.article-body blockquote{margin:1.7em 0;padding:20px 24px;border-left:5px solid #111;background:#f3f5f6;font-size:21px;line-height:1.55;color:#25282b}.article-body blockquote p{margin-bottom:.75em}.article-body blockquote p:last-child{margin-bottom:0}.article-body table{width:100%;border-collapse:collapse;margin:1.7em 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}.article-body caption{text-align:left;font-weight:800;margin-bottom:8px}.article-body th,.article-body td{border:1px solid #ccd2d8;padding:11px 12px;text-align:left;vertical-align:top}.article-body th{background:#f0f2f4;font-weight:800}.article-body tbody tr:nth-child(even){background:#fafbfc}.article-body figure{margin:1.8em 0}.article-body figcaption{font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.45;color:#69707a;margin-top:7px}.article-body .article-embed,.article-body .article-embed-youtube{width:100%;margin:1.8em 0}.article-body iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;border:0;border-radius:10px;background:#111}.article-body hr{border:0;border-top:1px solid #cfd4d8;margin:2.2em 0}.article-body img{display:block;max-width:100%;height:auto;margin:1.6em auto}.article-body>p:first-child{font-size:20px}.article-body>p:first-child strong:first-child{font-weight:900}
++.article-body{font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.72;color:#202124}.article-body p{margin:0 0 1.28em}.article-body h2{font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.14;letter-spacing:-.015em;margin:1.55em 0 .58em;font-weight:800;color:#111}.article-body h3{font-family:Georgia,'Times New Roman',serif;font-size:25px;line-height:1.2;margin:1.4em 0 .52em;font-weight:800;color:#151515}.article-body h4{font-size:21px;line-height:1.25;margin:1.3em 0 .48em;font-weight:800}.article-body strong,.article-body b{font-weight:800}.article-body em,.article-body i{font-style:italic}.article-body .article-normal-weight{font-weight:400!important}.article-body .article-normal-style{font-style:normal!important}.article-body a{color:#075fb8;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}.article-body a:hover{color:#043f7b}.article-body ul,.article-body ol{margin:0 0 1.35em;padding-left:1.55em}.article-body li{margin:.42em 0;padding-left:.12em}.article-body blockquote{margin:1.7em 0;padding:20px 24px;border-left:5px solid #111;background:#f3f5f6;font-size:21px;line-height:1.55;color:#25282b}.article-body blockquote p{margin-bottom:.75em}.article-body blockquote p:last-child{margin-bottom:0}.article-body table{width:100%;border-collapse:collapse;margin:1.7em 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}.article-body caption{text-align:left;font-weight:800;margin-bottom:8px}.article-body th,.article-body td{border:1px solid #ccd2d8;padding:11px 12px;text-align:left;vertical-align:top}.article-body th{background:#f0f2f4;font-weight:800}.article-body tbody tr:nth-child(even){background:#fafbfc}.article-body figure{margin:1.8em 0}.article-body figcaption{font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.45;color:#69707a;margin-top:7px}.article-body .article-embed,.article-body .article-embed-youtube{width:100%;margin:1.8em 0}.article-body iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;border:0;border-radius:10px;background:#111}.article-body hr{border:0;border-top:1px solid #cfd4d8;margin:2.2em 0}.article-body img{display:block;max-width:100%;height:auto;margin:1.6em auto}.article-body>p:first-child{font-size:20px}.article-body>p:first-child strong:first-child{font-weight:900}
+ @media(max-width:640px){.article-body{font-size:18px;line-height:1.68}.article-body>p:first-child{font-size:19px}.article-body h2{font-size:27px}.article-body h3{font-size:23px}.article-body blockquote{font-size:19px;padding:17px 18px;margin:1.45em 0}.article-body table{display:block;overflow-x:auto;font-size:12px}.article-body th,.article-body td{min-width:125px;padding:9px 10px}.article-body iframe{border-radius:7px}}
+diff --git a/components/admin/RichArticleEditor.module.css b/components/admin/RichArticleEditor.module.css
+index 57b51d5..6000007 100644
+--- a/components/admin/RichArticleEditor.module.css
++++ b/components/admin/RichArticleEditor.module.css
+@@ -1,2 +1,2 @@
+-.wrapper{border:1px solid #cbd2d9;border-radius:10px;overflow:hidden;background:#fff}.toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:7px;padding:9px;background:#f5f7f9;border-bottom:1px solid #dce1e6}.group{display:flex;gap:4px;padding-right:7px;border-right:1px solid #d8dde2}.group:last-child{border-right:0;padding-right:0}.toolbar button{border:1px solid #cbd1d7;background:#fff;color:#25292e;border-radius:6px;padding:7px 9px;font-size:10px;font-weight:850;cursor:pointer;line-height:1}.toolbar button:hover{background:#111317;color:#fff;border-color:#111317}.hint{padding:8px 12px;background:#fbfcfd;border-bottom:1px solid #e4e8eb;color:#727a84;font-size:9px;line-height:1.45}.editor{min-height:620px;padding:26px 30px;outline:none;font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.72;color:#17191c}.editor:empty:before{content:attr(data-placeholder);color:#9aa1a9;pointer-events:none}.editor p{margin:0 0 1.15em}.editor h2{font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;margin:1.5em 0 .55em;font-weight:800}.editor h3{font-family:Georgia,'Times New Roman',serif;font-size:23px;line-height:1.2;margin:1.35em 0 .5em;font-weight:800}.editor h4{font-size:19px;margin:1.2em 0 .45em}.editor a{color:#075fb8;text-decoration:underline;text-underline-offset:2px}.editor ul,.editor ol{margin:0 0 1.25em;padding-left:1.5em}.editor li{margin:.35em 0}.editor blockquote{margin:1.5em 0;padding:18px 22px;border-left:5px solid #111317;background:#f3f5f7;font-size:20px;line-height:1.55}.editor blockquote p:last-child{margin-bottom:0}.editor table{width:100%;border-collapse:collapse;margin:1.5em 0;font-family:Arial,Helvetica,sans-serif;font-size:14px}.editor th,.editor td{border:1px solid #cfd5db;padding:10px 12px;vertical-align:top;text-align:left}.editor th{background:#f1f3f5;font-weight:800}.editor figure{margin:1.6em 0}.editor iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;border:0;border-radius:9px;background:#111}.editor img{max-width:100%;height:auto}.editor hr{border:0;border-top:1px solid #cfd4da;margin:2em 0}.editor strong,.editor b{font-weight:800}.editor em,.editor i{font-style:italic}
++.wrapper{border:1px solid #cbd2d9;border-radius:10px;overflow:hidden;background:#fff}.toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:7px;padding:9px;background:#f5f7f9;border-bottom:1px solid #dce1e6}.group{display:flex;gap:4px;padding-right:7px;border-right:1px solid #d8dde2}.group:last-child{border-right:0;padding-right:0}.toolbar button{border:1px solid #cbd1d7;background:#fff;color:#25292e;border-radius:6px;padding:7px 9px;font-size:10px;font-weight:850;cursor:pointer;line-height:1}.toolbar button:hover{background:#111317;color:#fff;border-color:#111317}.hint{padding:8px 12px;background:#fbfcfd;border-bottom:1px solid #e4e8eb;color:#727a84;font-size:9px;line-height:1.45}.editor{min-height:620px;padding:26px 30px;outline:none;font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.72;color:#17191c}.editor:empty:before{content:attr(data-placeholder);color:#9aa1a9;pointer-events:none}.editor p{margin:0 0 1.15em}.editor h2{font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;margin:1.5em 0 .55em;font-weight:800}.editor h3{font-family:Georgia,'Times New Roman',serif;font-size:23px;line-height:1.2;margin:1.35em 0 .5em;font-weight:800}.editor h4{font-size:19px;margin:1.2em 0 .45em}.editor a{color:#075fb8;text-decoration:underline;text-underline-offset:2px}.editor ul,.editor ol{margin:0 0 1.25em;padding-left:1.5em}.editor li{margin:.35em 0}.editor blockquote{margin:1.5em 0;padding:18px 22px;border-left:5px solid #111317;background:#f3f5f7;font-size:20px;line-height:1.55}.editor blockquote p:last-child{margin-bottom:0}.editor table{width:100%;border-collapse:collapse;margin:1.5em 0;font-family:Arial,Helvetica,sans-serif;font-size:14px}.editor th,.editor td{border:1px solid #cfd5db;padding:10px 12px;vertical-align:top;text-align:left}.editor th{background:#f1f3f5;font-weight:800}.editor figure{margin:1.6em 0}.editor iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;border:0;border-radius:9px;background:#111}.editor img{max-width:100%;height:auto}.editor hr{border:0;border-top:1px solid #cfd4da;margin:2em 0}.editor strong,.editor b{font-weight:800}.editor em,.editor i{font-style:italic}.editor .article-normal-weight{font-weight:400!important}.editor .article-normal-style{font-style:normal!important}
+ @media(max-width:760px){.toolbar{position:static}.group{border-right:0;padding-right:0}.toolbar button{padding:8px;font-size:9px}.hint{font-size:9px}.editor{min-height:480px;padding:20px 16px;font-size:17px}.editor h2{font-size:25px}.editor h3{font-size:21px}.editor blockquote{padding:15px 16px;font-size:18px}.editor table{font-size:12px;display:block;overflow-x:auto}.editor th,.editor td{min-width:130px}}
+diff --git a/components/admin/RichArticleEditor.tsx b/components/admin/RichArticleEditor.tsx
+index 6f5fa7f..920e67a 100644
+--- a/components/admin/RichArticleEditor.tsx
++++ b/components/admin/RichArticleEditor.tsx
+@@ -145,8 +145,93 @@ function unwrap(element: Element) {
+   parent.removeChild(element);
+ }
+ 
++const BLOCK_TAGS = new Set(['P','H1','H2','H3','H4','UL','OL','LI','BLOCKQUOTE','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','FIGURE','DIV']);
++
++function containsBlockChild(element: Element) {
++  return Array.from(element.children).some(child => BLOCK_TAGS.has(child.tagName.toUpperCase()) || containsBlockChild(child));
++}
++
++function normalizeBroadInlineWrappers(doc: Document) {
++  for (const element of Array.from(doc.body.querySelectorAll('b,strong,em,i'))) {
++    if (containsBlockChild(element)) unwrap(element);
++  }
++}
++
++function normalizeWordHeadings(doc: Document) {
++  for (const paragraph of Array.from(doc.body.querySelectorAll('p'))) {
++    const className = (paragraph.getAttribute('class') || '').toLowerCase();
++    const style = (paragraph.getAttribute('style') || '').toLowerCase();
++    let level = 0;
++
++    const classMatch = className.match(/(?:mso)?heading\s*([1-4])/i);
++    const styleMatch = style.match(/mso-style-name\s*:\s*['"]?heading\s*([1-4])/i);
++    const outlineMatch = style.match(/mso-outline-level\s*:\s*([0-3])/i);
++
++    if (classMatch) level = Number(classMatch[1]);
++    else if (styleMatch) level = Number(styleMatch[1]);
++    else if (outlineMatch) level = Number(outlineMatch[1]) + 1;
++
++    if (!level) continue;
++    const heading = doc.createElement(level <= 2 ? 'h2' : 'h3');
++    while (paragraph.firstChild) heading.appendChild(paragraph.firstChild);
++    paragraph.replaceWith(heading);
++  }
++}
++
++function removeLeadingListMarker(element: Element) {
++  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
++  const first = walker.nextNode();
++  if (!first) return;
++  first.textContent = (first.textContent || '').replace(/^\s*(?:[•·▪◦o]|\d+[.)])\s*/, '');
++}
++
++function normalizeWordLists(doc: Document) {
++  const children = Array.from(doc.body.children);
++  let currentList: HTMLElement | null = null;
++  let currentType = '';
++
++  for (const element of children) {
++    if (element.tagName.toUpperCase() !== 'P') {
++      currentList = null;
++      currentType = '';
++      continue;
++    }
++
++    const className = (element.getAttribute('class') || '').toLowerCase();
++    const style = (element.getAttribute('style') || '').toLowerCase();
++    const isWordList = className.includes('msolistparagraph') || style.includes('mso-list');
++    if (!isWordList) {
++      currentList = null;
++      currentType = '';
++      continue;
++    }
++
++    const marker = element.querySelector('[style*="mso-list:Ignore" i]');
++    const markerText = marker?.textContent?.trim() || element.textContent?.trim().slice(0, 8) || '';
++    const type = /^\d+[.)]/.test(markerText) ? 'ol' : 'ul';
++    if (marker) marker.remove();
++    removeLeadingListMarker(element);
++
++    if (!currentList || currentType !== type) {
++      currentList = doc.createElement(type);
++      currentType = type;
++      element.parentNode?.insertBefore(currentList, element);
++    }
++
++    const item = doc.createElement('li');
++    while (element.firstChild) item.appendChild(element.firstChild);
++    currentList.appendChild(item);
++    element.remove();
++  }
++}
++
+ function sanitizePastedHtml(html: string) {
+   const doc = new DOMParser().parseFromString(html, 'text/html');
++
++  normalizeWordHeadings(doc);
++  normalizeWordLists(doc);
++  normalizeBroadInlineWrappers(doc);
++
+   const elements = Array.from(doc.body.querySelectorAll('*'));
+ 
+   for (const element of elements.reverse()) {
+@@ -165,16 +250,42 @@ function sanitizePastedHtml(html: string) {
+ 
+     if (tag === 'SPAN') {
+       const style = (element.getAttribute('style') || '').toLowerCase();
+-      const bold = /font-weight\s*:\s*(bold|[6-9]00)/.test(style);
+-      const italic = /font-style\s*:\s*italic/.test(style);
+-      if (bold || italic) {
+-        let replacement: HTMLElement = doc.createElement(bold ? 'strong' : 'em');
+-        while (element.firstChild) replacement.appendChild(element.firstChild);
+-        if (bold && italic) {
+-          const em = doc.createElement('em');
+-          while (replacement.firstChild) em.appendChild(replacement.firstChild);
+-          replacement.appendChild(em);
++      const normalWeight = /font-weight\s*:\s*(normal|[1-5]00)(?:\s|;|$)/.test(style);
++      const bold = /font-weight\s*:\s*(bold|[6-9]00)(?:\s|;|$)/.test(style);
++      const normalStyle = /font-style\s*:\s*normal(?:\s|;|$)/.test(style);
++      const italic = /font-style\s*:\s*italic(?:\s|;|$)/.test(style);
++
++      if (normalWeight || normalStyle || bold || italic) {
++        let replacement: HTMLElement;
++
++        if (normalWeight || normalStyle) {
++          replacement = doc.createElement('span');
++          const classes = [];
++          if (normalWeight) classes.push('article-normal-weight');
++          if (normalStyle) classes.push('article-normal-style');
++          replacement.setAttribute('class', classes.join(' '));
++          while (element.firstChild) replacement.appendChild(element.firstChild);
++
++          if (italic && !normalStyle) {
++            const em = doc.createElement('em');
++            while (replacement.firstChild) em.appendChild(replacement.firstChild);
++            replacement.appendChild(em);
++          }
++          if (bold && !normalWeight) {
++            const strong = doc.createElement('strong');
++            while (replacement.firstChild) strong.appendChild(replacement.firstChild);
++            replacement.appendChild(strong);
++          }
++        } else {
++          replacement = doc.createElement(bold ? 'strong' : 'em');
++          while (element.firstChild) replacement.appendChild(element.firstChild);
++          if (bold && italic) {
++            const em = doc.createElement('em');
++            while (replacement.firstChild) em.appendChild(replacement.firstChild);
++            replacement.appendChild(em);
++          }
+         }
++
+         element.replaceWith(replacement);
+       } else {
+         unwrap(element);
+@@ -322,7 +433,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
+         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
+       </div>
+     </div>
+-    <div className={styles.hint}>Paste formatted text directly. Headings, links, lists, quotes and tables are kept. Paste a YouTube URL on its own line to embed the video.</div>
++    <div className={styles.hint}>Paste formatted text directly from Word or the web. Bold, italic, headings, links, lists, quotes and tables are preserved without turning normal text bold. Paste a YouTube URL on its own line to embed the video.</div>
+     <div
+       ref={editorRef}
+       className={styles.editor}

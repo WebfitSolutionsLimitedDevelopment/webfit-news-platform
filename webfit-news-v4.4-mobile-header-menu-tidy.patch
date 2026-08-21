@@ -1,0 +1,506 @@
+diff --git a/components/SiteHeader.module.css b/components/SiteHeader.module.css
+new file mode 100644
+index 0000000..76632fc
+--- /dev/null
++++ b/components/SiteHeader.module.css
+@@ -0,0 +1,123 @@
++.mobileHeader{
++  display:none;
++}
++
++@media(max-width:720px){
++  .desktopHeader,
++  .desktopNav{
++    display:none!important;
++  }
++
++  .utilityInner{
++    min-height:42px;
++    padding-top:0!important;
++    padding-bottom:0!important;
++    display:flex!important;
++    flex-direction:row!important;
++    align-items:center!important;
++    justify-content:space-between!important;
++    gap:12px!important;
++    font-size:11px!important;
++  }
++
++  .utilityLinks{
++    display:flex!important;
++    align-items:center;
++    justify-content:flex-end;
++    gap:0!important;
++  }
++
++  .utilityLinks a{
++    display:none;
++  }
++
++  .utilityLinks span{
++    display:block;
++    font-size:11px;
++    white-space:nowrap;
++  }
++
++  .mobileHeader{
++    display:block;
++    background:#fff;
++    border-bottom:1px solid #dfe3e6;
++  }
++
++  .mobileRow{
++    min-height:72px;
++    padding:0 16px;
++    display:flex;
++    align-items:center;
++    justify-content:space-between;
++    gap:15px;
++  }
++
++  .mobileBrand{
++    display:flex;
++    align-items:center;
++    flex:0 0 auto;
++  }
++
++  .mobileBrand img{
++    display:block;
++    width:122px;
++    max-height:52px;
++    object-fit:contain;
++  }
++
++  .mobileControls{
++    display:flex;
++    align-items:center;
++    gap:13px;
++    margin-left:auto;
++  }
++
++  .mobileSearch{
++    min-height:44px;
++    display:inline-flex;
++    align-items:center;
++    gap:7px;
++    padding:8px 0 8px 10px;
++    border-left:1px solid #dfe3e6;
++    font-size:14px;
++    font-weight:800;
++  }
++
++  .mobileSearch svg{
++    width:20px;
++    height:20px;
++    fill:none;
++    stroke:currentColor;
++    stroke-width:2;
++    stroke-linecap:round;
++  }
++}
++
++@media(max-width:390px){
++  .mobileRow{
++    padding:0 12px;
++    gap:9px;
++  }
++
++  .mobileBrand img{
++    width:108px;
++  }
++
++  .mobileControls{
++    gap:8px;
++  }
++
++  .mobileSearch span{
++    display:none;
++  }
++
++  .mobileSearch{
++    padding-left:10px;
++  }
++
++  .utilityLinks span{
++    max-width:190px;
++    overflow:hidden;
++    text-overflow:ellipsis;
++  }
++}
+diff --git a/components/SiteHeader.tsx b/components/SiteHeader.tsx
+index d3ac0a5..1c372f3 100644
+--- a/components/SiteHeader.tsx
++++ b/components/SiteHeader.tsx
+@@ -2,6 +2,7 @@ import Link from 'next/link';
+ import { getPublicSiteSettings } from '@/lib/public-settings';
+ import { SupportBanner } from './SupportBanner';
+ import { SiteMenu } from './SiteMenu';
++import styles from './SiteHeader.module.css';
+ 
+ const links=[['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
+ 
+@@ -11,12 +12,43 @@ export async function SiteHeader(){
+   const today=new Intl.DateTimeFormat('en-NZ',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date());
+   return <>
+     <SupportBanner/>
+-    <div className="utility-premium"><div className="shell utility-premium-inner"><span>{today}</span><div><Link href="/about">About</Link><Link href="/editorial-policy">Editorial policy</Link>{settings.footer.media_council_member!==false?<span>Member, New Zealand Media Council</span>:null}</div></div></div>
+-    <header className="masthead-premium"><div className="shell masthead-premium-inner">
+-      <SiteMenu/>
+-      <Link href="/" className="brand-premium"><img src="/webfit-news-logo.png" alt={siteName}/></Link>
+-      <div className="header-actions-premium"><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
+-    </div></header>
+-    <div className="nav-premium-wrap"><nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav></div>
++
++    <div className={`utility-premium ${styles.utility}`}>
++      <div className={`shell utility-premium-inner ${styles.utilityInner}`}>
++        <span>{today}</span>
++        <div className={styles.utilityLinks}>
++          <Link href="/about">About</Link>
++          <Link href="/editorial-policy">Editorial policy</Link>
++          {settings.footer.media_council_member!==false?<span>Member, New Zealand Media Council</span>:null}
++        </div>
++      </div>
++    </div>
++
++    <header className={`masthead-premium ${styles.desktopHeader}`}>
++      <div className="shell masthead-premium-inner">
++        <SiteMenu/>
++        <Link href="/" className="brand-premium"><img src="/webfit-news-logo.png" alt={siteName}/></Link>
++        <div className="header-actions-premium"><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
++      </div>
++    </header>
++
++    <header className={styles.mobileHeader}>
++      <div className={styles.mobileRow}>
++        <Link href="/" className={styles.mobileBrand}>
++          <img src="/webfit-news-logo.png" alt={siteName}/>
++        </Link>
++        <div className={styles.mobileControls}>
++          <SiteMenu label="Sections" mobile/>
++          <Link className={styles.mobileSearch} href="/search" aria-label="Search Webfit News">
++            <span>Search</span>
++            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
++          </Link>
++        </div>
++      </div>
++    </header>
++
++    <div className={`nav-premium-wrap ${styles.desktopNav}`}>
++      <nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav>
++    </div>
+   </>;
+ }
+diff --git a/components/SiteMenu.module.css b/components/SiteMenu.module.css
+index e87e71b..fd78036 100644
+--- a/components/SiteMenu.module.css
++++ b/components/SiteMenu.module.css
+@@ -1,13 +1,17 @@
+ .trigger{
+   display:inline-flex;
+   align-items:center;
++  justify-content:center;
+   gap:9px;
+   cursor:pointer;
+ }
++.triggerLabel{
++  font-weight:800;
++}
+ .icon{
+-  width:18px;
++  width:19px;
+   display:grid;
+-  gap:3px;
++  gap:4px;
+ }
+ .icon i{
+   display:block;
+@@ -24,7 +28,7 @@
+   position:absolute;
+   inset:0;
+   border:0;
+-  background:rgba(0,0,0,.48);
++  background:rgba(5,10,14,.48);
+   cursor:pointer;
+ }
+ .drawer{
+@@ -32,77 +36,165 @@
+   left:0;
+   top:0;
+   height:100%;
+-  width:min(430px,92vw);
++  width:min(440px,94vw);
+   background:#fff;
+-  color:#111;
++  color:#101317;
+   box-shadow:18px 0 60px rgba(0,0,0,.2);
+   display:flex;
+   flex-direction:column;
+   overflow:auto;
++  overscroll-behavior:contain;
+ }
+ .head{
++  position:sticky;
++  top:0;
++  z-index:2;
+   display:flex;
+   align-items:center;
+   justify-content:space-between;
+   gap:18px;
+-  padding:22px 24px;
+-  border-bottom:1px solid #dedede;
++  min-height:82px;
++  padding:16px 22px;
++  border-bottom:1px solid #dfe3e6;
++  background:#fff;
+ }
+ .brand img{
+-  width:145px;
++  width:136px;
+   height:auto;
+   display:block;
+ }
+ .close{
+-  border:1px solid #111;
++  min-width:74px;
++  border:1px solid #cbd1d6;
+   background:#fff;
+   border-radius:999px;
+-  padding:8px 13px;
++  padding:8px 11px;
++  display:inline-flex;
++  align-items:center;
++  justify-content:center;
++  gap:6px;
++  color:#101317;
++  font-size:12px;
+   font-weight:800;
+   cursor:pointer;
+ }
++.close span{
++  font-size:20px;
++  line-height:14px;
++  font-weight:400;
++}
++.close b{
++  font:inherit;
++}
+ .content{
+-  padding:24px;
++  padding:22px;
+   display:grid;
+-  grid-template-columns:1fr 1fr;
+-  gap:28px;
++  grid-template-columns:1.1fr .9fr;
++  gap:30px;
+ }
+ .label{
+   display:block;
+   font-size:10px;
+-  letter-spacing:.14em;
++  letter-spacing:.15em;
+   text-transform:uppercase;
+   font-weight:900;
+   color:#9a6800;
+-  margin-bottom:12px;
++  margin-bottom:10px;
+ }
+ .links{
+   display:grid;
+ }
+ .links a{
+-  padding:9px 0;
+-  border-bottom:1px solid #ececec;
++  min-height:42px;
++  padding:11px 0;
++  border-bottom:1px solid #e6e9ec;
+   font-size:15px;
++  line-height:1.2;
+   font-weight:800;
+ }
++.links a:first-child{
++  border-top:2px solid #101317;
++}
++.links a:hover,
++.links a:focus-visible{
++  text-decoration:underline;
++  text-underline-offset:3px;
++}
+ .secondary a{
+-  font-weight:650;
++  font-size:13px;
++  font-weight:700;
+ }
+ .foot{
+   margin-top:auto;
+-  padding:18px 24px;
+-  border-top:1px solid #dedede;
++  padding:15px 22px 20px;
++  border-top:1px solid #dfe3e6;
+   display:flex;
+-  gap:18px;
++  align-items:center;
++  gap:16px;
+   flex-wrap:wrap;
+-  font-size:13px;
++  font-size:12px;
+   font-weight:800;
++  background:#f7f8f9;
++}
++.foot a{
++  padding:6px 0;
++}
++.footPrimary{
++  color:#fff!important;
++  background:#0b1218;
++  padding:9px 13px!important;
++  border-radius:4px;
++}
++.mobileTrigger{
++  border:0!important;
++  background:transparent!important;
++  border-radius:0!important;
++  padding:8px 5px!important;
++  min-height:44px;
++  color:#101317;
++  font-size:15px;
+ }
++
+ @media(max-width:720px){
+-  .content{grid-template-columns:1fr;gap:24px;padding:18px}
+-  .drawer{width:min(360px,94vw)}
+-  .head{padding:18px}
+-  .foot{padding:16px 18px}
+-  .triggerLabel{display:none}
+-  .trigger{padding:10px 11px}
++  .drawer{
++    width:min(390px,100vw);
++  }
++  .head{
++    min-height:70px;
++    padding:12px 16px;
++  }
++  .brand img{
++    width:122px;
++  }
++  .content{
++    grid-template-columns:1fr;
++    gap:26px;
++    padding:18px 16px 24px;
++  }
++  .links{
++    grid-template-columns:1fr 1fr;
++    column-gap:18px;
++  }
++  .links a{
++    min-height:43px;
++    font-size:14px;
++  }
++  .secondary{
++    grid-template-columns:1fr 1fr;
++  }
++  .secondary a{
++    font-size:12px;
++  }
++  .foot{
++    position:sticky;
++    bottom:0;
++    padding:12px 16px 16px;
++    background:#f7f8f9;
++  }
++  .trigger:not(.mobileTrigger) .triggerLabel{
++    display:none;
++  }
++  .trigger:not(.mobileTrigger){
++    padding:10px 11px;
++  }
+ }
+diff --git a/components/SiteMenu.tsx b/components/SiteMenu.tsx
+index 4014e94..067f89e 100644
+--- a/components/SiteMenu.tsx
++++ b/components/SiteMenu.tsx
+@@ -1,7 +1,7 @@
+ 'use client';
+ 
+ import Link from 'next/link';
+-import { useEffect, useState } from 'react';
++import { useEffect, useId, useState } from 'react';
+ import styles from './SiteMenu.module.css';
+ 
+ const sections=[
+@@ -30,8 +30,9 @@ const publication=[
+   ['RSS','/rss.xml'],
+ ];
+ 
+-export function SiteMenu(){
++export function SiteMenu({label='Menu',mobile=false}:{label?:string;mobile?:boolean}){
+   const [open,setOpen]=useState(false);
++  const menuId=`site-menu-${useId().replaceAll(':','')}`;
+ 
+   useEffect(()=>{
+     const onKey=(event:KeyboardEvent)=>{
+@@ -50,46 +51,50 @@ export function SiteMenu(){
+ 
+   return <>
+     <button
+-      className={`menu-chip ${styles.trigger}`}
++      className={`menu-chip ${styles.trigger} ${mobile?styles.mobileTrigger:''}`}
+       type="button"
+-      aria-label={open?'Close menu':'Open menu'}
++      aria-label={open?'Close sections':'Open sections'}
+       aria-expanded={open}
+-      aria-controls="site-menu-drawer"
++      aria-controls={menuId}
+       onClick={()=>setOpen(value=>!value)}
+     >
++      <span className={styles.triggerLabel}>{label}</span>
+       <span className={styles.icon} aria-hidden="true"><i></i><i></i><i></i></span>
+-      <span className={styles.triggerLabel}>Menu</span>
+     </button>
+ 
+     {open?<div className={styles.layer}>
+-      <button className={styles.backdrop} aria-label="Close menu" onClick={close}/>
+-      <aside id="site-menu-drawer" className={styles.drawer} aria-label="Site navigation">
++      <button className={styles.backdrop} aria-label="Close sections" onClick={close}/>
++      <aside id={menuId} className={styles.drawer} aria-label="Site navigation">
+         <div className={styles.head}>
+           <Link href="/" className={styles.brand} onClick={close}>
+             <img src="/webfit-news-logo.png" alt="Webfit News"/>
+           </Link>
+-          <button className={styles.close} type="button" onClick={close} aria-label="Close menu">Close</button>
++          <button className={styles.close} type="button" onClick={close} aria-label="Close sections">
++            <span aria-hidden="true">×</span>
++            <b>Close</b>
++          </button>
+         </div>
+ 
+         <div className={styles.content}>
+-          <div>
+-            <span className={styles.label}>News</span>
++          <section>
++            <span className={styles.label}>Sections</span>
+             <nav className={styles.links} aria-label="News sections">
+-              {sections.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
++              {sections.map(([itemLabel,href])=><Link key={href} href={href} onClick={close}>{itemLabel}</Link>)}
+             </nav>
+-          </div>
++          </section>
+ 
+-          <div>
++          <section>
+             <span className={styles.label}>Webfit News</span>
+             <nav className={`${styles.links} ${styles.secondary}`} aria-label="Publication links">
+-              {publication.map(([label,href])=><Link key={href} href={href} onClick={close}>{label}</Link>)}
++              {publication.map(([itemLabel,href])=><Link key={href} href={href} onClick={close}>{itemLabel}</Link>)}
+             </nav>
+-          </div>
++          </section>
+         </div>
+ 
+         <div className={styles.foot}>
++          <Link className={styles.footPrimary} href="/login" onClick={close}>Sign in</Link>
+           <Link href="/search" onClick={close}>Search</Link>
+-          <Link href="/login" onClick={close}>Reader Sign In</Link>
++          <Link href="/support-us" onClick={close}>Support us</Link>
+         </div>
+       </aside>
+     </div>:null}

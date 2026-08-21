@@ -1,0 +1,162 @@
+.player{
+  margin:20px 0 8px;
+  padding:14px 16px;
+  border:1px solid #dfe4e8;
+  border-radius:14px;
+  background:#fbfcfd;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  outline:none;
+}
+.player:focus-visible{
+  box-shadow:0 0 0 3px rgba(0,92,138,.18);
+  border-color:#005c8a;
+}
+.intro{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-width:190px;
+}
+.intro strong{
+  display:block;
+  font-size:14px;
+  line-height:1.25;
+}
+.intro div>span{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+  color:#6c737a;
+}
+.speakerIcon{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#0b1821;
+  color:#fff;
+  flex:0 0 auto;
+}
+.speakerIcon svg{
+  width:17px;
+  height:17px;
+  fill:currentColor;
+}
+.controls{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.controls button{
+  min-height:34px;
+  border:1px solid #cbd2d8;
+  border-radius:999px;
+  background:#fff;
+  color:#111;
+  padding:7px 12px;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.controls button:hover:not(:disabled){
+  border-color:#0b1821;
+}
+.controls button:disabled{
+  opacity:.45;
+  cursor:default;
+}
+.controls .primary{
+  background:#0b1821;
+  color:#fff;
+  border-color:#0b1821;
+}
+.speed{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding-left:3px;
+  font-size:11px;
+  font-weight:800;
+  color:#555;
+}
+.speed select{
+  height:34px;
+  border:1px solid #cbd2d8;
+  border-radius:999px;
+  background:#fff;
+  padding:0 9px;
+  color:#111;
+  font:inherit;
+}
+.unsupported{
+  margin:0;
+  color:#666;
+  font-size:12px;
+}
+.floating{
+  position:fixed;
+  left:18px;
+  bottom:22px;
+  z-index:800;
+  width:48px;
+  height:48px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:#0878b4;
+  color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.floating:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 28px rgba(0,0,0,.26);
+}
+.floating:focus-visible{
+  outline:3px solid #111;
+  outline-offset:3px;
+}
+.floating svg{
+  width:48px;
+  height:48px;
+  fill:#07354f;
+}
+.iconFill{
+  fill:#fff;
+}
+.iconStroke{
+  fill:none;
+  stroke:#fff;
+  stroke-width:2.6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+@media(max-width:720px){
+  .player{
+    align-items:flex-start;
+    flex-direction:column;
+    margin-top:16px;
+    padding:13px;
+  }
+  .controls{
+    width:100%;
+    justify-content:flex-start;
+  }
+  .floating{
+    width:44px;
+    height:44px;
+    left:12px;
+    bottom:16px;
+  }
+  .floating svg{
+    width:44px;
+    height:44px;
+  }
+}
