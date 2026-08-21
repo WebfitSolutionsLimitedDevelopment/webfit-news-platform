@@ -26,6 +26,30 @@ function escapeHtml(value: string) {
   return value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+
+function serializeEditorHtml(editor: HTMLElement) {
+  const clone = editor.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('[data-editor-control]').forEach(node => node.remove());
+  clone.querySelectorAll('[data-editor-selected]').forEach(node => node.removeAttribute('data-editor-selected'));
+  return clone.innerHTML;
+}
+
+function decorateEditorEmbeds(editor: HTMLElement) {
+  editor.querySelectorAll('figure.article-embed').forEach(node => {
+    const figure = node as HTMLElement;
+    if (figure.querySelector('[data-editor-control="remove-embed"]')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Remove video';
+    button.className = 'editor-embed-remove';
+    button.setAttribute('data-editor-control', 'remove-embed');
+    button.setAttribute('contenteditable', 'false');
+    button.setAttribute('aria-label', 'Remove YouTube video');
+    figure.appendChild(button);
+  });
+}
+
 function youtubeId(value: string) {
   try {
     const url = new URL(value.trim());
@@ -347,11 +371,18 @@ type MediaItem = {
 
 type MediaMode = 'image' | 'gallery';
 
+type EditorSnapshot = {
+  html: string;
+  caret: number;
+};
+
 export function RichArticleEditor({ value, onChange, placeholder = 'Write or paste the article here' }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const mediaFileRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const selectedMediaRef = useRef<HTMLElement | null>(null);
+  const historyRef = useRef<EditorSnapshot[]>([]);
+  const redoRef = useRef<EditorSnapshot[]>([]);
   const lastValue = useRef(value);
 
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -366,18 +397,130 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || value === lastValue.current) return;
-    if (document.activeElement !== editor) editor.innerHTML = value || '';
+    if (!editor) return;
+
+    // Never replace the contenteditable DOM while the user is typing.
+    // Replacing innerHTML during editing resets the browser selection/caret.
+    if (document.activeElement !== editor) {
+      if (editor.innerHTML !== (value || '')) {
+        editor.innerHTML = value || '';
+        historyRef.current = [];
+        redoRef.current = [];
+      }
+      decorateEditorEmbeds(editor);
+    }
+
     lastValue.current = value;
   }, [value]);
 
+  function getCaretOffset(editor: HTMLElement) {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return 0;
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer as Element
+      : range.commonAncestorContainer.parentElement;
+    if (!container || !editor.contains(container)) return 0;
+
+    const before = document.createRange();
+    before.selectNodeContents(editor);
+    try {
+      before.setEnd(range.startContainer, range.startOffset);
+      return before.toString().length;
+    } catch {
+      return 0;
+    }
+  }
+
+  function restoreCaretOffset(editor: HTMLElement, offset: number) {
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    let remaining = Math.max(0, offset);
+    let node = walker.nextNode();
+
+    while (node) {
+      const length = node.textContent?.length || 0;
+      if (remaining <= length) {
+        const range = document.createRange();
+        range.setStart(node, Math.min(remaining, length));
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
+      }
+      remaining -= length;
+      node = walker.nextNode();
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function currentSnapshot(): EditorSnapshot | null {
+    const editor = editorRef.current;
+    if (!editor) return null;
+    return {
+      html: serializeEditorHtml(editor),
+      caret: getCaretOffset(editor),
+    };
+  }
+
+  function rememberHistory() {
+    const snapshot = currentSnapshot();
+    if (!snapshot) return;
+    const previous = historyRef.current[historyRef.current.length - 1];
+    if (previous && previous.html === snapshot.html && previous.caret === snapshot.caret) return;
+    historyRef.current.push(snapshot);
+    if (historyRef.current.length > 150) historyRef.current.shift();
+    redoRef.current = [];
+  }
+
+  function applySnapshot(snapshot: EditorSnapshot) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.innerHTML = snapshot.html;
+    decorateEditorEmbeds(editor);
+    lastValue.current = snapshot.html;
+    onChange(snapshot.html);
+    editor.focus();
+    requestAnimationFrame(() => restoreCaretOffset(editor, snapshot.caret));
+  }
+
+  function undoEditor() {
+    const editor = editorRef.current;
+    if (!editor || !historyRef.current.length) return;
+    const current = currentSnapshot();
+    const previous = historyRef.current.pop();
+    if (!previous) return;
+    if (current) redoRef.current.push(current);
+    applySnapshot(previous);
+  }
+
+  function redoEditor() {
+    const editor = editorRef.current;
+    if (!editor || !redoRef.current.length) return;
+    const current = currentSnapshot();
+    const next = redoRef.current.pop();
+    if (!next) return;
+    if (current) historyRef.current.push(current);
+    applySnapshot(next);
+  }
+
   function emit() {
-    const html = editorRef.current?.innerHTML || '';
+    const editor = editorRef.current;
+    if (!editor) return;
+    const html = serializeEditorHtml(editor);
     lastValue.current = html;
     onChange(html);
   }
 
   function command(name: string, value?: string) {
+    rememberHistory();
     editorRef.current?.focus();
     document.execCommand(name, false, value);
     emit();
@@ -419,6 +562,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   function insertHtml(html: string) {
     const editor = editorRef.current;
     if (!editor || !html) return;
+    rememberHistory();
 
     let range = savedRangeRef.current?.cloneRange() || null;
     const rangeContainer = range
@@ -468,6 +612,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     }
 
     editor.normalize();
+    decorateEditorEmbeds(editor);
     emit();
   }
 
@@ -652,9 +797,53 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     setSelectedMediaLabel('');
   }
 
+  function removeEditorMedia(media: HTMLElement) {
+    const editor = editorRef.current;
+    if (!editor || !editor.contains(media)) return;
+    rememberHistory();
+
+    const isGalleryItem = media.classList.contains('article-gallery-item');
+    const isEmbed = media.classList.contains('article-embed');
+    const parentGallery = isGalleryItem ? media.closest('.article-gallery') as HTMLElement | null : null;
+    const next = media.nextElementSibling;
+
+    media.remove();
+
+    if (parentGallery && !parentGallery.querySelector('.article-gallery-item')) {
+      const galleryNext = parentGallery.nextElementSibling;
+      parentGallery.remove();
+      if (galleryNext?.tagName === 'P' && !galleryNext.textContent?.trim()) galleryNext.remove();
+    } else if (!isGalleryItem && next?.tagName === 'P' && !next.textContent?.trim()) {
+      next.remove();
+    }
+
+    selectedMediaRef.current = null;
+    setSelectedMediaLabel('');
+    emit();
+    setEditorNotice(
+      isEmbed
+        ? 'YouTube video removed from the article body. Save or update the article to publish this change.'
+        : isGalleryItem
+          ? 'Gallery image removed from the article body. Save or update the article to publish this change.'
+          : 'Image removed from the article body. Save or update the article to publish this change.'
+    );
+  }
+
   function handleEditorClick(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
-    const media = target.closest('figure.article-inline-image, figure.article-gallery-item') as HTMLElement | null;
+    const removeControl = target.closest('[data-editor-control="remove-embed"]') as HTMLElement | null;
+
+    if (removeControl) {
+      event.preventDefault();
+      event.stopPropagation();
+      const figure = removeControl.closest('figure.article-embed') as HTMLElement | null;
+      if (figure) removeEditorMedia(figure);
+      return;
+    }
+
+    const media = target.closest(
+      'figure.article-inline-image, figure.article-gallery-item, figure.article-embed'
+    ) as HTMLElement | null;
 
     if (!media) {
       clearSelectedMedia();
@@ -668,43 +857,55 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     selectedMediaRef.current = media;
     media.setAttribute('data-editor-selected', 'true');
     setSelectedMediaLabel(
-      media.classList.contains('article-gallery-item') ? 'gallery image' : 'inline image'
+      media.classList.contains('article-embed')
+        ? 'YouTube video'
+        : media.classList.contains('article-gallery-item')
+          ? 'gallery image'
+          : 'inline image'
     );
   }
 
   function removeSelectedMedia() {
     const media = selectedMediaRef.current;
     const editor = editorRef.current;
+
     if (!media || !editor || !editor.contains(media)) {
       clearSelectedMedia();
-      setEditorNotice('Click an image in the article first, then choose Remove image.');
+      setEditorNotice('Click an image or YouTube video in the article first, then choose Remove.');
       return;
     }
 
-    const isGalleryItem = media.classList.contains('article-gallery-item');
-    const parentGallery = isGalleryItem ? media.closest('.article-gallery') as HTMLElement | null : null;
-    const next = media.nextElementSibling;
+    removeEditorMedia(media);
+  }
 
-    media.remove();
+  function handleEditorBeforeInput(event: React.FormEvent<HTMLDivElement>) {
+    const nativeEvent = event.nativeEvent as InputEvent;
+    if (nativeEvent.inputType === 'historyUndo' || nativeEvent.inputType === 'historyRedo') return;
+    rememberHistory();
+  }
 
-    // Remove an empty gallery automatically.
-    if (parentGallery && !parentGallery.querySelector('.article-gallery-item')) {
-      const galleryNext = parentGallery.nextElementSibling;
-      parentGallery.remove();
-      if (galleryNext?.tagName === 'P' && !galleryNext.textContent?.trim()) galleryNext.remove();
-    } else if (!isGalleryItem && next?.tagName === 'P' && !next.textContent?.trim()) {
-      // Inline image insertion adds a spacer paragraph. Remove it with the image.
-      next.remove();
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const modifier = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+
+    if (modifier && key === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) redoEditor();
+      else undoEditor();
+      return;
     }
 
-    selectedMediaRef.current = null;
-    setSelectedMediaLabel('');
-    emit();
-    setEditorNotice(
-      isGalleryItem
-        ? 'Gallery image removed from the article body. Save or update the article to publish this change.'
-        : 'Image removed from the article body. Save or update the article to publish this change.'
-    );
+    if (modifier && key === 'y') {
+      event.preventDefault();
+      redoEditor();
+      return;
+    }
+
+    // Ctrl/Cmd+C and Ctrl/Cmd+V are intentionally left to the browser.
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedMediaRef.current) {
+      event.preventDefault();
+      removeSelectedMedia();
+    }
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
@@ -747,12 +948,12 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Line',()=>command('insertHorizontalRule'))}
       </div>
       <div className={styles.group}>
-        {toolbarButton('Undo',()=>command('undo'))}
-        {toolbarButton('Redo',()=>command('redo'))}
+        {toolbarButton('Undo',undoEditor)}
+        {toolbarButton('Redo',redoEditor)}
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery for multiple images. To remove an image, click it in the article and choose Remove image from the floating controls.</div>
+    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery for multiple images. Click an image or YouTube video to remove it. Normal typing and deletion keep the caret in place.</div>
     {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
@@ -760,17 +961,18 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       contentEditable
       suppressContentEditableWarning
       data-placeholder={placeholder}
+      onBeforeInput={handleEditorBeforeInput}
       onInput={emit}
       onBlur={emit}
       onPaste={handlePaste}
       onClick={handleEditorClick}
-      dangerouslySetInnerHTML={{__html:value || ''}}
+      onKeyDown={handleEditorKeyDown}
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
       <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image')}}>+ Image</button>
       <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery')}}>Gallery</button>
-      {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>Remove image</button> : null}
+      {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
     </div>
 
     {mediaOpen && <div className={styles.mediaModal}>

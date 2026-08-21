@@ -30,3 +30,18 @@
 .quickMedia .removeMedia:hover{
   background:#ffe3e3;
 }
+
+
+/* v5.9 editor-only YouTube removal */
+.editor figure.article-embed{position:relative}
+.editor :global(.editor-embed-remove){
+  position:absolute;top:10px;right:10px;z-index:6;
+  border:1px solid rgba(255,255,255,.7);border-radius:999px;
+  background:rgba(20,20,20,.88);color:#fff;padding:7px 10px;
+  font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1;
+  font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.2)
+}
+.editor :global(.editor-embed-remove:hover){background:#a11818}
+.editor figure.article-embed[data-editor-selected="true"]{
+  outline:3px solid #111317;outline-offset:4px;border-radius:8px
+}

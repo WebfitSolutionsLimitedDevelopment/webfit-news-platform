@@ -47,6 +47,55 @@ function hasMeaningfulArticleContent(html:string){
   return text.length>0;
 }
 
+
+function articlePlainText(html:string){
+  if(!html)return'';
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi,' ')
+    .replace(/<br\s*\/?>/gi,' ')
+    .replace(/<\/(p|div|li|h2|h3|h4|blockquote|figcaption)>/gi,'. ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;|&#160;/gi,' ')
+    .replace(/&amp;/gi,'&')
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;/gi,"'")
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function cleanCut(value:string,max:number){
+  const text=value.replace(/\s+/g,' ').trim();
+  if(text.length<=max)return text;
+  const slice=text.slice(0,max+1);
+  const cut=slice.lastIndexOf(' ');
+  return `${(cut>Math.floor(max*.7)?slice.slice(0,cut):slice.slice(0,max)).trim().replace(/[,:;.!?-]+$/,'')}...`;
+}
+
+function firstSentence(value:string){
+  const text=value.replace(/\s+/g,' ').trim();
+  if(!text)return'';
+  const match=text.match(/^(.{20,}?[\.\?!])(?:\s|$)/);
+  return match?.[1]||text;
+}
+
+function firstHeadingFromHtml(html:string){
+  const match=html.match(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/i);
+  return match?articlePlainText(match[1]):'';
+}
+
+function smartAutoSlug(value:string){
+  const stop=new Set(['a','an','the','and','or','but','for','of','to','in','on','at','by','with','from','as','is','are','was','were']);
+  const words=value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9\s-]+/g,' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((word,index)=>index<3||!stop.has(word))
+    .slice(0,12);
+  return slugify(words.join(' ')).slice(0,90);
+}
+
 export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
   initialCategoryIds=[],initialPrimaryCategoryId='',
@@ -92,6 +141,34 @@ export default function ArticleWorkspace({
   });
 
   const update=(key:string,value:any)=>setForm(current=>({...current,[key]:value}));
+
+  function handleTitleChange(value:string){
+    setTitle(value);
+    if(!slugTouched)setSlug(smartAutoSlug(value));
+    setForm(current=>({
+      ...current,
+      seo_title:current.seo_title||cleanCut(value,90),
+      social_title:current.social_title||cleanCut(value,110)
+    }));
+  }
+
+  function handleArticleBodyChange(html:string){
+    const plain=articlePlainText(html);
+    const candidateTitle=title.trim()||firstHeadingFromHtml(html)||cleanCut(firstSentence(plain),90);
+    const meta=cleanCut(firstSentence(plain)||plain,180);
+    const socialDescription=cleanCut(plain,220);
+
+    setForm(current=>({
+      ...current,
+      content_html:html,
+      seo_title:current.seo_title||cleanCut(candidateTitle,90),
+      meta_description:current.meta_description||meta,
+      social_title:current.social_title||cleanCut(candidateTitle,110),
+      social_description:current.social_description||socialDescription
+    }));
+
+    if(!slugTouched&&!slug&&candidateTitle)setSlug(smartAutoSlug(candidateTitle));
+  }
   const filteredCategories=useMemo(()=>{
     const q=categorySearch.trim().toLowerCase();
     return q?categories.filter(c=>c.name.toLowerCase().includes(q)):categories;
@@ -375,18 +452,18 @@ export default function ArticleWorkspace({
 
         <section className={styles.card}>
           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Visual editor. What you see here is close to the published article.</small></header>
-          <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>{setTitle(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value))}} placeholder="Write a clear, specific headline"/></label>
+          <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>handleTitleChange(e.target.value)} placeholder="Write a clear, specific headline"/></label>
           <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>update('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
-          <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div><RichArticleEditor value={form.content_html} onChange={html=>update('content_html',html)} placeholder="Write or paste the article here"/></div>
+          <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div><RichArticleEditor value={form.content_html} onChange={handleArticleBodyChange} placeholder="Write or paste the article here"/></div>
           <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>update('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
         </section>
 
         <section className={styles.card}>
           <header className={styles.cardHead}><div><span>SEO</span><h2>Search and social</h2></div></header>
-          <div className={styles.two}><label className={styles.field}>SEO title<input value={form.seo_title} onChange={e=>update('seo_title',e.target.value)}/><small className={form.seo_title.length>60?styles.over:''}>{form.seo_title.length}/60 recommended</small></label><label className={styles.field}>Slug<input value={slug} onChange={e=>{setSlugTouched(true);setSlug(slugify(e.target.value))}}/></label></div>
-          <label className={styles.field}>Meta description<textarea rows={3} value={form.meta_description} onChange={e=>update('meta_description',e.target.value)}/><small className={form.meta_description.length>160?styles.over:''}>{form.meta_description.length}/160 recommended</small></label>
-          <div className={styles.two}><label className={styles.field}>Social title<input value={form.social_title} onChange={e=>update('social_title',e.target.value)}/></label><label className={styles.field}>Canonical URL<input value={form.canonical_url} onChange={e=>update('canonical_url',e.target.value)} placeholder="Leave blank for article URL"/></label></div>
-          <label className={styles.field}>Social description<textarea rows={3} value={form.social_description} onChange={e=>update('social_description',e.target.value)}/></label>
+          <div className={styles.two}><label className={styles.field}>SEO title<input value={form.seo_title} onChange={e=>update('seo_title',e.target.value)}/><small className={form.seo_title.length>90?styles.over:''}>{form.seo_title.length}/90 recommended</small></label><label className={styles.field}>Slug<input value={slug} onChange={e=>{setSlugTouched(true);setSlug(slugify(e.target.value))}}/></label></div>
+          <label className={styles.field}>Meta description<textarea rows={3} value={form.meta_description} onChange={e=>update('meta_description',e.target.value)}/><small className={form.meta_description.length>180?styles.over:''}>{form.meta_description.length}/180 recommended</small></label>
+          <div className={styles.two}><label className={styles.field}>Social title<input value={form.social_title} onChange={e=>update('social_title',e.target.value)}/><small className={form.social_title.length>110?styles.over:''}>{form.social_title.length}/110 recommended</small></label><label className={styles.field}>Canonical URL<input value={form.canonical_url} onChange={e=>update('canonical_url',e.target.value)} placeholder="Leave blank for article URL"/></label></div>
+          <label className={styles.field}>Social description<textarea rows={3} value={form.social_description} onChange={e=>update('social_description',e.target.value)}/><small className={form.social_description.length>220?styles.over:''}>{form.social_description.length}/220 recommended</small></label>
         </section>
 
         {isEdit&&<section className={styles.card}><header className={styles.cardHead}><div><span>HISTORY</span><h2>Revision history</h2></div></header>{revisions.length?<div className={styles.revisions}>{revisions.map(r=><div key={r.id}><strong>{new Date(r.created_at).toLocaleString('en-NZ')}</strong><span>{r.title}</span></div>)}</div>:<p className={styles.note}>No previous revisions yet.</p>}</section>}
