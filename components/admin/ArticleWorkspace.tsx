@@ -26,6 +26,25 @@ function currentAucklandDate(){
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
+function formatRevisionDate(value:string){
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime()))return value;
+
+  const parts=new Intl.DateTimeFormat('en-NZ',{
+    timeZone:'Pacific/Auckland',
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit',
+    hour:'2-digit',
+    minute:'2-digit',
+    second:'2-digit',
+    hourCycle:'h23'
+  }).formatToParts(date);
+
+  const get=(type:Intl.DateTimeFormatPartTypes)=>parts.find(part=>part.type===type)?.value||'';
+  return `${get('day')}/${get('month')}/${get('year')}, ${get('hour')}:${get('minute')}:${get('second')}`;
+}
+
 function hasMeaningfulArticleContent(html:string){
   const value=(html||'').trim();
   if(!value)return false;
@@ -96,6 +115,85 @@ function smartAutoSlug(value:string){
   return slugify(words.join(' ')).slice(0,90);
 }
 
+
+type AutoFieldKey='subtitle'|'excerpt'|'seo_title'|'meta_description'|'social_title'|'social_description'|'tags';
+
+function articleBlocks(html:string){
+  if(!html)return[];
+  const blockMatches=Array.from(html.matchAll(/<(?:p|li|blockquote|h2|h3|h4)[^>]*>([\s\S]*?)<\/(?:p|li|blockquote|h2|h3|h4)>/gi));
+  const blocks=blockMatches
+    .map(match=>articlePlainText(match[1]))
+    .map(value=>value.replace(/^\s*[•*-]\s*/,'').trim())
+    .filter(value=>value.length>=12);
+  if(blocks.length)return blocks;
+  const plain=articlePlainText(html);
+  return plain?[plain]:[];
+}
+
+function articleSentences(text:string){
+  const normalized=text.replace(/\s+/g,' ').trim();
+  if(!normalized)return[];
+  const matches=normalized.match(/[^.!?]+(?:[.!?]+|$)/g)||[];
+  return matches.map(value=>value.trim()).filter(value=>value.length>=18);
+}
+
+function deriveEditorialFields(html:string,title:string){
+  const blocks=articleBlocks(html);
+  const plain=blocks.join(' ').replace(/\s+/g,' ').trim();
+  const sentences=articleSentences(plain);
+  const normalizedTitle=title.trim().toLowerCase();
+  const usefulBlocks=blocks.filter(block=>block.trim().toLowerCase()!==normalizedTitle);
+  const usefulSentences=sentences.filter(sentence=>sentence.trim().toLowerCase()!==normalizedTitle);
+
+  const subtitleSource=usefulSentences[0]||usefulBlocks[0]||'';
+  const excerptSource=[usefulSentences[0],usefulSentences[1]].filter(Boolean).join(' ')||usefulBlocks.slice(0,2).join(' ');
+  const metaSource=[usefulSentences[0],usefulSentences[1]].filter(Boolean).join(' ')||subtitleSource;
+  const socialSource=[usefulSentences[0],usefulSentences[1],usefulSentences[2]].filter(Boolean).join(' ')||excerptSource;
+
+  return{
+    subtitle:cleanCut(subtitleSource,180),
+    excerpt:cleanCut(excerptSource,260),
+    seo_title:cleanCut(title||firstHeadingFromHtml(html)||firstSentence(plain),90),
+    meta_description:cleanCut(metaSource,180),
+    social_title:cleanCut(title||firstHeadingFromHtml(html)||firstSentence(plain),110),
+    social_description:cleanCut(socialSource,220),
+  };
+}
+
+function deriveSeoTags(html:string,title:string){
+  const plain=`${title} ${articlePlainText(html)}`.replace(/\s+/g,' ').trim();
+  if(!plain)return[];
+
+  const stop=new Set([
+    'about','after','again','against','also','among','and','are','because','been','before','being','between','both','but','can','could','did','does','during','each','for','from','had','has','have','into','its','more','most','new','not','now','only','other','our','over','said','says','she','that','the','their','them','there','these','they','this','those','through','under','very','was','were','what','when','where','which','while','who','will','with','would','you','your',
+    'article','news','report','reported','according','today','yesterday'
+  ]);
+
+  const score=new Map<string,number>();
+  const add=(tag:string,weight:number)=>{
+    const clean=tag.replace(/\s+/g,' ').replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g,'').trim();
+    if(clean.length<3||clean.length>55)return;
+    const key=clean.toLowerCase();
+    if(stop.has(key))return;
+    score.set(clean,(score.get(clean)||0)+weight);
+  };
+
+  for(const match of plain.matchAll(/\b(?:[A-Z][A-Za-z0-9'’-]+(?:\s+[A-Z][A-Za-z0-9'’-]+){0,3})\b/g)){
+    add(match[0],4);
+  }
+
+  for(const raw of plain.toLowerCase().match(/[a-z][a-z0-9'-]{3,}/g)||[]){
+    if(stop.has(raw))continue;
+    add(raw,1);
+  }
+
+  return Array.from(score.entries())
+    .sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))
+    .map(([tag])=>tag)
+    .filter((tag,index,all)=>!all.some((other,i)=>i<index&&other.toLowerCase().includes(tag.toLowerCase())))
+    .slice(0,8);
+}
+
 export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
   initialCategoryIds=[],initialPrimaryCategoryId='',
@@ -108,6 +206,15 @@ export default function ArticleWorkspace({
   const fileRef=useRef<HTMLInputElement>(null);
   const sourceFileRef=useRef<HTMLInputElement>(null);
   const isEdit=Boolean(article?.id);
+  const autoManagedRef=useRef<Record<AutoFieldKey,boolean>>({
+    subtitle:!isEdit&&!Boolean(article?.subtitle),
+    excerpt:!isEdit&&!Boolean(article?.excerpt),
+    seo_title:!isEdit&&!Boolean(article?.seo_title),
+    meta_description:!isEdit&&!Boolean(article?.meta_description),
+    social_title:!isEdit&&!Boolean(article?.social_title),
+    social_description:!isEdit&&!Boolean(article?.social_description),
+    tags:!isEdit&&initialTags.length===0,
+  });
 
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
@@ -142,32 +249,46 @@ export default function ArticleWorkspace({
 
   const update=(key:string,value:any)=>setForm(current=>({...current,[key]:value}));
 
+  function setManualField(key:AutoFieldKey,value:string){
+    autoManagedRef.current[key]=false;
+    if(key==='tags')setTags(value);
+    else update(key,value);
+  }
+
   function handleTitleChange(value:string){
     setTitle(value);
     if(!slugTouched)setSlug(smartAutoSlug(value));
+
+    const derived=deriveEditorialFields(form.content_html,value);
     setForm(current=>({
       ...current,
-      seo_title:current.seo_title||cleanCut(value,90),
-      social_title:current.social_title||cleanCut(value,110)
+      seo_title:autoManagedRef.current.seo_title?derived.seo_title:current.seo_title,
+      social_title:autoManagedRef.current.social_title?derived.social_title:current.social_title,
+      subtitle:autoManagedRef.current.subtitle?derived.subtitle:current.subtitle,
+      excerpt:autoManagedRef.current.excerpt?derived.excerpt:current.excerpt,
+      meta_description:autoManagedRef.current.meta_description?derived.meta_description:current.meta_description,
+      social_description:autoManagedRef.current.social_description?derived.social_description:current.social_description,
     }));
   }
 
   function handleArticleBodyChange(html:string){
-    const plain=articlePlainText(html);
-    const candidateTitle=title.trim()||firstHeadingFromHtml(html)||cleanCut(firstSentence(plain),90);
-    const meta=cleanCut(firstSentence(plain)||plain,180);
-    const socialDescription=cleanCut(plain,220);
+    const derived=deriveEditorialFields(html,title);
+    const candidateTitle=title.trim()||firstHeadingFromHtml(html)||cleanCut(firstSentence(articlePlainText(html)),90);
+    const nextTags=deriveSeoTags(html,title).join(', ');
 
     setForm(current=>({
       ...current,
       content_html:html,
-      seo_title:current.seo_title||cleanCut(candidateTitle,90),
-      meta_description:current.meta_description||meta,
-      social_title:current.social_title||cleanCut(candidateTitle,110),
-      social_description:current.social_description||socialDescription
+      subtitle:autoManagedRef.current.subtitle?derived.subtitle:current.subtitle,
+      excerpt:autoManagedRef.current.excerpt?derived.excerpt:current.excerpt,
+      seo_title:autoManagedRef.current.seo_title?derived.seo_title:current.seo_title,
+      meta_description:autoManagedRef.current.meta_description?derived.meta_description:current.meta_description,
+      social_title:autoManagedRef.current.social_title?derived.social_title:current.social_title,
+      social_description:autoManagedRef.current.social_description?derived.social_description:current.social_description,
     }));
 
-    if(!slugTouched&&!slug&&candidateTitle)setSlug(smartAutoSlug(candidateTitle));
+    if(autoManagedRef.current.tags)setTags(nextTags);
+    if(!slugTouched&&candidateTitle)setSlug(smartAutoSlug(candidateTitle));
   }
   const filteredCategories=useMemo(()=>{
     const q=categorySearch.trim().toLowerCase();
@@ -214,6 +335,7 @@ export default function ArticleWorkspace({
 
   function applyImportedDraft(draft:any,rawText?:string){
     if(rawText)setReleaseText(rawText);
+    for(const key of Object.keys(autoManagedRef.current) as AutoFieldKey[])autoManagedRef.current[key]=false;
     setTitle(draft.title||'');
     setSlug(draft.slug||slugify(draft.title||''));
     setSlugTouched(true);
@@ -278,6 +400,7 @@ export default function ArticleWorkspace({
     setTitle('');
     setSlug('');
     setSlugTouched(false);
+    for(const key of Object.keys(autoManagedRef.current) as AutoFieldKey[])autoManagedRef.current[key]=true;
     setStatus('draft');
     setArticleType('news');
     setTags('');
@@ -453,20 +576,20 @@ export default function ArticleWorkspace({
         <section className={styles.card}>
           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Visual editor. What you see here is close to the published article.</small></header>
           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>handleTitleChange(e.target.value)} placeholder="Write a clear, specific headline"/></label>
-          <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>update('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
+          <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>setManualField('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
           <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div><RichArticleEditor value={form.content_html} onChange={handleArticleBodyChange} placeholder="Write or paste the article here"/></div>
-          <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>update('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
+          <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>setManualField('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
         </section>
 
         <section className={styles.card}>
-          <header className={styles.cardHead}><div><span>SEO</span><h2>Search and social</h2></div></header>
-          <div className={styles.two}><label className={styles.field}>SEO title<input value={form.seo_title} onChange={e=>update('seo_title',e.target.value)}/><small className={form.seo_title.length>90?styles.over:''}>{form.seo_title.length}/90 recommended</small></label><label className={styles.field}>Slug<input value={slug} onChange={e=>{setSlugTouched(true);setSlug(slugify(e.target.value))}}/></label></div>
-          <label className={styles.field}>Meta description<textarea rows={3} value={form.meta_description} onChange={e=>update('meta_description',e.target.value)}/><small className={form.meta_description.length>180?styles.over:''}>{form.meta_description.length}/180 recommended</small></label>
-          <div className={styles.two}><label className={styles.field}>Social title<input value={form.social_title} onChange={e=>update('social_title',e.target.value)}/><small className={form.social_title.length>110?styles.over:''}>{form.social_title.length}/110 recommended</small></label><label className={styles.field}>Canonical URL<input value={form.canonical_url} onChange={e=>update('canonical_url',e.target.value)} placeholder="Leave blank for article URL"/></label></div>
-          <label className={styles.field}>Social description<textarea rows={3} value={form.social_description} onChange={e=>update('social_description',e.target.value)}/><small className={form.social_description.length>220?styles.over:''}>{form.social_description.length}/220 recommended</small></label>
+          <header className={styles.cardHead}><div><span>SEO</span><h2>Search and social</h2></div><small>Auto-filled from the article until you edit a field yourself.</small></header>
+          <div className={styles.two}><label className={styles.field}>SEO title<input value={form.seo_title} onChange={e=>setManualField('seo_title',e.target.value)}/><small className={form.seo_title.length>90?styles.over:''}>{form.seo_title.length}/90 recommended</small></label><label className={styles.field}>Slug<input value={slug} onChange={e=>{setSlugTouched(true);setSlug(slugify(e.target.value).slice(0,90))}}/></label></div>
+          <label className={styles.field}>Meta description<textarea rows={3} value={form.meta_description} onChange={e=>setManualField('meta_description',e.target.value)}/><small className={form.meta_description.length>180?styles.over:''}>{form.meta_description.length}/180 recommended</small></label>
+          <div className={styles.two}><label className={styles.field}>Social title<input value={form.social_title} onChange={e=>setManualField('social_title',e.target.value)}/><small className={form.social_title.length>110?styles.over:''}>{form.social_title.length}/110 recommended</small></label><label className={styles.field}>Canonical URL<input value={form.canonical_url} onChange={e=>update('canonical_url',e.target.value)} placeholder="Leave blank for article URL"/></label></div>
+          <label className={styles.field}>Social description<textarea rows={3} value={form.social_description} onChange={e=>setManualField('social_description',e.target.value)}/><small className={form.social_description.length>220?styles.over:''}>{form.social_description.length}/220 recommended</small></label>
         </section>
 
-        {isEdit&&<section className={styles.card}><header className={styles.cardHead}><div><span>HISTORY</span><h2>Revision history</h2></div></header>{revisions.length?<div className={styles.revisions}>{revisions.map(r=><div key={r.id}><strong>{new Date(r.created_at).toLocaleString('en-NZ')}</strong><span>{r.title}</span></div>)}</div>:<p className={styles.note}>No previous revisions yet.</p>}</section>}
+        {isEdit&&<section className={styles.card}><header className={styles.cardHead}><div><span>HISTORY</span><h2>Revision history</h2></div></header>{revisions.length?<div className={styles.revisions}>{revisions.map(r=><div key={r.id}><strong>{formatRevisionDate(r.created_at)}</strong><span>{r.title}</span></div>)}</div>:<p className={styles.note}>No previous revisions yet.</p>}</section>}
       </main>
 
       <aside className={styles.side}>
@@ -486,7 +609,7 @@ export default function ArticleWorkspace({
           <label className={styles.field}>Primary category<select value={form.primary_category_id} onChange={e=>update('primary_category_id',e.target.value)}><option value="">Select primary category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           {selectedCategories.length>0&&<div className={styles.chips}>{selectedCategories.map(c=><span key={c.id}>{c.name}{c.id===form.primary_category_id?' • Primary':''}</span>)}</div>}
           <div className={styles.categoryBox}><input value={categorySearch} onChange={e=>setCategorySearch(e.target.value)} placeholder="Search categories"/><div>{filteredCategories.map(c=><label key={c.id}><input type="checkbox" checked={categoryIds.includes(c.id)||c.id===form.primary_category_id} disabled={c.id===form.primary_category_id} onChange={()=>toggleCategory(c.id)}/><span>{c.name}</span></label>)}</div></div>
-          <label className={styles.field}>Tags<textarea rows={3} value={tags} onChange={e=>setTags(e.target.value)} placeholder="Auckland, politics, community"/><small>Separate tags with commas.</small></label>
+          <label className={styles.field}>Tags<textarea rows={3} value={tags} onChange={e=>setManualField('tags',e.target.value)} placeholder="Auckland, politics, community"/><small>Separate tags with commas.</small></label>
         </section>
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>PLACEMENT</span><h2>Homepage options</h2></div></header><div className={styles.toggles}>{[['is_breaking','Breaking News'],['is_featured','Featured'],['is_editor_pick',"Editor's Pick"],['is_homepage_hero','Homepage Hero']].map(([k,l])=><label key={k}><input type="checkbox" checked={(form as any)[k]} onChange={e=>update(k,e.target.checked)}/><span>{l}</span></label>)}</div></section>

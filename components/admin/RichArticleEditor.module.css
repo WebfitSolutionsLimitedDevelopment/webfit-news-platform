@@ -45,3 +45,14 @@
 .editor figure.article-embed[data-editor-selected="true"]{
   outline:3px solid #111317;outline-offset:4px;border-radius:8px
 }
+
+
+/* v5.10 keep core editing tools reachable on phones */
+@media(max-width:760px){
+  .toolbar{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding:7px 8px}
+  .toolbar::-webkit-scrollbar{display:none}
+  .group{flex:0 0 auto}
+  .toolbar button{min-height:36px;white-space:nowrap}
+  .quickMedia{bottom:10px;max-width:calc(100vw - 20px)}
+  .quickMedia button{min-height:42px}
+}

@@ -27,10 +27,35 @@ function escapeHtml(value: string) {
 }
 
 
+function unwrapWholeBlockBold(root: ParentNode) {
+  for (const block of Array.from(root.querySelectorAll('p,li,blockquote,figcaption'))) {
+    const meaningful = Array.from(block.childNodes).filter(node => {
+      if (node.nodeType === Node.TEXT_NODE) return Boolean((node.textContent || '').trim());
+      if (node.nodeType !== Node.ELEMENT_NODE) return false;
+      const element = node as Element;
+      if (element.tagName === 'BR') return false;
+      return true;
+    });
+
+    if (meaningful.length !== 1) continue;
+    const only = meaningful[0];
+    if (only.nodeType !== Node.ELEMENT_NODE) continue;
+
+    const element = only as Element;
+    if (!['STRONG','B'].includes(element.tagName.toUpperCase())) continue;
+
+    // A whole paragraph accidentally wrapped in bold is usually formatting
+    // left behind after cutting/removing a pasted headline. Preserve partial
+    // inline emphasis, but normalise block-wide bold back to ordinary prose.
+    unwrap(element);
+  }
+}
+
 function serializeEditorHtml(editor: HTMLElement) {
   const clone = editor.cloneNode(true) as HTMLElement;
   clone.querySelectorAll('[data-editor-control]').forEach(node => node.remove());
   clone.querySelectorAll('[data-editor-selected]').forEach(node => node.removeAttribute('data-editor-selected'));
+  unwrapWholeBlockBold(clone);
   return clone.innerHTML;
 }
 
@@ -354,6 +379,7 @@ function sanitizePastedHtml(html: string) {
     }
   }
 
+  unwrapWholeBlockBold(doc.body);
   return doc.body.innerHTML;
 }
 
@@ -370,6 +396,7 @@ type MediaItem = {
 };
 
 type MediaMode = 'image' | 'gallery';
+type MediaPlacement = 'cursor' | 'end';
 
 type EditorSnapshot = {
   html: string;
@@ -540,6 +567,15 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     savedRangeRef.current = container && editor.contains(container) ? range.cloneRange() : null;
   }
 
+  function rememberEndSelection() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    savedRangeRef.current = range;
+  }
+
   function restoreSelection() {
     const editor = editorRef.current;
     if (!editor) return;
@@ -579,7 +615,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
     // Block media should sit between paragraphs rather than becoming an invalid
     // child of a paragraph, heading or list item.
-    const isBlockInsert = /^\s*<(figure|div\s+class=["']article-gallery|table|iframe|hr)\b/i.test(html);
+    const isBlockInsert = /^\s*<(p|h2|h3|h4|ul|ol|blockquote|figure|div|table|iframe|hr)\b/i.test(html);
     if (isBlockInsert) {
       const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
         ? range.startContainer as Element
@@ -662,8 +698,9 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     }
   }
 
-  async function openMedia(mode: MediaMode) {
-    rememberSelection();
+  async function openMedia(mode: MediaMode, placement: MediaPlacement = 'cursor') {
+    if (placement === 'end') rememberEndSelection();
+    else rememberSelection();
     setMediaMode(mode);
     setGalleryIds([]);
     setMediaMessage('');
@@ -878,10 +915,86 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     removeEditorMedia(media);
   }
 
+  function normalizeCaretBlockFormatting() {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    if (!editor || !selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const start = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as Element
+      : range.startContainer.parentElement;
+    if (!start || !editor.contains(start)) return;
+
+    const block = start.closest('p,li,blockquote') as HTMLElement | null;
+    if (!block) return;
+
+    const meaningful = Array.from(block.childNodes).filter(node => {
+      if (node.nodeType === Node.TEXT_NODE) return Boolean((node.textContent || '').trim());
+      if (node.nodeType !== Node.ELEMENT_NODE) return false;
+      return (node as Element).tagName !== 'BR';
+    });
+
+    if (meaningful.length !== 1) return;
+    const only = meaningful[0];
+    if (only.nodeType !== Node.ELEMENT_NODE) return;
+
+    const element = only as HTMLElement;
+    if (!['STRONG','B'].includes(element.tagName.toUpperCase())) return;
+
+    // If the whole current prose block is bold, move its children out of the
+    // bold wrapper while retaining the current caret as closely as possible.
+    const offset = getCaretOffset(editor);
+    unwrap(element);
+    requestAnimationFrame(() => restoreCaretOffset(editor, offset));
+  }
+
+  function releaseEmptyFormattingBeforeText() {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    if (!editor || !selection || !selection.rangeCount || !selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const start = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as Element
+      : range.startContainer.parentElement;
+    if (!start || !editor.contains(start)) return;
+
+    const inline = start.closest('strong,b,em,i,u') as HTMLElement | null;
+    if (inline && !(inline.textContent || '').trim()) {
+      const after = document.createRange();
+      after.setStartAfter(inline);
+      after.collapse(true);
+      inline.remove();
+      selection.removeAllRanges();
+      selection.addRange(after);
+    }
+
+    const heading = start.closest('h2,h3,h4') as HTMLElement | null;
+    if (heading && !(heading.textContent || '').trim() && !heading.querySelector('img,iframe,figure')) {
+      const paragraph = document.createElement('p');
+      paragraph.appendChild(document.createElement('br'));
+      heading.replaceWith(paragraph);
+      const inside = document.createRange();
+      inside.selectNodeContents(paragraph);
+      inside.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(inside);
+    }
+  }
+
   function handleEditorBeforeInput(event: React.FormEvent<HTMLDivElement>) {
     const nativeEvent = event.nativeEvent as InputEvent;
     if (nativeEvent.inputType === 'historyUndo' || nativeEvent.inputType === 'historyRedo') return;
+    if (nativeEvent.inputType.startsWith('insert')) releaseEmptyFormattingBeforeText();
     rememberHistory();
+
+    if (nativeEvent.inputType.startsWith('delete')) {
+      requestAnimationFrame(() => {
+        normalizeCaretBlockFormatting();
+        emit();
+      });
+    }
   }
 
   function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -913,6 +1026,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     const text = event.clipboardData.getData('text/plain');
     const singleYoutube = text.trim() && !text.trim().includes('\n') ? youtubeEmbed(text.trim()) : '';
     event.preventDefault();
+    releaseEmptyFormattingBeforeText();
     rememberSelection();
     if (singleYoutube) insertHtml(singleYoutube);
     else if (html) insertHtml(sanitizePastedHtml(html));
@@ -941,8 +1055,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Quote',()=>command('formatBlock','blockquote'))}
       </div>
       <div className={styles.group}>
-        {toolbarButton('Image',()=>openMedia('image'),'Insert an image at the cursor')}
-        {toolbarButton('Gallery',()=>openMedia('gallery'),'Insert up to 20 images as a gallery')}
+        {toolbarButton('Image',()=>openMedia('image','cursor'),'Insert an image at the cursor')}
+        {toolbarButton('Gallery',()=>openMedia('gallery','cursor'),'Insert up to 20 images as a gallery')}
         {toolbarButton('Table',addTable)}
         {toolbarButton('YouTube',addYoutube)}
         {toolbarButton('Line',()=>command('insertHorizontalRule'))}
@@ -953,7 +1067,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Use Image for a full article image exactly where the cursor is placed. Use Gallery for multiple images. Click an image or YouTube video to remove it. Normal typing and deletion keep the caret in place.</div>
+    <div className={styles.hint}>Toolbar Image/Gallery inserts at the cursor. The floating mobile-friendly Image at end/Gallery at end controls always append media after the story. Click an image or YouTube video to remove it.</div>
     {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
@@ -965,13 +1079,14 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       onInput={emit}
       onBlur={emit}
       onPaste={handlePaste}
+      onCut={()=>requestAnimationFrame(()=>{normalizeCaretBlockFormatting();emit();})}
       onClick={handleEditorClick}
       onKeyDown={handleEditorKeyDown}
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
-      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image')}}>+ Image</button>
-      <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery')}}>Gallery</button>
+      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>+ Image at end</button>
+      <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery','end')}}>Gallery at end</button>
       {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
     </div>
 

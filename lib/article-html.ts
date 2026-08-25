@@ -16,6 +16,23 @@ function inlineFigureKey(figureHtml: string) {
   return src ? `src:${src}` : null;
 }
 
+function removeAccidentalWholeBlockBold(html: string) {
+  let current = html;
+  let previous = '';
+
+  // Only unwrap bold when it is the sole meaningful content of a normal prose
+  // block. Partial emphasis remains untouched. Headings are intentionally not
+  // included because headings should remain visually bold.
+  const pattern = /<(p|li|blockquote|figcaption)(\b[^>]*)>\s*<(strong|b)(?:\b[^>]*)>([\s\S]*?)<\/\3>\s*<\/\1>/gi;
+
+  while (current !== previous) {
+    previous = current;
+    current = current.replace(pattern, '<$1$2>$4</$1>');
+  }
+
+  return current;
+}
+
 function dedupeInlineFiguresKeepLast(html: string) {
   const figures = Array.from(
     html.matchAll(/<figure\b[^>]*class=["'][^"']*\barticle-inline-image\b[^"']*["'][^>]*>[\s\S]*?<\/figure>/gi)
@@ -87,7 +104,7 @@ export function sanitizeArticleHtml(value: string) {
     },
   });
 
-  return dedupeInlineFiguresKeepLast(clean);
+  return removeAccidentalWholeBlockBold(dedupeInlineFiguresKeepLast(clean));
 }
 
 export function articleHtmlToText(value: string) {
