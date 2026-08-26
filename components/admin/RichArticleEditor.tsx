@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import styles from './RichArticleEditor.module.css';
+import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
 
 type Props = {
   value: string;
@@ -414,6 +415,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaMode, setMediaMode] = useState<MediaMode>('image');
+  const [mediaPlacement, setMediaPlacement] = useState<MediaPlacement>('cursor');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaSearch, setMediaSearch] = useState('');
   const [mediaBusy, setMediaBusy] = useState(false);
@@ -702,9 +704,11 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     if (placement === 'end') rememberEndSelection();
     else rememberSelection();
     setMediaMode(mode);
+    setMediaPlacement(placement);
     setGalleryIds([]);
     setMediaMessage('');
     setMediaOpen(true);
+    if (mediaFileRef.current) mediaFileRef.current.value = '';
     if (!mediaItems.length) await loadMedia('');
   }
 
@@ -782,10 +786,19 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       setMediaMessage('Choose one or more image files first.');
       return;
     }
-    if (mediaMode === 'image' && files.length > 1) {
-      setMediaMessage('Choose one image for a full-width inline image, or use Gallery for multiple images.');
+
+    const allowMultipleStandalone = mediaMode === 'image' && mediaPlacement === 'end';
+
+    if (mediaMode === 'image' && !allowMultipleStandalone && files.length > 1) {
+      setMediaMessage('Choose one image here. Use Images at end or Gallery for multiple images.');
       return;
     }
+
+    if (files.length > 20) {
+      setMediaMessage('You can upload a maximum of 20 images at one time.');
+      return;
+    }
+
     if (mediaMode === 'gallery' && files.length + galleryIds.length > 20) {
       setMediaMessage('A gallery can contain up to 20 images.');
       return;
@@ -794,31 +807,56 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     setMediaBusy(true);
     setMediaMessage('');
     const uploaded: MediaItem[] = [];
+
     try {
-      for (const file of files) {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
         if (!file.type.startsWith('image/')) throw new Error(`${file.name} is not an image.`);
+
+        setMediaMessage(`Compressing image ${index + 1} of ${files.length}: ${file.name}`);
+        const compressed = await compressImageForUpload(file, {
+          maxBytes: 2 * 1024 * 1024,
+          maxDimension: 2200,
+        });
+
+        setMediaMessage(
+          `Uploading image ${index + 1} of ${files.length} (${formatUploadSize(compressed.size)})...`
+        );
+
         const form = new FormData();
-        form.set('file', file);
-        form.set('alt_text', file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' '));
+        form.set('file', compressed);
+        form.set(
+          'alt_text',
+          file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' ')
+        );
+
         const response = await fetch('/api/admin/media', { method: 'POST', body: form });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || `Could not upload ${file.name}.`);
         uploaded.push(data.media);
       }
 
-      setMediaItems(current => [...uploaded, ...current.filter(item => !uploaded.some(upload => upload.id === item.id))]);
+      setMediaItems(current => [
+        ...uploaded,
+        ...current.filter(item => !uploaded.some(upload => upload.id === item.id)),
+      ]);
 
       if (mediaMode === 'image') {
-        const html = imageHtml(uploaded[0]);
+        const html = uploaded.map(imageHtml).join('');
         if (html) {
           insertHtml(html);
-          setEditorNotice('Image uploaded and inserted into the article body. Save or update the article to publish this change.');
+          setEditorNotice(
+            `${uploaded.length} image${uploaded.length === 1 ? '' : 's'} compressed, uploaded and inserted into the article body. Save or update the article to publish this change.`
+          );
         }
         setMediaOpen(false);
       } else {
         setGalleryIds(current => [...current, ...uploaded.map(item => item.id)].slice(0, 20));
-        setMediaMessage(`${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded and selected.`);
+        setMediaMessage(
+          `${uploaded.length} image${uploaded.length === 1 ? '' : 's'} compressed, uploaded and selected.`
+        );
       }
+
       if (mediaFileRef.current) mediaFileRef.current.value = '';
     } catch (error: any) {
       setMediaMessage(error.message || 'Image upload failed.');
@@ -1085,7 +1123,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
-      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>+ Image at end</button>
+      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>+ Images at end</button>
       <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery','end')}}>Gallery at end</button>
       {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
     </div>
@@ -1103,8 +1141,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         </header>
 
         <div className={styles.mediaUpload}>
-          <div><strong>Upload {mediaMode === 'gallery' ? 'images' : 'image'}</strong><small>JPG, PNG, WebP or AVIF. Maximum 20 MB each.</small></div>
-          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery'}/>
+          <div><strong>Upload {mediaMode === 'gallery' || mediaPlacement === 'end' ? 'images' : 'image'}</strong><small>Large images are automatically compressed to a maximum of 2 MB each. Up to 20 images at the end.</small></div>
+          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery' || mediaPlacement === 'end'}/>
           <button type="button" disabled={mediaBusy} onClick={uploadMediaFiles}>{mediaBusy ? 'Uploading...' : 'Upload'}</button>
         </div>
 

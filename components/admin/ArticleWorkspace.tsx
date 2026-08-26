@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './ArticleWorkspace.module.css';
 import { RichArticleEditor } from './RichArticleEditor';
+import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
 
 type Option={id:string;name:string};
 type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
@@ -312,23 +313,39 @@ export default function ArticleWorkspace({
 
   async function uploadMedia(){
     const file=fileRef.current?.files?.[0];
-    if(!file){setMessage('Choose an image first.');return}
-    if(!file.type.startsWith('image/')){setMessage('Featured media must be an image.');return}
-    setMediaBusy(true);setMessage('');
+    if(!file){setMessageKind('error');setMessage('Choose an image first.');return}
+    if(!file.type.startsWith('image/')){setMessageKind('error');setMessage('Featured media must be an image.');return}
+
+    setMediaBusy(true);
+    setMessageKind('info');
+    setMessage(`Compressing ${file.name}...`);
+
     try{
+      const compressed=await compressImageForUpload(file,{maxBytes:2*1024*1024,maxDimension:2200});
+      setMessage(`Compressed to ${formatUploadSize(compressed.size)}. Uploading...`);
+
       const fd=new FormData();
-      fd.set('file',file);
+      fd.set('file',compressed);
       fd.set('alt_text',file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' '));
+
       const r=await fetch('/api/admin/media',{method:'POST',body:fd});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'Upload failed');
+
       setMedia(d.media);
       update('featured_media_id',d.media.id);
-      setMediaItems(current=>[d.media,...current]);
+      setMediaItems(current=>[d.media,...current.filter(item=>item.id!==d.media.id)]);
       setMediaOpen(false);
       if(fileRef.current)fileRef.current.value='';
-    }catch(e:any){setMessage(e.message||'Upload failed')}
-    finally{setMediaBusy(false)}
+
+      setMessageKind('success');
+      setMessage(`Featured image uploaded successfully (${formatUploadSize(compressed.size)}).`);
+    }catch(e:any){
+      setMessageKind('error');
+      setMessage(e.message||'Upload failed');
+    }finally{
+      setMediaBusy(false);
+    }
   }
 
   function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
@@ -620,7 +637,7 @@ export default function ArticleWorkspace({
       <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
       <div className={styles.dialog}>
         <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>Upload a new image or select an existing newsroom image.</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
-        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Maximum 20 MB.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
+        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Large images are automatically compressed to a maximum of 2 MB.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
         <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/><button onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
         {mediaBusy?<div className={styles.loading}>Loading images...</div>:<div className={styles.mediaGrid}>{mediaItems.map(item=><button key={item.id} onClick={()=>chooseMedia(item)}><span>{item.public_url?<img src={item.public_url} alt={item.alt_text||item.filename||''}/>:null}</span><strong>{item.filename||'Untitled image'}</strong><small>{item.width&&item.height?`${item.width} × ${item.height}`:'Image'}</small></button>)}</div>}
       </div>
