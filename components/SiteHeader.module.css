@@ -70,7 +70,7 @@
   .mobileControls{
     grid-column:2 / 4;
     display:grid;
-    grid-template-columns:auto auto;
+    grid-template-columns:auto auto auto;
     align-items:center;
     margin-left:0;
     min-width:0;

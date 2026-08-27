@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getPublicSiteSettings } from '@/lib/public-settings';
 import { SupportBanner } from './SupportBanner';
 import { SiteMenu } from './SiteMenu';
+import { LanguageSelector } from './LanguageSelector';
 import styles from './SiteHeader.module.css';
 
 const links=[['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
@@ -28,7 +29,7 @@ export async function SiteHeader(){
       <div className="shell masthead-premium-inner">
         <SiteMenu/>
         <Link href="/" className="brand-premium"><img src="/webfit-news-logo.png" alt={siteName}/></Link>
-        <div className="header-actions-premium"><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
+        <div className="header-actions-premium"><LanguageSelector/><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
       </div>
     </header>
 
@@ -38,6 +39,7 @@ export async function SiteHeader(){
           <img src="/webfit-news-logo.png" alt={siteName}/>
         </Link>
         <div className={styles.mobileControls}>
+          <LanguageSelector mobile/>
           <SiteMenu label="Sections" mobile/>
           <Link className={styles.mobileSearch} href="/search" aria-label="Search Webfit News">
             <span>Search</span>
