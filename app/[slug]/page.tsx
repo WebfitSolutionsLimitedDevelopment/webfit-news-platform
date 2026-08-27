@@ -17,7 +17,9 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   const canonical=article.canonical_url||`https://webfitnews.com/${article.slug}/`;
   const socialTitle=article.social_title||article.title;
   const socialDescription=article.social_description||article.meta_description||article.excerpt||undefined;
-  const socialImage=`https://webfitnews.com/${article.slug}/social-card`;
+  // Prefer the article's actual featured image for social crawlers.
+  // The generated social card remains a fallback for stories without one.
+  const socialImage=article.media?.public_url||`https://webfitnews.com/${article.slug}/social-card`;
 
   return{
     title:article.seo_title||article.title,
@@ -32,10 +34,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
       description:socialDescription,
       images:[{
         url:socialImage,
-        width:1200,
-        height:630,
-        alt:article.media?.alt_text||article.title,
-        type:'image/png'
+        alt:article.media?.alt_text||article.title
       }],
       publishedTime:article.published_at||undefined,
       modifiedTime:article.updated_at||undefined

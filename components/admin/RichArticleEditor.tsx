@@ -420,6 +420,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   const [mediaSearch, setMediaSearch] = useState('');
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaMessage, setMediaMessage] = useState('');
+  const [inlineCaption, setInlineCaption] = useState('');
   const [galleryIds, setGalleryIds] = useState<string[]>([]);
   const [editorNotice, setEditorNotice] = useState('');
   const [selectedMediaLabel, setSelectedMediaLabel] = useState('');
@@ -706,6 +707,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     setMediaMode(mode);
     setMediaPlacement(placement);
     setGalleryIds([]);
+    setInlineCaption('');
     setMediaMessage('');
     setMediaOpen(true);
     if (mediaFileRef.current) mediaFileRef.current.value = '';
@@ -718,11 +720,11 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       : `inline-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
-  function imageHtml(item: MediaItem) {
+  function imageHtml(item: MediaItem, captionOverride = '') {
     if (!item.public_url) return '';
     const inlineInstance = newInlineInstance();
     const alt = escapeHtml(item.alt_text || item.filename || '');
-    const caption = (item.caption || '').trim();
+    const caption = captionOverride.trim() || (item.caption || '').trim();
     const credit = (item.credit || '').trim();
     const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
     return `<figure class="article-inline-image" data-inline-instance="${escapeHtml(inlineInstance)}"><img data-media-id="${escapeHtml(item.id)}" src="${escapeHtml(item.public_url)}" alt="${alt}" loading="lazy" decoding="async">${captionText ? `<figcaption>${escapeHtml(captionText)}</figcaption>` : ''}</figure><p><br></p>`;
@@ -745,7 +747,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
   function chooseImage(item: MediaItem) {
     if (mediaMode === 'image') {
-      const html = imageHtml(item);
+      const html = imageHtml(item, inlineCaption);
       if (html) {
         insertHtml(html);
         setEditorNotice('Image inserted into the article body. Save or update the article to publish this change.');
@@ -842,7 +844,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       ]);
 
       if (mediaMode === 'image') {
-        const html = uploaded.map(imageHtml).join('');
+        const html = uploaded.map(item => imageHtml(item, inlineCaption)).join('');
         if (html) {
           insertHtml(html);
           setEditorNotice(
@@ -1105,7 +1107,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Toolbar Image/Gallery inserts at the cursor. The floating mobile-friendly Image at end/Gallery at end controls always append media after the story. Click an image or YouTube video to remove it.</div>
+    <div className={styles.hint}>Place the cursor anywhere in the article, then choose Image or Gallery. The image will be inserted at that position. An image caption is optional. Click an image or YouTube video to remove it.</div>
     {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
@@ -1123,8 +1125,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
-      <button type="button" title="Insert image at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>+ Images at end</button>
-      <button type="button" title="Insert image gallery at the current article position" onMouseDown={event=>{event.preventDefault();openMedia('gallery','end')}}>Gallery at end</button>
+      <button type="button" title="Insert an image where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('image','cursor')}}>+ Image here</button>
+      <button type="button" title="Insert an image gallery where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('gallery','cursor')}}>Gallery here</button>
       {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
     </div>
 
@@ -1141,8 +1143,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         </header>
 
         <div className={styles.mediaUpload}>
-          <div><strong>Upload {mediaMode === 'gallery' || mediaPlacement === 'end' ? 'images' : 'image'}</strong><small>Large images are automatically compressed to a maximum of 2 MB each. Up to 20 images at the end.</small></div>
-          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery' || mediaPlacement === 'end'}/>
+          <div><strong>Upload {mediaMode === 'gallery' ? 'images' : 'image'}</strong><small>Large images are automatically compressed to a maximum of 2 MB each. Galleries can contain up to 20 images.</small></div>
+          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery'}/>
           <button type="button" disabled={mediaBusy} onClick={uploadMediaFiles}>{mediaBusy ? 'Uploading...' : 'Upload'}</button>
         </div>
 
@@ -1150,6 +1152,15 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
           <input value={mediaSearch} onChange={event=>setMediaSearch(event.target.value)} onKeyDown={event=>{if(event.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/>
           <button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch)}>Search</button>
         </div>
+
+        {mediaMode === 'image' && <div className={styles.mediaSearch}>
+          <input
+            value={inlineCaption}
+            onChange={event=>setInlineCaption(event.target.value)}
+            placeholder="Optional image caption shown below this image"
+            maxLength={500}
+          />
+        </div>}
 
         {mediaMessage && <div className={styles.mediaMessage}>{mediaMessage}</div>}
 
