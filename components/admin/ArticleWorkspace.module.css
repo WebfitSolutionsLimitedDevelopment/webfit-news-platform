@@ -84,3 +84,22 @@
   .cardHead{display:grid;grid-template-columns:1fr}
   .cardHead small{max-width:none;text-align:left}
 }
+
+
+/* Article workspace destructive actions */
+.actions .deleteButton{
+  border-color:#d9a6a6;
+  color:#9f1d1d;
+  background:#fff;
+}
+.actions .deleteButton:hover{
+  border-color:#b42318;
+  background:#fff4f2;
+  color:#8e1712;
+}
+@media(max-width:760px){
+  .actions .deleteButton{
+    order:11;
+    flex-basis:100%;
+  }
+}

@@ -409,7 +409,9 @@ export default function ArticleWorkspace({
 
     if(hasAnything){
       const confirmed=window.confirm(
-        'Clear this entire new article? This will remove the source, headline, subheadline, article body, excerpt, SEO/social fields, categories, tags and featured image from this unsaved form.'
+        isEdit
+          ? 'Clear every field in this article editor? This clears the current form only. The saved article is not changed until you click Save changes or Update published.'
+          : 'Clear this entire new article? This will remove the source, headline, subheadline, article body, excerpt, SEO/social fields, categories, tags and featured image from this unsaved form.'
       );
       if(!confirmed)return;
     }
@@ -451,8 +453,38 @@ export default function ArticleWorkspace({
     if(sourceFileRef.current)sourceFileRef.current.value='';
 
     setMessageKind('success');
-    setMessage('All new-article fields cleared. You can start again with a fresh source.');
+    setMessage(isEdit?'All article fields cleared in the editor. Nothing has been saved yet.':'All new-article fields cleared. You can start again with a fresh source.');
     window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
+  }
+
+  async function deleteArticle(){
+    if(!isEdit||!article?.id)return;
+
+    const isPublished=status==='published';
+    const confirmed=window.confirm(
+      isPublished
+        ? 'Delete this published article permanently? It will be removed from the CMS and the live website. This cannot be undone.'
+        : 'Delete this article permanently? This cannot be undone.'
+    );
+    if(!confirmed)return;
+
+    setBusy(true);
+    setMessageKind('info');
+    setMessage(isPublished?'Deleting published article...':'Deleting article...');
+
+    try{
+      const r=await fetch(`/api/admin/articles/${article.id}`,{method:'DELETE'});
+      const d=await r.json().catch(()=>({error:`Server returned ${r.status}`}));
+      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error||d));
+      router.push('/admin/articles');
+      router.refresh();
+    }catch(e:any){
+      setMessageKind('error');
+      setMessage(e.message||'Could not delete article');
+      window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
+    }finally{
+      setBusy(false);
+    }
   }
 
   function subtitleOrExcerptPresent(){
@@ -552,7 +584,7 @@ export default function ArticleWorkspace({
   return <div className={styles.page}>
     <header className={styles.top}>
       <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
-      <div className={styles.actions}>{!isEdit?<button type="button" className={styles.clearAllButton} disabled={busy||converterBusy} onClick={clearAllFields}>Clear all fields</button>:null}{isEdit?<a href="/admin/articles/new">+ New Article</a>:null}{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button></div>
+      <div className={styles.actions}><button type="button" className={styles.clearAllButton} disabled={busy||converterBusy} onClick={clearAllFields}>Clear all fields</button>{isEdit?<a href="/admin/articles/new">+ New Article</a>:null}{isEdit&&article.slug?<a href={`/${article.slug}/`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button>{isEdit?<button type="button" className={styles.deleteButton} disabled={busy||converterBusy} onClick={deleteArticle}>Delete article</button>:null}</div>
     </header>
 
     {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
