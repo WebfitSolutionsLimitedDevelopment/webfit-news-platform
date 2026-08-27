@@ -7,16 +7,27 @@ import { AdSlot } from '@/components/AdSlot';
 import { VideoSection } from '@/components/VideoSection';
 import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
 import adFlow from './HomeAdFlow.module.css';
+import { getPublicStoryTitle } from '@/lib/public-story-display';
 
 export const revalidate=60;
 
 function StandardSection({title,stories,index}:{title:string;stories:any[];index:number}){
-  if(!stories.length)return null;
+  const normalizedTitle=title.trim().toLowerCase();
+  const hiddenSlugs=new Set(
+    normalizedTitle==='features'
+      ? ['provide-guidelines-for-using-the-logo-effectively','consider-different-perspectives-and-opinions-to-ensure-the-design-is-widely-accepted']
+      : normalizedTitle==='auckland'
+        ? ['queenstown-airport-delivers-record-20-4-million-dividend-after-passenger-numbers-hit-2-82-million-2026']
+        : []
+  );
+  const visibleStories=stories.filter(story=>!hiddenSlugs.has(story.slug));
+  const eyebrowLabel=normalizedTitle==='opinion & columns'?'Opinion':normalizedTitle==='features'?'Feature':undefined;
+  if(!visibleStories.length)return null;
   return <section className="premium-section">
     <div className="section-heading-premium"><div><span>Webfit News</span><h2>{title}</h2></div><Link href="/search">View more</Link></div>
     <div className={index%2===0?'section-layout-feature':'section-layout-grid'}>
-      {index%2===0&&stories[0]?<StoryCard story={stories[0]} variant="horizontal"/>:null}
-      <div className="section-card-grid">{stories.slice(index%2===0?1:0, index%2===0?7:8).map(s=><StoryCard key={s.id} story={s}/>)}</div>
+      {index%2===0&&visibleStories[0]?<StoryCard story={visibleStories[0]} variant="horizontal" eyebrowLabel={eyebrowLabel}/>:null}
+      <div className="section-card-grid">{visibleStories.slice(index%2===0?1:0, index%2===0?7:8).map(s=><StoryCard key={s.id} story={s} eyebrowLabel={eyebrowLabel}/>)}</div>
     </div>
   </section>;
 }
@@ -61,7 +72,7 @@ export default async function Home(){
         <div className="lead-rail">{hero.stories.slice(1,5).map((s:any)=><StoryCard key={s.id} story={s} variant="compact"/>)}</div>
       </section>:null}
 
-      {newsroomRibbonStories.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Latest</span><strong>From the newsroom</strong></div>{newsroomRibbonStories.map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{s.title}</span></Link>)}</section>:null}
+      {newsroomRibbonStories.length>0?<section className="latest-ribbon"><div className="latest-label"><span>Newsroom Now</span><strong>Just published</strong></div>{newsroomRibbonStories.map((s:any)=><Link className="latest-item" key={s.id} href={`/${s.slug}`}><img src={s.media?.public_url||'/webfit-news-logo.png'} alt=""/><span>{getPublicStoryTitle(s.title)}</span></Link>)}</section>:null}
 
       <div className={adFlow.desktopAfterHeroAd}>
         <AdSlot slotKey="HOME_AFTER_HERO"/>

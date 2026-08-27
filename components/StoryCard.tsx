@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Story } from '@/lib/news';
+import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story-display';
 
 type Variant='standard'|'lead'|'compact'|'horizontal';
 
@@ -16,15 +17,17 @@ function cleanExcerpt(value:string|null){
     .replace(/\s+/g,' ')
     .trim();
 }
-export function StoryCard({story,lead=false,variant}:{story:Story;lead?:boolean;variant?:Variant}){
+export function StoryCard({story,lead=false,variant,eyebrowLabel}:{story:Story;lead?:boolean;variant?:Variant;eyebrowLabel?:string}){
   const resolved:Variant=variant||(lead?'lead':'standard');
   const image=story.media?.public_url||'/webfit-news-logo.png';
   const excerpt=cleanExcerpt(story.excerpt);
+  const displayTitle=getPublicStoryTitle(story.title);
+  const displayType=getPublicStoryTypeLabel(story.article_type,story.title,eyebrowLabel);
   return <article className={`story-card story-card-${resolved}`}>
-    <Link href={`/${story.slug}`} className="story-image"><img src={image} alt={story.media?.alt_text||story.title}/></Link>
+    <Link href={`/${story.slug}`} className="story-image"><img src={image} alt={story.media?.alt_text||displayTitle}/></Link>
     <div className="story-copy">
-      <div className="eyebrow">{story.article_type.replaceAll('_',' ')}</div>
-      <h2><Link href={`/${story.slug}`}>{story.title}</Link></h2>
+      <div className="eyebrow">{displayType}</div>
+      <h2><Link href={`/${story.slug}`}>{displayTitle}</Link></h2>
       {(resolved==='lead'||resolved==='horizontal')&&excerpt?<p>{excerpt}</p>:null}
       {story.published_at?<time dateTime={story.published_at}>{new Date(story.published_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</time>:null}
     </div>
