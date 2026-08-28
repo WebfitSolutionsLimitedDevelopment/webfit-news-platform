@@ -1,2 +1,10 @@
 import type { MetadataRoute } from 'next';
-export default function robots():MetadataRoute.Robots{return {rules:{userAgent:'*',allow:'/',disallow:['/admin/','/api/']},sitemap:'https://webfitnews.co.nz/sitemap.xml'}};
+
+const SITE_URL = 'https://webfitnews.com';
+
+export default function robots():MetadataRoute.Robots{
+  return {
+    rules:{userAgent:'*',allow:'/',disallow:['/admin/','/api/']},
+    sitemap:`${SITE_URL}/sitemap.xml`
+  };
+}

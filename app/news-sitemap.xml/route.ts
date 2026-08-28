@@ -1,2 +1,11 @@
 import { getLatestStories } from '@/lib/news';
-export async function GET(){const stories=await getLatestStories(1000);const recent=stories.filter(s=>s.published_at&&Date.now()-new Date(s.published_at).getTime()<=48*60*60*1000);const esc=(s:string)=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');const urls=recent.map(s=>`<url><loc>https://webfitnews.co.nz/${s.slug}/</loc><news:news><news:publication><news:name>Webfit News</news:name><news:language>en</news:language></news:publication><news:publication_date>${new Date(s.published_at!).toISOString()}</news:publication_date><news:title>${esc(s.title)}</news:title></news:news></url>`).join('');return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">${urls}</urlset>`,{headers:{'content-type':'application/xml; charset=utf-8'}})}
+
+const SITE_URL = 'https://webfitnews.com';
+
+export async function GET(){
+  const stories=await getLatestStories(1000);
+  const recent=stories.filter(s=>s.published_at&&Date.now()-new Date(s.published_at).getTime()<=48*60*60*1000);
+  const esc=(s:string)=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const urls=recent.map(s=>`<url><loc>${SITE_URL}/${s.slug}/</loc><news:news><news:publication><news:name>Webfit News</news:name><news:language>en</news:language></news:publication><news:publication_date>${new Date(s.published_at!).toISOString()}</news:publication_date><news:title>${esc(s.title)}</news:title></news:news></url>`).join('');
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">${urls}</urlset>`,{headers:{'content-type':'application/xml; charset=utf-8'}});
+}

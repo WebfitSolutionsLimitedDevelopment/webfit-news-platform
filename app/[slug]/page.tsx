@@ -8,6 +8,7 @@ import { ArticleAudioPlayer } from '@/components/ArticleAudioPlayer';
 import { getArticleBySlug, getRelatedStories, resolveInlineArticleMedia } from '@/lib/news';
 import { articleHtmlToText, sanitizeArticleHtml } from '@/lib/article-html';
 import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story-display';
+import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
 export const revalidate=60;
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{
   const {slug}=await params;
@@ -15,15 +16,18 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   if(!article)return{};
 
   const canonical=article.canonical_url||`https://webfitnews.com/${article.slug}/`;
-  const socialTitle=article.social_title||article.title;
+  const publicTitle=getPublicStoryTitle(article.title);
+  const seoTitle=truncateSeoText(article.seo_title||publicTitle,SEO_TITLE_MAX_LENGTH)||publicTitle;
+  const metaDescription=truncateSeoText(article.meta_description||article.excerpt,SEO_DESCRIPTION_MAX_LENGTH);
+  const socialTitle=article.social_title||publicTitle;
   const socialDescription=article.social_description||article.meta_description||article.excerpt||undefined;
   // Prefer the article's actual featured image for social crawlers.
   // The generated social card remains a fallback for stories without one.
   const socialImage=article.media?.public_url||`https://webfitnews.com/${article.slug}/social-card`;
 
   return{
-    title:article.seo_title||article.title,
-    description:article.meta_description||article.excerpt||undefined,
+    title:{absolute:seoTitle},
+    description:metaDescription,
     alternates:{canonical},
     openGraph:{
       type:'article',

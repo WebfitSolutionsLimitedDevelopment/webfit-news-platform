@@ -216,3 +216,21 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
     display:none;
   }
 }
+
+/* Public newsroom trust and article metadata polish */
+.editorial-trust{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  margin:-8px 0 28px;
+  padding:13px 16px;
+  border:1px solid #dfe3e7;
+  border-left:4px solid #111820;
+  background:#f8f9fa;
+}
+.editorial-trust-copy{display:grid;gap:3px;min-width:0}.editorial-trust-copy strong{font-size:13px;line-height:1.25}.editorial-trust-copy span{font-size:11px;line-height:1.4;color:#68717a}.editorial-trust-links{display:flex;align-items:center;gap:16px;flex:0 0 auto}.editorial-trust-links a{font-size:11px;font-weight:850;color:#111820;text-decoration:none;white-space:nowrap}.editorial-trust-links a:hover{text-decoration:underline;text-underline-offset:3px}
+.editorial-trust-compact{margin:14px 0 6px;padding:11px 13px}.editorial-trust-compact .editorial-trust-copy span{display:none}.editorial-trust-compact .editorial-trust-copy strong{font-size:12px}
+.article-meta{align-items:center;flex-wrap:wrap}.article-byline{margin-right:auto}.article-time-group{display:grid;gap:2px}.article-meta-label{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#7a828b}.article-time-group time{white-space:nowrap}
+.footer-credential{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:8px;padding:6px 9px;border:1px solid #3a4651;border-radius:999px;color:#dbe1e6;font-size:10px;font-weight:800;letter-spacing:.04em}
+@media(max-width:760px){.editorial-trust{align-items:flex-start;flex-direction:column;gap:10px;margin-top:-4px}.editorial-trust-links{width:100%;gap:12px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.editorial-trust-links::-webkit-scrollbar{display:none}.editorial-trust-compact{margin-top:12px}.article-byline{width:100%;margin-right:0}.article-time-group{min-width:calc(50% - 9px)}}
