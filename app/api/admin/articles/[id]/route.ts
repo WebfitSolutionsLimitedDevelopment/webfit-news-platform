@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { createClient } from '../../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
 import { sanitizeArticleHtml } from '../../../../../lib/article-html';
+import { sendPushToAllDevices } from '../../../../../lib/push-notifications';
+import { getSiteUrl } from '../../../../../lib/env';
 
 const Patch = z.object({
   title:z.string().min(5).optional(),
@@ -99,6 +101,13 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   // Purge the public ISR cache immediately so changed featured images and
   // story metadata are visible on every device as soon as the CMS save ends.
   revalidateEditorialContent(before?.slug,data.slug);
+
+  // Only notify phones the moment an article newly goes live, not on every
+  // later edit to an already-published story.
+  if(data.status==='published'&&before?.status!=='published'){
+    const {data:full}=await c.supabase.from('articles').select('title,excerpt').eq('id',id).maybeSingle();
+    if(full?.title) void sendPushToAllDevices(full.title, full.excerpt||'Read the full story on Webfit News.', `${getSiteUrl()}/${data.slug}`);
+  }
 
   return NextResponse.json({article:data});
 }
