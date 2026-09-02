@@ -1,6 +1,7 @@
-const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
-const DEFAULT_TARGET_BYTES = Math.floor(1.85 * 1024 * 1024);
-const DEFAULT_MAX_DIMENSION = 2200;
+export const NEWS_IMAGE_MAX_BYTES = 500 * 1024;
+const DEFAULT_MAX_BYTES = NEWS_IMAGE_MAX_BYTES;
+const DEFAULT_TARGET_BYTES = 420 * 1024;
+const DEFAULT_MAX_DIMENSION = 1800;
 const MIN_DIMENSION = 360;
 
 type CompressOptions = {
@@ -282,9 +283,7 @@ export async function compressImageForUpload(
 
   if (!bestBlob || bestBlob.size > maxBytes) {
     throw new Error(
-      `${file.name} could not be compressed below ${Math.round(
-        maxBytes / 1024 / 1024
-      )} MB.`
+      `${file.name} could not be compressed below ${Math.round(maxBytes / 1024)} KB.`
     );
   }
 

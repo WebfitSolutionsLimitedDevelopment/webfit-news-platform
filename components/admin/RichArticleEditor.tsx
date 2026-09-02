@@ -746,7 +746,9 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   }
 
   function chooseImage(item: MediaItem) {
-    if (mediaMode === 'image') {
+    const selectingEndImages = mediaMode === 'image' && mediaPlacement === 'end';
+
+    if (mediaMode === 'image' && !selectingEndImages) {
       const html = imageHtml(item, inlineCaption);
       if (html) {
         insertHtml(html);
@@ -755,14 +757,32 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       setMediaOpen(false);
       return;
     }
+
     setGalleryIds(current => {
       if (current.includes(item.id)) return current.filter(id => id !== item.id);
       if (current.length >= 20) {
-        setMediaMessage('A gallery can contain up to 20 images.');
+        setMediaMessage(selectingEndImages ? 'You can add up to 20 images at the end.' : 'A gallery can contain up to 20 images.');
         return current;
       }
       return [...current, item.id];
     });
+  }
+
+  function insertSelectedEndImages() {
+    const selected = galleryIds
+      .map(id => mediaItems.find(item => item.id === id))
+      .filter(Boolean) as MediaItem[];
+    if (!selected.length) {
+      setMediaMessage('Select at least one image to add at the end.');
+      return;
+    }
+    const html = selected.map(item => imageHtml(item, inlineCaption)).join('');
+    if (html) {
+      insertHtml(html);
+      setEditorNotice(`${selected.length} image${selected.length === 1 ? '' : 's'} inserted at the end of the article. Save or update the article to publish this change.`);
+    }
+    setMediaOpen(false);
+    setGalleryIds([]);
   }
 
   function insertSelectedGallery() {
@@ -816,10 +836,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         if (!file.type.startsWith('image/')) throw new Error(`${file.name} is not an image.`);
 
         setMediaMessage(`Compressing image ${index + 1} of ${files.length}: ${file.name}`);
-        const compressed = await compressImageForUpload(file, {
-          maxBytes: 2 * 1024 * 1024,
-          maxDimension: 2200,
-        });
+        const compressed = await compressImageForUpload(file);
 
         setMediaMessage(
           `Uploading image ${index + 1} of ${files.length} (${formatUploadSize(compressed.size)})...`
@@ -1095,7 +1112,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Quote',()=>command('formatBlock','blockquote'))}
       </div>
       <div className={styles.group}>
-        {toolbarButton('Image',()=>openMedia('image','cursor'),'Insert an image at the cursor')}
+        {toolbarButton('Image',()=>openMedia('image','cursor'),'Insert one image at the cursor')}
+        {toolbarButton('Images at end',()=>openMedia('image','end'),'Insert up to 20 separate images at the end of the article')}
         {toolbarButton('Gallery',()=>openMedia('gallery','cursor'),'Insert up to 20 images as a gallery')}
         {toolbarButton('Table',addTable)}
         {toolbarButton('YouTube',addYoutube)}
@@ -1125,7 +1143,8 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     />
 
     <div className={styles.quickMedia} aria-label="Quick article media controls">
-      <button type="button" title="Insert an image where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('image','cursor')}}>+ Image here</button>
+      <button type="button" title="Insert one image where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('image','cursor')}}>+ Image here</button>
+      <button type="button" title="Insert up to 20 separate images at the end of the article" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>Images at end</button>
       <button type="button" title="Insert an image gallery where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('gallery','cursor')}}>Gallery here</button>
       {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
     </div>
@@ -1136,15 +1155,15 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         <header className={styles.mediaHeader}>
           <div>
             <span>ARTICLE MEDIA</span>
-            <h3>{mediaMode === 'gallery' ? 'Build image gallery' : 'Insert image'}</h3>
-            <p>{mediaMode === 'gallery' ? `${galleryIds.length}/20 selected. Images will appear where your cursor was.` : 'Choose or upload an image. It will be inserted where your cursor was.'}</p>
+            <h3>{mediaMode === 'gallery' ? 'Build image gallery' : mediaPlacement === 'end' ? 'Add images at end' : 'Insert image'}</h3>
+            <p>{mediaMode === 'gallery' ? `${galleryIds.length}/20 selected. Images will appear where your cursor was.` : mediaPlacement === 'end' ? 'Choose or upload up to 20 images. They will be added as separate images at the end of the article.' : 'Choose or upload one image. It will be inserted where your cursor was.'}</p>
           </div>
           <button type="button" onClick={()=>setMediaOpen(false)}>Close</button>
         </header>
 
         <div className={styles.mediaUpload}>
-          <div><strong>Upload {mediaMode === 'gallery' ? 'images' : 'image'}</strong><small>Large images are automatically compressed to a maximum of 2 MB each. Galleries can contain up to 20 images.</small></div>
-          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery'}/>
+          <div><strong>Upload {mediaMode === 'gallery' || mediaPlacement === 'end' ? 'images' : 'image'}</strong><small>Every image is automatically optimised to about 300–500 KB before upload. You can add up to 20 images at the end or in a gallery.</small></div>
+          <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery' || mediaPlacement === 'end'}/>
           <button type="button" disabled={mediaBusy} onClick={uploadMediaFiles}>{mediaBusy ? 'Uploading...' : 'Upload'}</button>
         </div>
 
@@ -1177,15 +1196,21 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
                 <span>{item.public_url ? <img src={item.public_url} alt={item.alt_text || item.filename || ''}/> : null}</span>
                 <strong>{item.filename || 'Untitled image'}</strong>
                 <small>{item.width && item.height ? `${item.width} x ${item.height}` : 'Image'}</small>
-                {mediaMode === 'gallery' && <b>{selected ? 'Selected' : 'Select'}</b>}
+                {(mediaMode === 'gallery' || mediaPlacement === 'end') && <b>{selected ? 'Selected' : 'Select'}</b>}
               </button>;
             })}
           </div>
         }
 
-        {mediaMode === 'gallery' && <footer className={styles.mediaFooter}>
-          <span>{galleryIds.length} image{galleryIds.length === 1 ? '' : 's'} selected</span>
-          <button type="button" disabled={!galleryIds.length || mediaBusy} onClick={insertSelectedGallery}>Insert gallery</button>
+        {(mediaMode === 'gallery' || mediaPlacement === 'end') && <footer className={styles.mediaFooter}>
+          <span>{galleryIds.length}/20 image{galleryIds.length === 1 ? '' : 's'} selected</span>
+          <button
+            type="button"
+            disabled={!galleryIds.length || mediaBusy}
+            onClick={mediaMode === 'gallery' ? insertSelectedGallery : insertSelectedEndImages}
+          >
+            {mediaMode === 'gallery' ? 'Insert gallery' : 'Insert images at end'}
+          </button>
         </footer>}
       </div>
     </div>}

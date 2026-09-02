@@ -321,7 +321,7 @@ export default function ArticleWorkspace({
     setMessage(`Compressing ${file.name}...`);
 
     try{
-      const compressed=await compressImageForUpload(file,{maxBytes:2*1024*1024,maxDimension:2200});
+      const compressed=await compressImageForUpload(file);
       setMessage(`Compressed to ${formatUploadSize(compressed.size)}. Uploading...`);
 
       const fd=new FormData();
@@ -669,7 +669,7 @@ export default function ArticleWorkspace({
       <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
       <div className={styles.dialog}>
         <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>Upload a new image or select an existing newsroom image.</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
-        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Large images are automatically compressed to a maximum of 2 MB.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
+        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Images are automatically optimised to about 300–500 KB before upload.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
         <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/><button onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
         {mediaBusy?<div className={styles.loading}>Loading images...</div>:<div className={styles.mediaGrid}>{mediaItems.map(item=><button key={item.id} onClick={()=>chooseMedia(item)}><span>{item.public_url?<img src={item.public_url} alt={item.alt_text||item.filename||''}/>:null}</span><strong>{item.filename||'Untitled image'}</strong><small>{item.width&&item.height?`${item.width} × ${item.height}`:'Image'}</small></button>)}</div>}
       </div>
