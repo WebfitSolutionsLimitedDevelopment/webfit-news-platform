@@ -3,6 +3,7 @@ import './public-image-fit.css';
 import './admin-mobile.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { headers } from 'next/headers';
 import { getSiteUrl } from '../lib/env';
 import { getPublicSiteSettings } from '../lib/public-settings';
 
@@ -88,38 +89,53 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // The iOS and Android apps tag their WebView requests with an
+  // "WebfitNewsApp/1.0" marker appended to the User-Agent. When a request
+  // comes from inside our own native app (not a regular browser), we skip
+  // Google Analytics and Google AdSense entirely. Neither script nor the
+  // tracking-consent prompt Google shows for them is needed in-app, and
+  // this keeps the native apps from doing any cross-app/site tracking that
+  // would otherwise require Apple's App Tracking Transparency permission.
+  const headersList = await headers();
+  const userAgent = headersList.get('user-agent') || '';
+  const isNativeApp = userAgent.includes('WebfitNewsApp');
+
   return (
     <html lang="en-NZ">
       <body>{children}</body>
 
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
+      {!isNativeApp && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
 
-      <Script
-        id="google-analytics"
-        strategy="afterInteractive"
-      >
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}');
-        `}
-      </Script>
+          <Script
+            id="google-analytics"
+            strategy="afterInteractive"
+          >
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}');
+            `}
+          </Script>
 
-      <Script
-        async
-        strategy="afterInteractive"
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9134063543493779"
-        crossOrigin="anonymous"
-      />
+          <Script
+            async
+            strategy="afterInteractive"
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9134063543493779"
+            crossOrigin="anonymous"
+          />
+        </>
+      )}
 
       <Script id="sw-register" strategy="afterInteractive">
         {`
