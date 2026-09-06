@@ -1,8 +1,10 @@
-export const NEWS_IMAGE_MAX_BYTES = 500 * 1024;
+export const NEWS_IMAGE_MAX_BYTES = 512 * 1024;
 const DEFAULT_MAX_BYTES = NEWS_IMAGE_MAX_BYTES;
-const DEFAULT_TARGET_BYTES = 420 * 1024;
-const DEFAULT_MAX_DIMENSION = 1800;
-const MIN_DIMENSION = 360;
+const DEFAULT_TARGET_BYTES = 500 * 1024;
+const DEFAULT_MAX_DIMENSION = 2200;
+const MIN_DIMENSION = 720;
+const MIN_WEBP_QUALITY = 0.68;
+const MAX_WEBP_QUALITY = 0.94;
 
 type CompressOptions = {
   maxBytes?: number;
@@ -110,8 +112,8 @@ async function encodeAtBestQuality(
 ) {
   const mime = 'image/webp';
 
-  let low = 0.18;
-  let high = 0.92;
+  let low = MIN_WEBP_QUALITY;
+  let high = MAX_WEBP_QUALITY;
 
   let bestBlob: Blob | null = null;
 
@@ -136,7 +138,12 @@ async function encodeAtBestQuality(
     return bestBlob;
   }
 
-  return canvasBlob(canvas, mime, 0.16);
+  /*
+   * Do not destroy visible detail just to hit the byte target.
+   * If the minimum acceptable quality is still too large, return it
+   * and let the caller reduce dimensions before encoding again.
+   */
+  return canvasBlob(canvas, mime, MIN_WEBP_QUALITY);
 }
 
 export async function compressImageForUpload(
@@ -152,17 +159,17 @@ export async function compressImageForUpload(
 
   const targetBytes = Math.min(
     DEFAULT_TARGET_BYTES,
-    Math.floor(maxBytes * 0.93)
+    Math.floor(maxBytes * 0.98)
   );
 
   const maxDimension =
     options.maxDimension ?? DEFAULT_MAX_DIMENSION;
 
   /*
-   * If the image is already comfortably below the upload limit,
+   * If the image is already within the upload limit,
    * leave it untouched.
    */
-  if (file.size <= targetBytes) {
+  if (file.size <= maxBytes) {
     return file;
   }
 
@@ -250,7 +257,7 @@ export async function compressImageForUpload(
     const resized = resizeDimensions(
       width,
       height,
-      0.82
+      0.9
     );
 
     width = resized.width;
@@ -258,7 +265,7 @@ export async function compressImageForUpload(
 
     /*
      * If we have reached the minimum dimensions,
-     * perform one final aggressive encoding attempt.
+     * perform one final quality-safe encoding attempt.
      */
     if (
       width === previousWidth &&
@@ -267,7 +274,7 @@ export async function compressImageForUpload(
       const emergencyBlob = await canvasBlob(
         canvas,
         'image/webp',
-        0.1
+        MIN_WEBP_QUALITY
       );
 
       if (
