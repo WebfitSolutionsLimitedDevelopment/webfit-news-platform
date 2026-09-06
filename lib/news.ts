@@ -26,7 +26,15 @@ export async function getLatestStories(limit = 12) {
 
 export async function getBreakingStories(limit=4){
   const supabase=await createClient();
-  const {data,error}=await supabase.from('articles').select(storyFields).eq('status','published').eq('is_breaking',true).order('published_at',{ascending:false}).limit(limit);
+  const cutoff=new Date(Date.now()-(12*60*60*1000)).toISOString();
+  const {data,error}=await supabase
+    .from('articles')
+    .select(storyFields)
+    .eq('status','published')
+    .or('is_breaking.eq.true,is_homepage_hero.eq.true')
+    .gte('published_at',cutoff)
+    .order('published_at',{ascending:false})
+    .limit(limit);
   if(error) throw error;
   return (data||[]) as unknown as Story[];
 }
