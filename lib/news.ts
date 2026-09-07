@@ -1,4 +1,5 @@
 import { createClient } from './supabase-server';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export type Story = {
   id: string;
@@ -48,12 +49,32 @@ export async function searchStories(query:string,limit=40){
 }
 
 export async function getArticleBySlug(slug: string) {
+  // Direct article URLs must always resolve against the live database. During the
+  // WordPress migration these pages were previously eligible for ISR caching, which
+  // allowed a transient lookup miss to become a cached 404 even though internal
+  // navigation/search could later find the same published record.
+  noStore();
   const supabase = await createClient();
+  const articleFields = '*,author:author_id(name,slug,bio),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit),article_categories(category:category_id(id,name,slug))';
+
   const { data, error } = await supabase.from('articles')
-    .select('*,author:author_id(name,slug,bio),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit),article_categories(category:category_id(id,name,slug))')
-    .eq('slug', slug).eq('status', 'published').maybeSingle();
+    .select(articleFields)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data) return data;
+
+  // Compatibility fallback for migrated WordPress posts. Nearly every imported post
+  // retained wp_post_name, and this also covers any historical slug that differs from
+  // the current canonical slug without rewriting production article rows.
+  const { data: legacyData, error: legacyError } = await supabase.from('articles')
+    .select(articleFields)
+    .eq('wp_post_name', slug)
+    .eq('status', 'published')
+    .maybeSingle();
+  if (legacyError) throw legacyError;
+  return legacyData;
 }
 
 function inlineStoragePathFromUrl(value: string) {
