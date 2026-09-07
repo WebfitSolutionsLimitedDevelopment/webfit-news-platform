@@ -4,6 +4,9 @@ import { getPublicEnv } from './lib/env';
 
 type CookieToSet = { name: string; value: string; options?: any };
 
+const LEGACY_HOSTS = new Set(['webfitnews.co.nz', 'www.webfitnews.co.nz']);
+const CANONICAL_HOST = 'www.webfitnews.com';
+
 function redirectCandidates(pathname: string, search = '') {
   const withoutTrailing = pathname === '/' ? '/' : (pathname.replace(/\/+$/, '') || '/');
   const withTrailing = withoutTrailing === '/' ? '/' : `${withoutTrailing}/`;
@@ -17,6 +20,17 @@ function redirectCandidates(pathname: string, search = '') {
 }
 
 export async function proxy(request: NextRequest) {
+  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
+
+  // Preserve every historical path/query while moving legacy .co.nz traffic
+  // onto the canonical production host. This runs before any database lookup.
+  if (LEGACY_HOSTS.has(host) && (request.method === 'GET' || request.method === 'HEAD')) {
+    const destination = request.nextUrl.clone();
+    destination.protocol = 'https:';
+    destination.host = CANONICAL_HOST;
+    return NextResponse.redirect(destination, 308);
+  }
+
   let response = NextResponse.next({ request });
   const { supabaseUrl, supabasePublishableKey } = getPublicEnv();
   const supabase = createServerClient(
