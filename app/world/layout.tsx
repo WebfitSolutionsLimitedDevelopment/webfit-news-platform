@@ -1,4 +1,26 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'World Guides',
+    template: '%s',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+};
 
 const worldLinks = [
   ['/world/weather', 'World Weather'],
