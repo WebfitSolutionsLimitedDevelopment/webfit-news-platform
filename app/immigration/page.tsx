@@ -7,7 +7,7 @@ import styles from './Immigration.module.css';
 
 export const metadata: Metadata = {
   title: 'New Zealand Visa Guide | Work, Study, Visit, Family & Residence | Webfit News',
-  description: 'A clear New Zealand visa guide organised by work, study, visit, residence and family pathways, with direct links to Immigration New Zealand.',
+  description: 'A clear New Zealand visa guide organised by work, study, visit, residence and family pathways, with official Immigration New Zealand links and downloadable checklists.',
 };
 
 const categories: Array<{name: VisaCategory; id: string; description: string}> = [
@@ -21,12 +21,12 @@ const categories: Array<{name: VisaCategory; id: string; description: string}> =
 export default function ImmigrationHubPage() {
   return <>
     <SiteHeader/>
-    <main className={`shell ${styles.page}`}>
+    <main id="top" className={`shell ${styles.page}`}>
       <section className={styles.hero}>
         <span className={styles.eyebrow}>Webfit News Immigration Information</span>
         <h1>New Zealand Visa Guide</h1>
         <p className={styles.heroLead}>
-          Find New Zealand visa information by purpose, compare the main visa pathways, then open a detailed guide with official Immigration New Zealand links, document information and a downloadable checklist.
+          Find New Zealand visa information by purpose, compare the main visa pathways, then open a detailed guide with official Immigration New Zealand links, document information and a downloadable Webfit News checklist.
         </p>
         <div className={styles.notice}>
           <strong>General information only.</strong> Webfit News does not provide immigration advice or assess personal eligibility. Visa rules can change, so always confirm the current requirements on the official Immigration New Zealand website before applying.
@@ -45,12 +45,12 @@ export default function ImmigrationHubPage() {
           <p>Start with work, study, visit, residence or family.</p>
         </div>
         <div>
-          <strong>2. Compare visa options</strong>
-          <p>Use the tables below to quickly understand what each visa is generally for.</p>
+          <strong>2. Open the visa guide</strong>
+          <p>Read the latest information Webfit News could safely organise from the official source.</p>
         </div>
         <div>
-          <strong>3. Open the full guide</strong>
-          <p>Each visa name links to a dedicated Webfit News guide with official source links.</p>
+          <strong>3. Download the checklist</strong>
+          <p>Every listed visa has a branded PDF checklist generated from the latest source snapshot used by the guide.</p>
         </div>
       </section>
 
@@ -76,6 +76,7 @@ export default function ImmigrationHubPage() {
                   <th>What it is generally for</th>
                   <th>Category</th>
                   <th>Guide</th>
+                  <th>Checklist</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,12 +91,26 @@ export default function ImmigrationHubPage() {
                   <td data-label="Guide">
                     <Link className={styles.openGuide} href={`/immigration/${visa.slug}`}>View guide →</Link>
                   </td>
+                  <td data-label="Checklist">
+                    <a className={styles.downloadGuide} href={`/immigration/${visa.slug}/checklist.pdf`}>
+                      Download PDF ↓
+                    </a>
+                  </td>
                 </tr>)}
               </tbody>
             </table>
           </div>
         </section>;
       })}
+
+      <section className={styles.checklistPanel}>
+        <div>
+          <span className={styles.sectionLabel}>Printable reference</span>
+          <h2>Branded checklists are available for every visa above</h2>
+          <p>Each PDF carries Webfit News branding, the official source link, the source-check time, key visa facts, extracted requirements, document information and the general-information disclaimer. Download it again whenever you need a fresh copy.</p>
+        </div>
+        <strong>Always verify the final requirements with Immigration New Zealand before applying.</strong>
+      </section>
 
       <section className={styles.newsPanel}>
         <div>
