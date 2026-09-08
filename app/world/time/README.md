@@ -1,0 +1,1 @@
+World Time uses Intl.DateTimeFormat with IANA time-zone identifiers. No external API key is required. The UI updates once per second in the browser and applies DST according to runtime time-zone data.
