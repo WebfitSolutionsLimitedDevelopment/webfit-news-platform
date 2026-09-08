@@ -3,6 +3,16 @@ import { createClient } from '../lib/supabase-server';
 
 const SITE_URL = 'https://webfitnews.com';
 
+const evergreenPages: MetadataRoute.Sitemap = [
+  {url:`${SITE_URL}/nz-guides`,changeFrequency:'weekly',priority:0.9},
+  {url:`${SITE_URL}/minimum-wage`,changeFrequency:'daily',priority:0.9},
+  {url:`${SITE_URL}/public-holidays`,changeFrequency:'weekly',priority:0.9},
+  {url:`${SITE_URL}/immigration`,changeFrequency:'daily',priority:0.9},
+  {url:`${SITE_URL}/visitor-visa-nz`,changeFrequency:'daily',priority:0.9},
+  {url:`${SITE_URL}/nz-passport-renewal`,changeFrequency:'weekly',priority:0.85},
+  {url:`${SITE_URL}/government-jobs-nz`,changeFrequency:'hourly',priority:0.9},
+];
+
 function safeDate(value:string|null|undefined,fallback:string|null|undefined){
   const primary=value?new Date(value):null;
   if(primary&&!Number.isNaN(primary.getTime()))return primary;
@@ -30,6 +40,7 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
 
   return [
     {url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},
+    ...evergreenPages,
     ...articles.map(a=>({
       url:`${SITE_URL}/${a.slug.trim()}/`,
       lastModified:safeDate(a.updated_at,a.published_at),
