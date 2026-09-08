@@ -3,8 +3,10 @@ import { createClient } from '../lib/supabase-server';
 
 const SITE_URL = 'https://webfitnews.com';
 
+const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge-pdf','split-pdf','compress-pdf','pdf-to-png','rotate-pdf','watermark-pdf'];
 const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/ilikemypdf`,changeFrequency:'monthly',priority:0.95},
+  ...pdfToolSlugs.map(slug=>({url:`${SITE_URL}/ilikemypdf/${slug}`,changeFrequency:'monthly' as const,priority:0.9})),
   {url:`${SITE_URL}/world`,changeFrequency:'daily',priority:0.95},
   {url:`${SITE_URL}/world/weather`,changeFrequency:'hourly',priority:0.95},
   {url:`${SITE_URL}/world/public-holidays`,changeFrequency:'daily',priority:0.95},
@@ -37,39 +39,12 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/government-jobs-nz`,changeFrequency:'hourly',priority:0.9},
 ];
 
-function safeDate(value:string|null|undefined,fallback:string|null|undefined){
-  const primary=value?new Date(value):null;
-  if(primary&&!Number.isNaN(primary.getTime()))return primary;
-  const secondary=fallback?new Date(fallback):null;
-  return secondary&&!Number.isNaN(secondary.getTime())?secondary:undefined;
-}
+function safeDate(value:string|null|undefined,fallback:string|null|undefined){const primary=value?new Date(value):null;if(primary&&!Number.isNaN(primary.getTime()))return primary;const secondary=fallback?new Date(fallback):null;return secondary&&!Number.isNaN(secondary.getTime())?secondary:undefined;}
 
 export default async function sitemap():Promise<MetadataRoute.Sitemap>{
-  const supabase = await createClient();
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('articles')
-    .select('slug,updated_at,published_at')
-    .eq('status','published')
-    .not('slug','is',null)
-    .neq('slug','')
-    .not('published_at','is',null)
-    .lte('published_at',now)
-    .order('published_at',{ascending:false})
-    .limit(50000);
-
+  const supabase=await createClient();const now=new Date().toISOString();
+  const {data,error}=await supabase.from('articles').select('slug,updated_at,published_at').eq('status','published').not('slug','is',null).neq('slug','').not('published_at','is',null).lte('published_at',now).order('published_at',{ascending:false}).limit(50000);
   if(error)console.error('Failed to build sitemap:',error.message);
-
   const articles=(data||[]).filter(a=>typeof a.slug==='string'&&a.slug.trim().length>0);
-
-  return [
-    {url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},
-    ...evergreenPages,
-    ...articles.map(a=>({
-      url:`${SITE_URL}/${a.slug.trim()}/`,
-      lastModified:safeDate(a.updated_at,a.published_at),
-      changeFrequency:'daily' as const,
-      priority:0.8
-    }))
-  ];
+  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...articles.map(a=>({url:`${SITE_URL}/${a.slug.trim()}/`,lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
 }
