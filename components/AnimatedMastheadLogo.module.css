@@ -3,10 +3,10 @@
   --brand-gold-deep:#9a762a;
   --brand-blue:#0a354d;
   display:grid;
-  grid-template-columns:clamp(74px,7vw,104px) minmax(0,1fr);
+  grid-template-columns:clamp(72px,6.8vw,98px) minmax(0,1fr);
   align-items:center;
-  column-gap:clamp(12px,1.8vw,26px);
-  min-height:clamp(120px,12vw,182px);
+  column-gap:clamp(12px,1.8vw,24px);
+  min-height:clamp(132px,12vw,182px);
   overflow:hidden;
   font-family:Arial Black,Arial,sans-serif;
   font-weight:900;
@@ -20,7 +20,7 @@
   align-items:center;
   justify-content:center;
   width:100%;
-  height:clamp(108px,10vw,158px);
+  height:clamp(124px,10vw,160px);
   overflow:visible;
 }
 .webfit{
@@ -30,8 +30,8 @@
   top:50%;
   transform:translate(-50%,-50%) rotate(-90deg);
   transform-origin:center;
-  font-size:clamp(28px,3.7vw,56px);
-  letter-spacing:-.06em;
+  font-size:clamp(24px,3vw,44px);
+  letter-spacing:-.055em;
   background:linear-gradient(115deg,var(--brand-gold-deep),#f2d47f 42%,var(--brand-gold) 68%,var(--brand-gold-deep));
   -webkit-background-clip:text;
   background-clip:text;
@@ -70,15 +70,15 @@
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 @media(max-width:900px){
-  .logo{grid-template-columns:66px minmax(0,1fr);column-gap:10px;min-height:108px}
-  .webfitSlot{height:98px}
-  .webfit{font-size:34px}
+  .logo{grid-template-columns:62px minmax(0,1fr);column-gap:10px;min-height:112px}
+  .webfitSlot{height:104px}
+  .webfit{font-size:30px}
   .news{font-size:clamp(58px,13vw,110px)}
 }
 @media(max-width:620px){
-  .logo{grid-template-columns:54px minmax(0,1fr);column-gap:7px;min-height:88px}
-  .webfitSlot{height:78px}
-  .webfit{font-size:26px}
+  .logo{grid-template-columns:50px minmax(0,1fr);column-gap:7px;min-height:92px}
+  .webfitSlot{height:84px}
+  .webfit{font-size:22px}
   .news{font-size:14vw}
 }
 @media(prefers-reduced-motion:reduce){
