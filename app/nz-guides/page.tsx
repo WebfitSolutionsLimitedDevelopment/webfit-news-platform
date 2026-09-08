@@ -5,13 +5,13 @@ import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
-  title: 'New Zealand Guides | Wages, Tax, Leave, Holidays, Visas, Passports & Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, sick leave, annual leave and holiday pay, public and school holidays, visas, passports and jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
+  title: 'New Zealand Guides | Wages, Tax, KiwiSaver, Leave, Holidays, Visas & Jobs',
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, KiwiSaver, sick leave, annual leave and holiday pay, public and school holidays, visas, passports and jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','KiwiSaver calculator NZ','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, tax, leave, holidays, visas, passports and jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, tax, KiwiSaver, leave, holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 const guides=[
   {href:'/minimum-wage',title:'Minimum Wage NZ',text:'Current adult, starting-out and training minimum wage rates, pay examples and calculator.',fresh:'Regular official-source checks'},
   {href:'/nz-paye-calculator',title:'NZ PAYE & Tax Calculator',text:'Estimate income tax, ACC, KiwiSaver, student-loan deductions and take-home pay using current IRD settings.',fresh:'Interactive calculator · regular IRD source checks'},
+  {href:'/nz-kiwisaver-calculator',title:'NZ KiwiSaver Calculator',text:'Estimate employee contributions, employer contributions after ESCT, and the current government KiwiSaver contribution.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-holiday-pay-calculator',title:'NZ Holiday Pay Calculator',text:'Estimate annual leave pay and public-holiday pay using current OWP, AWE and time-and-a-half rules.',fresh:'Interactive calculator · current Employment NZ rules'},
   {href:'/nz-leave-entitlement-calculator',title:'NZ Sick Leave & Annual Leave Calculator',text:'Check sick-leave eligibility, carry-over and the statutory four-week annual holiday entitlement.',fresh:'Interactive calculator · daily official-source checks'},
   {href:'/public-holidays',title:'Public Holidays NZ',text:'2026 and 2027 national holidays, anniversary days, observed dates and public holiday pay.',fresh:'Date-aware Past, Today and Upcoming status'},
@@ -65,7 +66,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>12 live guides</strong>
+          <strong>13 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
