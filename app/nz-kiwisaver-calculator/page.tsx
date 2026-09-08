@@ -6,7 +6,7 @@ import styles from '@/components/UtilityGuide.module.css';
 import KiwiSaverCalculator from './KiwiSaverCalculator';
 import {getKiwiSaverSnapshot,kiwiSaverSources,KIWISAVER_REVALIDATE_SECONDS} from '@/lib/kiwisaver';
 
-export const revalidate=604800;
+export const revalidate=KIWISAVER_REVALIDATE_SECONDS;
 
 export const metadata:Metadata={
   title:'NZ KiwiSaver Calculator 2026 | Employee, Employer, ESCT & Government Contribution',
