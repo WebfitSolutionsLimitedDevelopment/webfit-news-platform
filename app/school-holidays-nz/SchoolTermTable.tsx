@@ -10,6 +10,10 @@ function nzDateKey(date:Date){
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+function displayDate(value:string){
+  return new Intl.DateTimeFormat('en-NZ',{day:'numeric',month:'short',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date(`${value}T12:00:00+12:00`));
+}
+
 function statusFor(row:Row,today:string){
   if(today<row.start)return 'Upcoming';
   if(today>row.end)return 'Past';
@@ -22,6 +26,6 @@ export default function SchoolTermTable({rows}:{rows:Row[]}){
     const status=statusFor(row,today);
     const rowClass=status==='Past'?styles.pastRow:status==='Current'?styles.todayRow:styles.upcomingRow;
     const badgeClass=status==='Past'?styles.past:status==='Current'?styles.today:styles.upcoming;
-    return <tr key={`${row.label}-${row.start}`} className={rowClass}><td className={status==='Past'?styles.pastText:undefined}><strong>{row.label}</strong></td><td className={status==='Past'?styles.pastText:undefined}>{row.start} to {row.end}</td><td><span className={`${styles.statusBadge} ${badgeClass}`}>{status}</span></td><td>{row.detail||'—'}</td></tr>;
+    return <tr key={`${row.label}-${row.start}`} className={rowClass}><td className={status==='Past'?styles.pastText:undefined}><strong>{row.label}</strong></td><td className={status==='Past'?styles.pastText:undefined}>{displayDate(row.start)} to {displayDate(row.end)}</td><td><span className={`${styles.statusBadge} ${badgeClass}`}>{status}</span></td><td>{row.detail||'—'}</td></tr>;
   })}</tbody></table></div>;
 }
