@@ -3,7 +3,7 @@ import { VisaCategoryLanding } from '@/components/immigration/VisaCategoryLandin
 import { getImmigrationCategoryPage } from '@/lib/immigration-category-pages';
 
 const config = getImmigrationCategoryPage('work-visas')!;
-const url = 'https://www.webfitnews.com/immigration/work-visas';
+const url = 'https://webfitnews.com/immigration/work-visas';
 
 export const metadata: Metadata = {
   title: config.metaTitle,
