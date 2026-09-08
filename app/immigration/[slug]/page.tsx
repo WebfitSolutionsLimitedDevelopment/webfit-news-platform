@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!visa) return {};
   return {
     title: `${visa.name} Guide | Webfit News`,
-    description: `${visa.summary} Current information organised from Immigration New Zealand with an official source link and printable checklist.`,
+    description: `${visa.summary} Current information organised from Immigration New Zealand with an official source link and downloadable checklist.`,
   };
 }
 
@@ -32,6 +32,24 @@ function formatCheckedAt(value: string) {
   }).format(new Date(value));
 }
 
+function safeDisplayItems(items: string[] | undefined) {
+  if (!items?.length) return [];
+  const blocked = /\{\{|\}\}|innerText|item\.|undefined|null|v-for|x-for|ng-|^step\s*\d+\b|submit your application|check your application status|log in to your account|visa labels and evisas/i;
+  const malformed = /\b(?:on|in|at|from|to)\s+(?:a|an|the)\s+(?:by|with|to|from|in|on)\s+(?:a|an|the)?\b/i;
+  const seen = new Set<string>();
+
+  return items
+    .map((item) => item.replace(/\s+/g, ' ').trim())
+    .filter((item) => item.length >= 8 && item.length <= 360)
+    .filter((item) => !blocked.test(item) && !malformed.test(item))
+    .filter((item) => {
+      const key = item.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 export default async function VisaGuidePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const visa = getVisaDefinition(slug);
@@ -41,6 +59,10 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
     getVisaSnapshot(slug),
     getPracticalGuidance(slug),
   ]);
+
+  const applyRequirements = safeDisplayItems(snapshot?.applyRequirements);
+  const visaLetsYou = safeDisplayItems(snapshot?.visaLetsYou);
+  const documentGuidance = safeDisplayItems(snapshot?.documentGuidance);
 
   const facts = [
     ['Length of stay', snapshot?.lengthOfStay],
@@ -54,8 +76,8 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
     visa.summary,
     ...facts.map(([label, value]) => `${label}: ${value}`),
     ...(practical?.facts || []).map((fact) => `${fact.label}: ${fact.value}. ${fact.note || ''}`),
-    snapshot?.applyRequirements.length ? `To apply, Immigration New Zealand currently lists: ${snapshot.applyRequirements.join('. ')}` : '',
-    snapshot?.visaLetsYou.length ? `This visa can allow: ${snapshot.visaLetsYou.join('. ')}` : '',
+    applyRequirements.length ? `To apply, Immigration New Zealand currently lists: ${applyRequirements.join('. ')}` : '',
+    visaLetsYou.length ? `This visa can allow: ${visaLetsYou.join('. ')}` : '',
     'This is general information, not immigration advice. Always confirm current requirements with Immigration New Zealand.',
   ].filter(Boolean).join('. ');
 
@@ -120,26 +142,30 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
 
       <div className={styles.actions}>
         <a className={styles.primary} href={visa.officialUrl} target="_blank" rel="noreferrer">View official INZ page</a>
-        <a className={styles.secondary} href={`/immigration/${slug}/checklist.pdf`}>Download PDF checklist</a>
+        <a className={styles.secondary} href={`/immigration/${slug}/checklist.pdf`}>Download latest branded PDF checklist</a>
         <Link className={styles.secondary} href="/immigration">All visa guides</Link>
         <Link className={styles.secondary} href="/category/immigration">Immigration news</Link>
+      </div>
+
+      <div className={styles.checklistNote}>
+        <strong>Latest checklist:</strong> The PDF is generated from the latest Immigration New Zealand source snapshot used by this guide and includes Webfit News branding, source details and the general-information disclaimer. Download a fresh copy whenever you need one.
       </div>
 
       <div className={styles.contentGrid}>
         <div>
           <section className={styles.panel}>
             <h2>Who can apply</h2>
-            {snapshot?.applyRequirements.length ? <ul>{snapshot.applyRequirements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>We could not safely extract this section during the latest source check. Please use the official Immigration New Zealand link above.</p>}
+            {applyRequirements.length ? <ul>{applyRequirements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>We could not safely extract this section during the latest source check. Please use the official Immigration New Zealand link above.</p>}
           </section>
 
           <section className={styles.panel}>
             <h2>What this visa lets you do</h2>
-            {snapshot?.visaLetsYou.length ? <ul>{snapshot.visaLetsYou.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Check the official Immigration New Zealand page for the current visa conditions.</p>}
+            {visaLetsYou.length ? <ul>{visaLetsYou.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Check the official Immigration New Zealand page for the current visa conditions.</p>}
           </section>
 
           <section className={styles.panel}>
             <h2>Documents and evidence</h2>
-            {snapshot?.documentGuidance.length ? <ul>{snapshot.documentGuidance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Document requirements vary by visa and circumstances. Use the official Immigration New Zealand page for the current evidence requirements. The PDF checklist on this page includes the information that could be safely extracted during the latest source check.</p>}
+            {documentGuidance.length ? <ul>{documentGuidance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Document requirements vary by visa and circumstances. Use the official Immigration New Zealand page for the current evidence requirements. The PDF checklist on this page includes the information that could be safely extracted during the latest source check.</p>}
           </section>
         </div>
 
@@ -161,7 +187,7 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
       <div className={styles.returnPanel}>
         <div>
           <strong>Looking for another visa?</strong>
-          <p>Return to the main New Zealand Visa Guide to browse work, study, visitor, residence and family visa information.</p>
+          <p>Return to the main New Zealand Visa Guide to browse work, study, visitor, residence and family visa information or download another visa checklist.</p>
         </div>
         <Link className={styles.primary} href="/immigration">← Back to New Zealand Visa Guide</Link>
       </div>
