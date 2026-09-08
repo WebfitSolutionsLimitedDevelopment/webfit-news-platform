@@ -7,6 +7,13 @@ export const metadata = {
   title: "World Visa & Immigration | Official Government Links | Webfit News",
   description:
     "Find official visa and immigration portals for major destinations worldwide. Use government sources for visit, work, study and migration information.",
+  alternates: { canonical: "/world/visa-immigration" },
+  openGraph: {
+    title: "World Visa & Immigration | Webfit News",
+    description: "Official government visa and immigration portals for major destinations worldwide.",
+    url: "/world/visa-immigration",
+    type: "website",
+  },
 };
 
 const destinations = [
@@ -33,7 +40,7 @@ export default function WorldVisaImmigrationPage() {
   return (
     <main className={styles.page}>
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link><span>/</span><Link href="/world">World</Link><span>/</span><span>Visa & Immigration</span>
+        <Link href="/">Home</Link><span>/</span><Link href="/world">World Guides</Link><span>/</span><span>Visa & Immigration</span>
       </nav>
 
       <header className={styles.hero}>
@@ -68,6 +75,8 @@ export default function WorldVisaImmigrationPage() {
         <article><h2>What to check before applying</h2><p>Check the official portal for visa type, eligibility, passport validity, funds, health or character requirements, fees, processing times and whether biometrics are required.</p></article>
         <article><h2>Freshness model</h2><p>This page revalidates on a 48-hour cycle. The actual rules remain with the government authority, so readers always have a direct path to the live source.</p></article>
       </section>
+
+      <p style={{marginTop:28,fontWeight:700}}><Link href="/world">← Back to World Guides</Link></p>
     </main>
   );
 }
