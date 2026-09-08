@@ -20,6 +20,7 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/nz-student-loan-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-superannuation`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-citizenship`,changeFrequency:'weekly',priority:0.95},
+  {url:`${SITE_URL}/nz-tenancy-rent-guide`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-holiday-pay-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-leave-entitlement-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/public-holidays`,changeFrequency:'weekly',priority:0.9},
