@@ -6,12 +6,12 @@ import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
   title: 'New Zealand Guides | Wages, Tax, KiwiSaver, Student Loans, Leave, Holidays, Visas & Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, KiwiSaver, student loan repayments, sick leave, annual leave and holiday pay, public and school holidays, visas, passports and jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','KiwiSaver calculator NZ','student loan calculator NZ','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, tax codes, KiwiSaver, student loan repayments, sick leave, annual leave and holiday pay, public and school holidays, visas, passports and jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','NZ tax code finder','KiwiSaver calculator NZ','student loan calculator NZ','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, tax, KiwiSaver, student loans, leave, holidays, visas, passports and jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, tax, tax codes, KiwiSaver, student loans, leave, holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 const guides=[
   {href:'/minimum-wage',title:'Minimum Wage NZ',text:'Current adult, starting-out and training minimum wage rates, pay examples and calculator.',fresh:'Regular official-source checks'},
   {href:'/nz-paye-calculator',title:'NZ PAYE & Tax Calculator',text:'Estimate income tax, ACC, KiwiSaver, student-loan deductions and take-home pay using current IRD settings.',fresh:'Interactive calculator · regular IRD source checks'},
+  {href:'/nz-tax-code-finder',title:'NZ Tax Code Finder',text:'Find the likely IRD tax code for main income, secondary income, student loans and common M, ME, SB, S, SH, ST and SA situations.',fresh:'Interactive finder · regular IRD source checks'},
   {href:'/nz-kiwisaver-calculator',title:'NZ KiwiSaver Calculator',text:'Estimate employee contributions, employer contributions after ESCT, and the current government KiwiSaver contribution.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-student-loan-calculator',title:'NZ Student Loan Repayment Calculator',text:'Estimate student-loan deductions by pay period, compare main and secondary jobs, and model extra repayments.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-holiday-pay-calculator',title:'NZ Holiday Pay Calculator',text:'Estimate annual leave pay and public-holiday pay using current OWP, AWE and time-and-a-half rules.',fresh:'Interactive calculator · current Employment NZ rules'},
@@ -67,7 +68,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>14 live guides</strong>
+          <strong>15 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
