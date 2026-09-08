@@ -5,8 +5,8 @@
   display:flex;
   align-items:center;
   justify-content:flex-start;
-  gap:clamp(12px,2vw,30px);
-  min-height:clamp(86px,11vw,170px);
+  gap:clamp(10px,1.4vw,22px);
+  min-height:clamp(104px,12vw,182px);
   overflow:visible;
   font-family:Arial Black,Arial,sans-serif;
   font-weight:900;
@@ -16,15 +16,15 @@
 }
 .webfit{
   display:inline-block;
-  transform:rotate(180deg);
+  transform:rotate(-90deg);
   transform-origin:center;
-  font-size:clamp(34px,5.2vw,74px);
+  font-size:clamp(30px,4.4vw,66px);
   letter-spacing:-.07em;
   background:linear-gradient(115deg,var(--brand-gold-deep),#f2d47f 42%,var(--brand-gold) 68%,var(--brand-gold-deep));
   -webkit-background-clip:text;
   background-clip:text;
   -webkit-text-fill-color:transparent;
-  animation:webfitFlipIn 1s cubic-bezier(.18,.8,.24,1.15) both;
+  animation:webfitSwingIn .9s cubic-bezier(.18,.8,.24,1.15) both;
 }
 .news{
   display:inline-flex;
@@ -44,11 +44,11 @@
 .news i:nth-child(2){animation-delay:.27s}
 .news i:nth-child(3){animation-delay:.36s}
 .news i:nth-child(4){animation-delay:.45s}
-@keyframes webfitFlipIn{
-  0%{opacity:0;transform:translateX(-48px) rotate(540deg) scale(.55)}
-  58%{opacity:1;transform:translateX(5px) rotate(170deg) scale(1.08)}
-  76%{transform:translateX(-2px) rotate(188deg) scale(.98)}
-  100%{opacity:1;transform:translateX(0) rotate(180deg) scale(1)}
+@keyframes webfitSwingIn{
+  0%{opacity:0;transform:translateX(-34px) rotate(-125deg) scale(.72)}
+  58%{opacity:1;transform:translateX(5px) rotate(-82deg) scale(1.06)}
+  78%{transform:translateX(-2px) rotate(-94deg) scale(.99)}
+  100%{opacity:1;transform:translateX(0) rotate(-90deg) scale(1)}
 }
 @keyframes letterBounce{
   0%{opacity:0;transform:translateY(-44px) rotate(-8deg) scale(.72)}
@@ -57,8 +57,8 @@
   100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}
 }
 @media(max-width:620px){
-  .logo{gap:9px;min-height:72px}
-  .webfit{font-size:8.2vw}
+  .logo{gap:6px;min-height:82px}
+  .webfit{font-size:7.2vw}
   .news{font-size:15vw}
 }
 @media(prefers-reduced-motion:reduce){
