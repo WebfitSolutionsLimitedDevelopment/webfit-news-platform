@@ -5,17 +5,17 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { visaDefinitions, VisaCategory } from '@/lib/immigration';
 import styles from './Immigration.module.css';
 
-const SITE_URL = 'https://www.webfitnews.com';
+const SITE_URL = 'https://webfitnews.com';
 const PAGE_URL = `${SITE_URL}/immigration`;
 
 export const metadata: Metadata = {
-  title: 'NZ Visa Guide 2026 | New Zealand Immigration & Visa Information | Webfit News',
+  title: 'NZ Visa Guide 2026 | New Zealand Immigration & Visa Information',
   description: 'Browse current New Zealand visa information for work, study, visitor, family and residence pathways. Compare NZ visas, read requirements and download branded checklists linked to official Immigration New Zealand sources.',
-  alternates: { canonical: PAGE_URL },
+  alternates: { canonical: '/immigration' },
   openGraph: {
     title: 'NZ Visa Guide 2026 | New Zealand Immigration Information',
     description: 'Current New Zealand visa information organised by work, study, visitor, family and residence pathways with official INZ sources and downloadable checklists.',
-    url: PAGE_URL,
+    url: '/immigration',
     siteName: 'Webfit News',
     type: 'website',
     locale: 'en_NZ',
@@ -76,7 +76,7 @@ export default function ImmigrationHubPage() {
   return <>
     <SiteHeader/>
     <main id="top" className={`shell ${styles.page}`}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}/>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}/>
 
       <section className={styles.hero}>
         <span className={styles.eyebrow}>Webfit News NZ Immigration Information</span>
