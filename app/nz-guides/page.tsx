@@ -5,13 +5,13 @@ import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
-  title: 'New Zealand Guides | Wages, Holidays, Visas, Passports & Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, public holidays, visas, passport applications and renewals, jobs in New Zealand and government jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','public holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
+  title: 'New Zealand Guides | Wages, Tax, Holidays, Visas, Passports & Jobs',
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, public holidays, visas, passport applications and renewals, jobs in New Zealand and government jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','public holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, public holidays, visas, passports and jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, tax, public holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 const guides=[
   {href:'/minimum-wage',title:'Minimum Wage NZ',text:'Current adult, starting-out and training minimum wage rates, pay examples and calculator.',fresh:'Regular official-source checks'},
+  {href:'/nz-paye-calculator',title:'NZ PAYE & Tax Calculator',text:'Estimate income tax, ACC, KiwiSaver, student-loan deductions and take-home pay using current IRD settings.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/public-holidays',title:'Public Holidays NZ',text:'2026 and 2027 national holidays, anniversary days, observed dates and public holiday pay.',fresh:'Date-aware Past, Today and Upcoming status'},
   {href:'/immigration',title:'New Zealand Visa Guide',text:'Work, study, visit, residence and family visa pathways with official Immigration New Zealand links.',fresh:'Live visa source monitoring'},
   {href:'/visitor-visa-nz',title:'Visitor Visa NZ',text:'Current Visitor Visa cost, processing time, stay length, requirements and application links.',fresh:'Frequent Immigration NZ source checks'},
@@ -61,7 +62,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>8 live guides</strong>
+          <strong>9 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
