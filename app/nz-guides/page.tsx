@@ -5,13 +5,13 @@ import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
-  title: 'New Zealand Guides | Wages, Holidays, Visas, Passports & Government Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, public holidays, visas, passport applications and renewals, and government jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','public holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','government jobs NZ'],
+  title: 'New Zealand Guides | Wages, Holidays, Visas, Passports & Jobs',
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, public holidays, visas, passport applications and renewals, jobs in New Zealand and government jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','public holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, public holidays, visas, passports and government jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, public holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -24,6 +24,7 @@ const guides=[
   {href:'/visitor-visa-nz',title:'Visitor Visa NZ',text:'Current Visitor Visa cost, processing time, stay length, requirements and application links.',fresh:'Frequent Immigration NZ source checks'},
   {href:'/new-zealand-passport-application',title:'New Zealand Passport Application',text:'First passport, adult and child application requirements, current fees, processing times and official application links.',fresh:'Regular NZ Passports source checks'},
   {href:'/nz-passport-renewal',title:'NZ Passport Renewal',text:'Passport renewal cost, current processing times, photo rules and application requirements.',fresh:'Regular NZ Passports source checks'},
+  {href:'/jobs-in-new-zealand',title:'Jobs in New Zealand',text:'Part-time, no-experience, remote, government and visa-related job-search pathways with official NZ guidance.',fresh:'Regular official job-source checks'},
   {href:'/government-jobs-nz',title:'Government Jobs NZ',text:'Current Public Service vacancies, job categories, graduate programmes and official job links.',fresh:'Frequent vacancy checks'},
 ];
 
@@ -60,7 +61,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>7 live guides</strong>
+          <strong>8 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
