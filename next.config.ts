@@ -21,9 +21,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: '/ILikePDF', destination: '/ilikemypdf', permanent: true },
       { source: '/ilikepdf', destination: '/ilikemypdf', permanent: true },
-      { source: '/ILikeMyPdf', destination: '/ilikemypdf', permanent: true },
     ];
   },
 };
