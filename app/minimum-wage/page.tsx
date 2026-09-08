@@ -8,8 +8,8 @@ import styles from './MinimumWage.module.css';
 export const revalidate = 172800;
 
 export const metadata: Metadata = {
-  title: 'Minimum Wage NZ 2026 | New Zealand Minimum Wage Rates & Calculator',
-  description: 'Current New Zealand minimum wage rates for 2026, including adult, starting-out and training minimum wage. Check weekly and annual pay, eligibility rules and official government sources.',
+  title: 'Minimum Wage NZ 2026 | $23.95 Adult Rate, Weekly Pay & Calculator',
+  description: 'Minimum wage NZ 2026: adult rate $23.95/hour from 1 April 2026. See starting-out and training rates, weekly pay examples and use the calculator.',
   keywords: [
     'minimum wage nz',
     'New Zealand minimum wage',
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: '/minimum-wage' },
   openGraph: {
-    title: 'Minimum Wage NZ 2026 | Current New Zealand Rates',
-    description: 'Current NZ minimum wage rates, practical explanations, calculator and direct links to official government sources.',
+    title: 'Minimum Wage NZ 2026 | $23.95 Adult Rate & Calculator',
+    description: 'See the current New Zealand minimum wage, 40-hour weekly pay, starting-out and training rates, and calculate gross pay.',
     url: '/minimum-wage',
     type: 'website',
   },
@@ -60,6 +60,10 @@ export default async function MinimumWagePage() {
       a: `From 1 April 2026, the adult minimum wage in New Zealand is ${money(wage.adultHourly)} per hour before tax. The starting-out and training minimum wage rates are ${money(wage.startingOutHourly)} per hour.`,
     },
     {
+      q: 'How much is minimum wage for 40 hours a week in NZ?',
+      a: `At the 2026 adult minimum wage of ${money(wage.adultHourly)} an hour, 40 hours is ${money(weeklyAdult)} before tax and other lawful deductions.`,
+    },
+    {
       q: 'Who gets the adult minimum wage in NZ?',
       a: 'In general, employees aged 16 or over must receive at least the adult minimum wage unless they meet the legal criteria for the starting-out or training minimum wage. Workers who supervise or train other workers must receive at least the adult minimum wage.',
     },
@@ -83,10 +87,10 @@ export default async function MinimumWagePage() {
       {
         '@type': 'WebPage',
         name: 'Minimum Wage NZ 2026',
-        url: 'https://www.webfitnews.com/minimum-wage',
+        url: 'https://webfitnews.com/minimum-wage',
         description: metadata.description,
         dateModified: wage.checkedAt,
-        isPartOf: { '@type': 'WebSite', name: 'Webfit News', url: 'https://www.webfitnews.com' },
+        isPartOf: { '@type': 'WebSite', name: 'Webfit News', url: 'https://webfitnews.com' },
       },
       {
         '@type': 'FAQPage',
@@ -104,9 +108,9 @@ export default async function MinimumWagePage() {
     <main className={`shell ${styles.page}`}>
       <section className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>New Zealand Pay Guide</span>
+          <span className={styles.eyebrow}>New Zealand Minimum Wage 2026</span>
           <h1>Minimum Wage NZ 2026</h1>
-          <p className={styles.lead}>Current New Zealand minimum wage rates, who they apply to, what a 40-hour week pays, and where to check the official rules.</p>
+          <p className={styles.lead}>The adult minimum wage is {money(wage.adultHourly)} an hour from 1 April 2026. See weekly and fortnightly pay, starting-out and training rates, and calculate your gross earnings.</p>
           <div className={styles.freshness}>
             <span className={wage.sourceStatus === 'live' ? styles.liveDot : styles.fallbackDot}/>
             <strong>Government sources checked:</strong> {formatNZDate(wage.checkedAt)} · Refreshes every 48 hours
@@ -131,9 +135,9 @@ export default async function MinimumWagePage() {
 
       <section id="rates" className={styles.section}>
         <div className={styles.sectionHeading}>
-          <span className={styles.kicker}>Current rates</span>
+          <span className={styles.kicker}>Quick answer</span>
           <h2>New Zealand minimum wage rates from 1 April 2026</h2>
-          <p>These are gross rates before tax and lawful deductions.</p>
+          <p>The adult rate is <strong>{money(wage.adultHourly)} per hour</strong>. The starting-out and training rates are <strong>{money(wage.startingOutHourly)} per hour</strong>. At the adult rate, 40 hours is <strong>{money(weeklyAdult)}</strong> before tax.</p>
         </div>
 
         <div className={styles.rateGrid}>

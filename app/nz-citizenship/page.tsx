@@ -9,11 +9,11 @@ import {citizenshipSources,getCitizenshipSnapshot} from '@/lib/nz-citizenship';
 export const revalidate=86400;
 
 export const metadata:Metadata={
-  title:'NZ Citizenship 2026 | Eligibility, Fees, 5-Year Rule & Application',
-  description:'Check New Zealand citizenship by grant eligibility, the 5-year and 1,350-day presence rules, current 2026 fees, application steps, English and character requirements.',
+  title:'NZ Citizenship 2026 | Check Eligibility, 5-Year Rule, Fees & Apply',
+  description:'Check NZ citizenship eligibility in 2026, including the 5-year rule, 1,350-day and 240-day presence tests, $641 adult fee, English requirements and application steps.',
   keywords:['NZ citizenship','New Zealand citizenship','NZ citizenship application','NZ citizenship eligibility','NZ citizenship requirements','NZ citizenship fee 2026','NZ citizenship 5 year rule','citizenship by grant NZ','NZ citizenship processing time'],
   alternates:{canonical:'/nz-citizenship'},
-  openGraph:{title:'NZ Citizenship 2026 | Eligibility, Fees & Application',description:'Current New Zealand citizenship by grant requirements, fees, presence rules and application guidance.',url:'/nz-citizenship',type:'website'},
+  openGraph:{title:'NZ Citizenship 2026 | Check Eligibility, Fees & 5-Year Rule',description:'Check New Zealand citizenship-by-grant eligibility, presence rules, current fees and how to apply.',url:'/nz-citizenship',type:'website'},
 };
 
 const feeRows=[
@@ -37,6 +37,7 @@ export default async function NzCitizenshipPage(){
   const snapshot=await getCitizenshipSnapshot();
   const checked=new Intl.DateTimeFormat('en-NZ',{dateStyle:'medium',timeStyle:'short',timeZone:'Pacific/Auckland'}).format(new Date(snapshot.checkedAt));
   const faq=[
+    ['Am I eligible for New Zealand citizenship after 5 years?','Possibly. For the standard citizenship-by-grant route, you generally need indefinite residence status plus at least 1,350 eligible days in New Zealand over the 5 years immediately before applying and at least 240 eligible days in each of those five 12-month periods. English, character and intention requirements also apply.'],
     ['How long do you need to live in New Zealand before applying for citizenship?','For the standard grant route, the presence test looks at the 5 years immediately before you apply. You generally need at least 1,350 eligible days in total and at least 240 eligible days in each 12-month period.'],
     ['How much does NZ citizenship cost in 2026?','From 28 August 2026, a citizenship-by-grant application costs NZD $641 for an adult aged 16 or over and NZD $320 for a child aged 15 or under.'],
     ['Do I need permanent residence before NZ citizenship?','You need to be entitled under immigration law to be in New Zealand indefinitely. The exact immigration-status assessment is made by DIA and Immigration New Zealand records are used in the official eligibility check.'],
@@ -62,9 +63,10 @@ export default async function NzCitizenshipPage(){
       {
         '@type':'WebApplication',
         name:'NZ Citizenship Eligibility Checker',
-        url:'https://www.webfitnews.com/nz-citizenship',
+        url:'https://webfitnews.com/nz-citizenship',
         applicationCategory:'GovernmentService',
         operatingSystem:'Web',
+        description:metadata.description,
       },
       {
         '@type':'FAQPage',
@@ -73,9 +75,9 @@ export default async function NzCitizenshipPage(){
       {
         '@type':'BreadcrumbList',
         itemListElement:[
-          {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
-          {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
-          {'@type':'ListItem',position:3,name:'NZ Citizenship',item:'https://www.webfitnews.com/nz-citizenship'},
+          {'@type':'ListItem',position:1,name:'Webfit News',item:'https://webfitnews.com'},
+          {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://webfitnews.com/nz-guides'},
+          {'@type':'ListItem',position:3,name:'NZ Citizenship',item:'https://webfitnews.com/nz-citizenship'},
         ],
       },
     ],
@@ -84,23 +86,25 @@ export default async function NzCitizenshipPage(){
   return <>
     <SiteHeader/>
     <main className={`shell ${styles.page}`}>
-      <section className={styles.hero}><div><span className={styles.eyebrow}>Webfit News NZ Guides</span><h1>NZ Citizenship 2026</h1><p className={styles.lead}>Check the standard citizenship-by-grant rules, current fees, presence requirements and application steps before using the official Department of Internal Affairs service.</p></div><div className={styles.heroCard}><span>Standard adult presence rule</span><strong>1,350 days</strong><small>Across the 5 years before applying, with at least 240 days in each 12-month period.</small></div></section>
+      <section className={styles.hero}><div><span className={styles.eyebrow}>New Zealand Citizenship Eligibility 2026</span><h1>NZ Citizenship 2026: Check Eligibility & Apply</h1><p className={styles.lead}>Check whether you appear to meet the standard citizenship-by-grant rules, including the 5-year presence test, current fees, English requirement and application steps.</p></div><div className={styles.heroCard}><span>Standard adult presence rule</span><strong>1,350 days</strong><small>Across the 5 years before applying, with at least 240 days in each 12-month period.</small></div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility checker</span><h2>Do you appear to meet the core grant requirements?</h2><p>This tool checks the common adult criteria only. Children, Samoan applicants and unusual immigration or character situations can follow different rules.</p></div><CitizenshipEligibilityChecker/></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Quick answer</span><h2>NZ citizenship eligibility at a glance</h2><p>For the standard adult grant route, you generally need to be entitled to live in New Zealand indefinitely, meet the <strong>1,350-day total presence rule</strong>, have at least <strong>240 eligible days in each of five 12-month periods</strong>, meet English and character requirements, and intend to continue living in New Zealand. The current adult application fee is <strong>$641</strong>.</p></div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Presence rule</span><h2>The 5-year citizenship presence test</h2></div><div className={styles.infoGrid}><article><h3>1,350 days total</h3><p>You generally need at least 1,350 days physically present in New Zealand during the 5 years immediately before the application date, while entitled to be here indefinitely.</p></article><article><h3>240 days every year</h3><p>You also generally need at least 240 eligible days in each of the five 12-month periods. One long absence can therefore matter even if your five-year total looks high.</p></article><article><h3>Future travel matters</h3><p>If you plan to live overseas, the standard intention requirement can become relevant. Limited statutory exceptions exist for certain NZ-linked overseas service or employment.</p></article></div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility checker</span><h2>Do you appear to meet the NZ citizenship requirements?</h2><p>This tool checks the common adult citizenship-by-grant criteria only. Children, Samoan applicants and unusual immigration or character situations can follow different rules.</p></div><CitizenshipEligibilityChecker/></section>
+
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Presence rule</span><h2>NZ citizenship 5-year rule: 1,350 days and 240 days each year</h2></div><div className={styles.infoGrid}><article><h3>1,350 days total</h3><p>You generally need at least 1,350 days physically present in New Zealand during the 5 years immediately before the application date, while entitled to be here indefinitely.</p></article><article><h3>240 days every year</h3><p>You also generally need at least 240 eligible days in each of the five 12-month periods. One long absence can therefore matter even if your five-year total looks high.</p></article><article><h3>Future travel matters</h3><p>If you plan to live overseas, the standard intention requirement can become relevant. Limited statutory exceptions exist for certain NZ-linked overseas service or employment.</p></article></div></section>
 
       <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Current fees</span><h2>NZ citizenship fees from 28 August 2026</h2></div><div style={{overflowX:'auto'}}><table><thead><tr><th>Application</th><th>Fee</th></tr></thead><tbody>{feeRows.map(r=><tr key={r[0]}><td>{r[0]}</td><td>{r[1]}</td></tr>)}</tbody></table></div><p>Citizenship by descent is a separate pathway from citizenship by grant. If you were born outside New Zealand and a parent was a qualifying New Zealand citizen when you were born, check the descent rules before paying a grant fee.</p></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>How to apply</span><h2>NZ citizenship application steps</h2></div><div className={styles.infoGrid}>{steps.map(([n,t,d])=><article key={n}><span className={styles.kicker}>Step {n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>How to apply</span><h2>How to apply for New Zealand citizenship</h2></div><div className={styles.infoGrid}>{steps.map(([n,t,d])=><article key={n}><span className={styles.kicker}>Step {n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Future change</span><h2>Citizenship test planned from late 2027</h2></div><div className={styles.infoGrid}><article><h3>No test for current 2026 applications</h3><p>The Department of Internal Affairs says there is currently no change to the citizenship-by-grant process.</p></article><article><h3>Most grant applicants later</h3><p>A citizenship test is planned for most citizenship-by-grant applicants from late 2027. Details such as exemptions, cost and exact implementation are still being developed.</p></article><article><h3>Current law still applies</h3><p>Applicants today must still meet the existing presence, character, English, responsibilities-and-privileges and intention requirements.</p></article></div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Future change</span><h2>NZ citizenship test planned from late 2027</h2></div><div className={styles.infoGrid}><article><h3>No test for current 2026 applications</h3><p>The Department of Internal Affairs says there is currently no change to the citizenship-by-grant process.</p></article><article><h3>Most grant applicants later</h3><p>A citizenship test is planned for most citizenship-by-grant applicants from late 2027. Details such as exemptions, cost and exact implementation are still being developed.</p></article><article><h3>Current law still applies</h3><p>Applicants today must still meet the existing presence, character, English, responsibilities-and-privileges and intention requirements.</p></article></div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Related guides</span><h2>After citizenship approval</h2></div><div className={styles.infoGrid}><article><h3>Apply for a New Zealand passport</h3><p>Citizenship approval does not automatically issue a passport. Passport application is a separate process.</p><Link href="/new-zealand-passport-application">Open NZ passport application guide →</Link></article><article><h3>Renew an existing NZ passport</h3><p>If you are already a New Zealand citizen and simply need a new passport, use the renewal guide instead.</p><Link href="/nz-passport-renewal">Open passport renewal guide →</Link></article></div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Related guides</span><h2>After citizenship approval</h2></div><div className={styles.infoGrid}><article><h3>Apply for a New Zealand passport</h3><p>Citizenship approval does not automatically issue a passport. Passport application is a separate process.</p><Link href="/new-zealand-passport-application">How to apply for an NZ passport →</Link></article><article><h3>Renew an existing NZ passport</h3><p>If you are already a New Zealand citizen and simply need a new passport, use the renewal guide instead.</p><Link href="/nz-passport-renewal">NZ passport renewal cost and processing time →</Link></article></div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Checked against New Zealand Government guidance</h2><p>Last checked {checked}. {snapshot.reachable}/{snapshot.total} official source pages responded successfully.</p></div><div className={styles.infoGrid}>{citizenshipSources.map(s=><article key={s.url}><h3>{s.label}</h3><a href={s.url} target="_blank" rel="noreferrer">Open official source →</a></article>)}</div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Official NZ citizenship information</h2><p>Last checked {checked}. {snapshot.reachable}/{snapshot.total} official source pages responded successfully.</p></div><div className={styles.infoGrid}>{citizenshipSources.map(s=><article key={s.url}><h3>{s.label}</h3><a href={s.url} target="_blank" rel="noreferrer">Open official source →</a></article>)}</div></section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>NZ citizenship questions</h2></div><div className={styles.infoGrid}>{faq.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
+      <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>NZ citizenship eligibility and application questions</h2></div><div className={styles.infoGrid}>{faq.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
 
       <aside className={styles.disclaimer}><strong>Important:</strong> This is general information, not an official eligibility decision or legal advice. The Department of Internal Affairs makes citizenship decisions and can assess exceptions, character issues, travel records, children, Samoan applicants and other special cases differently.</aside>
     </main>

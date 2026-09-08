@@ -8,50 +8,54 @@ import {getRatesRebateSnapshot,ratesRebateSources} from '@/lib/rates-rebate';
 
 export const revalidate=86400;
 export const metadata:Metadata={
-  title:'NZ Rates Rebate Calculator 2026/27 | $830 Rebate & Eligibility',
-  description:'Estimate your New Zealand rates rebate for 2026/27 using current $830 maximum, income thresholds, SuperGold rules, dependants and annual rates.',
-  keywords:['rates rebate NZ','NZ rates rebate calculator','rates rebate calculator NZ','rates rebate 2026','rates rebate eligibility NZ','SuperGold rates rebate','council rates rebate NZ'],
+  title:'Rates Rebate Calculator NZ 2026/27 | Check Your $830 Rebate',
+  description:'Use the NZ rates rebate calculator for 2026/27. Estimate how much council rates rebate you may get using the $830 maximum, income, SuperGold and dependants.',
+  keywords:['rates rebate calculator NZ','rates rebate NZ','NZ rates rebate calculator','rates rebate 2026 2027','rates rebate eligibility NZ','rates rebate income threshold','SuperGold rates rebate','council rates rebate NZ'],
   alternates:{canonical:'/nz-rates-rebate-calculator'},
-  openGraph:{title:'NZ Rates Rebate Calculator 2026/27 | Webfit News',description:'Estimate the current New Zealand council rates rebate and understand 2026/27 eligibility rules.',url:'/nz-rates-rebate-calculator',type:'website'},
+  openGraph:{title:'Rates Rebate Calculator NZ 2026/27 | Check Your $830 Rebate',description:'Estimate your 2026/27 New Zealand council rates rebate using current income thresholds, SuperGold rules and dependants.',url:'/nz-rates-rebate-calculator',type:'website'},
 };
 const faq:[string,string][]=[
- ['What is the maximum NZ rates rebate for 2026/27?','The maximum rebate for the rating year beginning 1 July 2026 is $830.'],
- ['What is the 2026/27 income threshold?','The income abatement threshold is $33,210 for most ratepayers and $46,400 for a SuperGold Card cardholder. The threshold increases by $500 for each dependant.'],
- ['Can I still get a rebate if my income is above the threshold?','Possibly. Income above the threshold reduces the calculated rebate by $1 for each $8 above the applicable threshold, so being above the threshold does not automatically mean a zero rebate.'],
- ['Do I need to apply every year?','Yes. A rates rebate is not automatic. You apply for each rating year and your local council assesses the application.'],
+ ['How much rates rebate can I get in NZ in 2026/27?','The maximum rates rebate for the rating year beginning 1 July 2026 is $830. Your actual rebate can be lower depending on annual rates, household income, dependants and the statutory calculation.'],
+ ['What is the rates rebate income limit for 2026/27?','The income abatement threshold is $33,210 for most ratepayers and $46,400 for a SuperGold Card holder. The threshold increases by $500 for each dependant. Income above the threshold can still produce a partial rebate.'],
+ ['Can I get a rates rebate if my income is over $33,210?','Possibly. Income above the applicable threshold reduces the calculated rebate by $1 for each $8 above that threshold, so being over the headline threshold does not automatically make the rebate zero.'],
+ ['Do SuperGold Card holders get a higher rates rebate threshold?','Yes. For 2026/27, a qualifying ratepayer who holds a SuperGold Card when applying has a $46,400 income abatement threshold before dependant adjustments.'],
+ ['Do I need to apply for a rates rebate every year?','Yes. Rates rebates are not automatic. You need to apply for each rating year through your local council, which makes the final assessment.'],
 ];
 export default async function Page(){
  const snapshot=await getRatesRebateSnapshot();
  const checked=new Intl.DateTimeFormat('en-NZ',{dateStyle:'medium',timeStyle:'short',timeZone:'Pacific/Auckland'}).format(new Date(snapshot.checkedAt));
  const faqEntities=faq.map(([q,a])=>({ '@type':'Question',name:q,acceptedAnswer:{'@type':'Answer',text:a}}));
  const breadcrumbItems=[
-  {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
-  {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
-  {'@type':'ListItem',position:3,name:'NZ Rates Rebate Calculator',item:'https://www.webfitnews.com/nz-rates-rebate-calculator'},
+  {'@type':'ListItem',position:1,name:'Webfit News',item:'https://webfitnews.com'},
+  {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://webfitnews.com/nz-guides'},
+  {'@type':'ListItem',position:3,name:'Rates Rebate Calculator NZ',item:'https://webfitnews.com/nz-rates-rebate-calculator'},
  ];
  const ld={'@context':'https://schema.org','@graph':[
-  {'@type':'WebApplication',name:'NZ Rates Rebate Calculator 2026/27',url:'https://www.webfitnews.com/nz-rates-rebate-calculator',applicationCategory:'FinanceApplication',operatingSystem:'Web'},
+  {'@type':'WebApplication',name:'Rates Rebate Calculator NZ 2026/27',url:'https://webfitnews.com/nz-rates-rebate-calculator',applicationCategory:'FinanceApplication',operatingSystem:'Web',description:metadata.description},
   {'@type':'FAQPage',mainEntity:faqEntities},
   {'@type':'BreadcrumbList',itemListElement:breadcrumbItems},
  ]};
  return <><SiteHeader/><main className={`shell ${styles.page}`}>
-  <section className={styles.hero}><div><span className={styles.eyebrow}>Webfit News NZ Guides</span><h1>NZ rates rebate calculator 2026/27</h1><p className={styles.lead}>Estimate the government rates rebate for your home using the current statutory formula, then apply through your local council.</p></div><div className={styles.heroCard}><span>Maximum rebate</span><strong>$830</strong><small>For the rating year from 1 July 2026 to 30 June 2027.</small></div></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Calculator</span><h2>Estimate your rates rebate</h2><p>Enter annual rates, household income, dependants and SuperGold status.</p></div><RatesRebateCalculator/></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>2026/27 settings</span><h2>Current rates rebate thresholds</h2></div><div className={styles.infoGrid}>
-   <article><h3>$830 maximum</h3><p>The statutory maximum rebate increased from $805 to $830 from 1 July 2026.</p></article>
-   <article><h3>$33,210 standard threshold</h3><p>For most ratepayers, the income abatement threshold is $33,210.</p></article>
-   <article><h3>$46,400 SuperGold threshold</h3><p>A ratepayer who holds a SuperGold Card when applying has a higher $46,400 income abatement threshold.</p></article>
-   <article><h3>Dependants</h3><p>The applicable income threshold increases by $500 for each dependant.</p></article>
+  <section className={styles.hero}><div><span className={styles.eyebrow}>2026/27 New Zealand Rates Rebate</span><h1>Rates Rebate Calculator NZ 2026/27</h1><p className={styles.lead}>Check how much New Zealand rates rebate you may qualify for using the current $830 maximum, your annual rates, household income, SuperGold status and dependants.</p></div><div className={styles.heroCard}><span>Maximum rates rebate</span><strong>$830</strong><small>For the rating year from 1 July 2026 to 30 June 2027.</small></div></section>
+
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Quick answer</span><h2>NZ rates rebate 2026/27 at a glance</h2><p>The maximum rebate is <strong>$830</strong>. The standard income abatement threshold is <strong>$33,210</strong>, or <strong>$46,400</strong> for a qualifying SuperGold Card holder, with another <strong>$500 per dependant</strong>. Income above the threshold can still qualify for a partial rebate.</p></div></section>
+
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Calculator</span><h2>Calculate your estimated NZ rates rebate</h2><p>Enter your annual council rates, household income, number of dependants and SuperGold status for an instant 2026/27 estimate.</p></div><RatesRebateCalculator/></section>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>2026/27 settings</span><h2>Rates rebate income thresholds and maximum</h2></div><div className={styles.infoGrid}>
+   <article><h3>$830 maximum rebate</h3><p>The statutory maximum rates rebate increased from $805 to $830 from 1 July 2026.</p></article>
+   <article><h3>$33,210 standard income threshold</h3><p>For most ratepayers, the 2026/27 income abatement threshold is $33,210.</p></article>
+   <article><h3>$46,400 SuperGold threshold</h3><p>A qualifying ratepayer who holds a SuperGold Card when applying has a higher $46,400 income abatement threshold.</p></article>
+   <article><h3>$500 per dependant</h3><p>The applicable income threshold increases by $500 for each dependant.</p></article>
   </div></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>How it works</span><h2>The statutory calculation</h2></div><div className={styles.infoGrid}>
-   <article><h3>Start with rates</h3><p>The formula starts with two-thirds of the amount by which annual rates exceed $160.</p></article>
-   <article><h3>Income abatement</h3><p>If income exceeds the applicable threshold, the calculated rebate is reduced by $1 for every $8 above that threshold.</p></article>
-   <article><h3>Maximum applies</h3><p>The final statutory rebate cannot exceed $830 for 2026/27.</p></article>
-   <article><h3>Council assessment</h3><p>Your council makes the final decision after checking the application and relevant property, residence, rates and income information.</p></article>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>How it works</span><h2>How the NZ rates rebate is calculated</h2></div><div className={styles.infoGrid}>
+   <article><h3>Start with annual rates</h3><p>The formula starts with two-thirds of the amount by which annual rates exceed $160.</p></article>
+   <article><h3>Apply the income adjustment</h3><p>If household income exceeds the applicable threshold, the calculated rebate is reduced by $1 for every $8 above that threshold.</p></article>
+   <article><h3>Apply the $830 cap</h3><p>The final statutory rebate cannot exceed $830 for the 2026/27 rating year.</p></article>
+   <article><h3>Your council decides</h3><p>Your local council makes the final decision after checking the application and relevant property, residence, rates and income information.</p></article>
   </div></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility</span><h2>Who should check the scheme?</h2><p>The scheme is primarily for qualifying ratepayers of residential property they use as their home. For the 2026/27 rating year, eligibility is assessed from 1 July 2026 and applications are made through the local council. Even if income is above the headline threshold, the formula can still produce a partial rebate.</p></div></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Government information</h2><p>Last checked {checked}. {snapshot.reachable}/{snapshot.total} official source pages responded successfully.</p></div><div className={styles.infoGrid}>{ratesRebateSources.map(s=><article key={s.url}><h3>{s.label}</h3><a href={s.url} target="_blank" rel="noreferrer">Open official source →</a></article>)}</div></section>
-  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>Rates rebate questions</h2></div><div className={styles.infoGrid}>{faq.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility</span><h2>Who can apply for a rates rebate in New Zealand?</h2><p>The scheme is primarily for qualifying ratepayers of residential property they use as their usual home. You apply through your local council for each rating year. Even if your income is above the headline threshold, it is still worth checking because the statutory formula can produce a partial rebate.</p></div></section>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Official NZ rates rebate information</h2><p>Last checked {checked}. {snapshot.reachable}/{snapshot.total} official source pages responded successfully.</p></div><div className={styles.infoGrid}>{ratesRebateSources.map(s=><article key={s.url}><h3>{s.label}</h3><a href={s.url} target="_blank" rel="noreferrer">Open official source →</a></article>)}</div></section>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>NZ rates rebate calculator: common questions</h2></div><div className={styles.infoGrid}>{faq.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
   <aside className={styles.disclaimer}><strong>Important:</strong> This calculator is a general estimate based on the statutory formula. It does not determine legal eligibility. Ownership structures, moves during the rating year, household circumstances and council assessment can affect the result.</aside><p><Link href="/nz-guides">← Back to NZ Guides</Link></p>
  </main><PublicFooter/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(ld).replace(/</g,'\\u003c')}}/></>;
 }
