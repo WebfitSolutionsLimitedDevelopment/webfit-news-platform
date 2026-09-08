@@ -1,0 +1,1 @@
+Implementation intentionally avoids a remote time API; runtime timezone data is the authority for display offsets.
