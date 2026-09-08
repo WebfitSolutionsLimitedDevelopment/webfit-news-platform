@@ -1,1 +1,0 @@
-World Time feature: live clocks, search, SEO, no external API.
