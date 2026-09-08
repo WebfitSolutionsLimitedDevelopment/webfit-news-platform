@@ -5,6 +5,7 @@ import { StoryCard } from '@/components/StoryCard';
 import { BreakingStrip } from '@/components/BreakingStrip';
 import { AdSlot } from '@/components/AdSlot';
 import { VideoSection } from '@/components/VideoSection';
+import { AnimatedMastheadLogo } from '@/components/AnimatedMastheadLogo';
 import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
 import { getPublicStoryTitle } from '@/lib/public-story-display';
 import adFlow from './HomeAdFlow.module.css';
@@ -80,9 +81,7 @@ export default async function Home(){
       </div>
 
       <section className={styles.mastIntro}>
-        <div className={styles.mastWord} aria-label="Webfit News">
-          <span>WEBFIT</span><strong>NEWS</strong>
-        </div>
+        <AnimatedMastheadLogo/>
         <div className={styles.mastMeta}>
           <span>Independent New Zealand journalism</span>
           <div><Link href="/category/new-zealand">Aotearoa</Link><Link href="/category/communities">Communities</Link><Link href="/category/politics">Politics</Link></div>
