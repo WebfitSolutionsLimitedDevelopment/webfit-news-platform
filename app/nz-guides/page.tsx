@@ -5,13 +5,13 @@ import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
-  title: 'New Zealand Guides | Wages, Tax, KiwiSaver, Super, Leave, Holidays, Visas & Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, tax codes, KiwiSaver, student loans, NZ Super, leave, holidays, visas, passports and jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','NZ tax code finder','KiwiSaver calculator NZ','student loan calculator NZ','NZ Superannuation','NZ Super rates 2026','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
+  title: 'New Zealand Guides | Wages, Tax, KiwiSaver, Super, Citizenship, Leave, Holidays, Visas & Jobs',
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, tax codes, KiwiSaver, student loans, NZ Super, citizenship, leave, holidays, visas, passports and jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','NZ tax code finder','KiwiSaver calculator NZ','student loan calculator NZ','NZ Superannuation','NZ citizenship','NZ citizenship application','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, tax, KiwiSaver, NZ Super, leave, holidays, visas, passports and jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, tax, KiwiSaver, NZ Super, citizenship, leave, holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -24,6 +24,7 @@ const guides=[
   {href:'/nz-kiwisaver-calculator',title:'NZ KiwiSaver Calculator',text:'Estimate employee contributions, employer contributions after ESCT, and the current government KiwiSaver contribution.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-student-loan-calculator',title:'NZ Student Loan Repayment Calculator',text:'Estimate student-loan deductions by pay period, compare main and secondary jobs, and model extra repayments.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-superannuation',title:'NZ Superannuation 2026',text:'Check core NZ Super eligibility, residence years, current fortnightly rates, overseas pension rules and payment timing.',fresh:'Eligibility checker · daily Work and Income source checks'},
+  {href:'/nz-citizenship',title:'NZ Citizenship 2026',text:'Check citizenship-by-grant eligibility, the five-year presence rule, current fees, application steps and the future citizenship test.',fresh:'Eligibility checker · daily NZ Government source checks'},
   {href:'/nz-holiday-pay-calculator',title:'NZ Holiday Pay Calculator',text:'Estimate annual leave pay and public-holiday pay using current OWP, AWE and time-and-a-half rules.',fresh:'Interactive calculator · current Employment NZ rules'},
   {href:'/nz-leave-entitlement-calculator',title:'NZ Sick Leave & Annual Leave Calculator',text:'Check sick-leave eligibility, carry-over and the statutory four-week annual holiday entitlement.',fresh:'Interactive calculator · daily official-source checks'},
   {href:'/public-holidays',title:'Public Holidays NZ',text:'2026 and 2027 national holidays, anniversary days, observed dates and public holiday pay.',fresh:'Date-aware Past, Today and Upcoming status'},
@@ -69,7 +70,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>16 live guides</strong>
+          <strong>17 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
