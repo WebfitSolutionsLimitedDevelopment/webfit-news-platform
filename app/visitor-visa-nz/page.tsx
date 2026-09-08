@@ -5,77 +5,70 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { getVisaSnapshot } from '@/lib/immigration';
 import styles from '@/components/UtilityGuide.module.css';
 
-export const revalidate = 21600;
-
-export const metadata: Metadata = {
-  title: 'Visitor Visa NZ 2026 | New Zealand Visitor Visa Cost, Time & Requirements',
-  description: 'Current New Zealand Visitor Visa information including cost, processing time, length of stay, requirements, documents and official Immigration New Zealand links.',
-  keywords: ['visitor visa nz','New Zealand visitor visa','NZ visitor visa','visitor visa New Zealand 2026','NZ visitor visa requirements','NZ visitor visa processing time','NZ visitor visa cost','New Zealand tourist visa'],
-  alternates: { canonical: '/visitor-visa-nz' },
-  openGraph: { title: 'Visitor Visa NZ 2026', description: 'Current NZ Visitor Visa cost, processing time, requirements and official source links.', url: '/visitor-visa-nz', type: 'website' },
+export const revalidate=21600;
+export const metadata:Metadata={
+  title:'New Zealand Visitor Visa 2026 | Cost, Processing Time & Requirements',
+  description:'NZ Visitor Visa 2026: cost from $441, 80% processed within 2 weeks, stay up to 6 or 9 months. Check requirements, funds, documents and apply online.',
+  keywords:['New Zealand visitor visa','visitor visa NZ','NZ visitor visa','New Zealand tourist visa','NZ visitor visa requirements','NZ visitor visa processing time','NZ visitor visa cost'],
+  alternates:{canonical:'/visitor-visa-nz'},
+  openGraph:{title:'New Zealand Visitor Visa 2026 | Cost, Time & Requirements',description:'Current Visitor Visa cost, processing time, stay length, requirements and official Immigration New Zealand application link.',url:'/visitor-visa-nz',type:'website'},
 };
-
-function formatNZDate(value: string) {
-  return new Intl.DateTimeFormat('en-NZ',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Pacific/Auckland',timeZoneName:'short'}).format(new Date(value));
-}
+function formatNZDate(value:string){return new Intl.DateTimeFormat('en-NZ',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Pacific/Auckland',timeZoneName:'short'}).format(new Date(value));}
 
 export default async function VisitorVisaNzPage(){
-  const snapshot = await getVisaSnapshot('visitor-visa');
-  const cost = snapshot?.cost || 'From NZD $441';
-  const processing = snapshot?.processingTime || '80% within 2 weeks';
-  const stay = snapshot?.lengthOfStay || 'Up to either 6 months or 9 months';
-  const checkedAt = snapshot?.checkedAt || new Date().toISOString();
-  const sourceOk = Boolean(snapshot?.sourceOk);
-  const requirements = snapshot?.applyRequirements?.length ? snapshot.applyRequirements.slice(0,8) : [
-    'Have genuine plans to leave New Zealand at the end of your stay.',
-    'Have enough money for your stay or an acceptable sponsor.',
-    'Meet health and character requirements where applicable.',
-    'Hold a passport that meets Immigration New Zealand validity requirements.',
-  ];
-  const letsYou = snapshot?.visaLetsYou?.length ? snapshot.visaLetsYou.slice(0,6) : [
-    'Holiday in New Zealand.', 'Visit family and friends.', 'Study for up to 3 months.', 'Include eligible partner and dependent children in the application.'
-  ];
-
+  const snapshot=await getVisaSnapshot('visitor-visa');
+  const cost=snapshot?.cost||'From NZD $441';
+  const processing=snapshot?.processingTime||'80% within 2 weeks';
+  const stay=snapshot?.lengthOfStay||'Up to either 6 months or 9 months';
+  const checkedAt=snapshot?.checkedAt||new Date().toISOString();
+  const sourceOk=Boolean(snapshot?.sourceOk);
+  const requirements=snapshot?.applyRequirements?.length?snapshot.applyRequirements.slice(0,8):['Have genuine plans to leave New Zealand at the end of your stay.','Have enough money for your stay or an acceptable sponsor.','Meet health and character requirements where applicable.','Hold a passport that meets Immigration New Zealand validity requirements.'];
+  const letsYou=snapshot?.visaLetsYou?.length?snapshot.visaLetsYou.slice(0,6):['Holiday in New Zealand.','Visit family and friends.','Study for up to 3 months.','Include eligible partner and dependent children in the application.'];
   const faq=[
-    {q:'How much does a New Zealand Visitor Visa cost?',a:`Immigration New Zealand currently lists the Visitor Visa cost from ${cost}. The exact amount can depend on where you apply and your circumstances, and most international visitors may also pay the International Visitor Conservation and Tourism Levy.`},
-    {q:'How long does an NZ Visitor Visa take?',a:`Immigration New Zealand currently publishes a processing indicator of ${processing}. Processing times can change, so check the official page before making non-refundable travel plans.`},
-    {q:'How long can I stay on a New Zealand Visitor Visa?',a:`The standard Visitor Visa page currently states a stay of ${stay}. The exact visa conditions granted to you control how long you may stay.`},
-    {q:'Can I work on a Visitor Visa in New Zealand?',a:'A standard Visitor Visa does not allow employment in New Zealand. Immigration New Zealand says remote work for an overseas business may be permitted subject to the visa rules.'},
-    {q:'Can I study on a Visitor Visa?',a:'The standard Visitor Visa can allow study for up to 3 months.'},
+    {q:'How much is a New Zealand Visitor Visa in 2026?',a:`Immigration New Zealand currently lists the standard Visitor Visa from ${cost}. Most international visitors may also need to pay the NZD $100 International Visitor Conservation and Tourism Levy. Exact fees depend on citizenship and where you apply.`},
+    {q:'How long does a New Zealand Visitor Visa take?',a:`Immigration New Zealand currently says ${processing}. Its current wait-time page shows an average of about 1 week and most applications completed within 2 weeks, based on recent applications.`},
+    {q:'How long can I stay in New Zealand on a Visitor Visa?',a:`The standard Visitor Visa currently allows ${stay}. A multiple-entry visa can allow up to 6 months in each 12-month period, while a single-entry visa can allow up to 9 months in an 18-month period, subject to the visa granted.`},
+    {q:'Can I work on a New Zealand Visitor Visa?',a:'You cannot take employment in New Zealand on a standard Visitor Visa. Immigration New Zealand says remote work for an overseas business may be permitted under the visitor rules.'},
+    {q:'Can I study on an NZ Visitor Visa?',a:'The standard Visitor Visa can allow study for up to 3 months.'},
+    {q:'Do visa-waiver travellers need a Visitor Visa?',a:'Not always. Travellers from visa-waiver countries generally use the Visa Waiver Visitor Visa process and need an NZeTA before travel. Australian citizens have separate border arrangements.'},
   ];
+  const faqEntities=faq.map(item=>({'@type':'Question',name:item.q,acceptedAnswer:{'@type':'Answer',text:item.a}}));
+  const jsonLd={
+    '@context':'https://schema.org',
+    '@graph':[
+      {'@type':'WebPage',name:'New Zealand Visitor Visa 2026',url:'https://webfitnews.com/visitor-visa-nz',description:metadata.description,dateModified:checkedAt,isPartOf:{'@type':'WebSite',name:'Webfit News',url:'https://webfitnews.com'}},
+      {'@type':'FAQPage',mainEntity:faqEntities},
+      {'@type':'BreadcrumbList',itemListElement:[
+        {'@type':'ListItem',position:1,name:'Webfit News',item:'https://webfitnews.com'},
+        {'@type':'ListItem',position:2,name:'NZ Visa & Immigration Guide',item:'https://webfitnews.com/immigration'},
+        {'@type':'ListItem',position:3,name:'New Zealand Visitor Visa',item:'https://webfitnews.com/visitor-visa-nz'},
+      ]},
+    ],
+  };
 
-  const jsonLd={'@context':'https://schema.org','@graph':[
-    {'@type':'WebPage',name:'Visitor Visa NZ 2026',url:'https://www.webfitnews.com/visitor-visa-nz',description:metadata.description,dateModified:checkedAt,isPartOf:{'@type':'WebSite',name:'Webfit News',url:'https://www.webfitnews.com'}},
-    {'@type':'FAQPage',mainEntity:faq.map(item=>({'@type':'Question',name:item.q,acceptedAnswer:{'@type':'Answer',text:item.a}}))}
-  ]};
+  return <><SiteHeader/><main className={`shell ${styles.page}`}>
+    <section className={styles.hero}><div><span className={styles.eyebrow}>New Zealand Visitor Visa Guide</span><h1>New Zealand Visitor Visa 2026</h1><p className={styles.lead}>Check the current Visitor Visa cost, processing time, stay length and requirements before applying through Immigration New Zealand.</p><div className={styles.freshness}><span className={sourceOk?styles.liveDot:styles.fallbackDot}/><strong>Immigration NZ source checked:</strong> {formatNZDate(checkedAt)}</div></div><div className={styles.heroCard}><span>Current standard Visitor Visa</span><strong>From $441 · 80% within 2 weeks</strong><small>Stay up to either 6 months or 9 months, depending on the visa granted.</small></div></section>
 
-  return <>
-    <SiteHeader/>
-    <main className={`shell ${styles.page}`}>
-      <section className={styles.hero}>
-        <div><span className={styles.eyebrow}>New Zealand Immigration Guide</span><h1>Visitor Visa NZ 2026</h1><p className={styles.lead}>A practical summary of the New Zealand Visitor Visa: current cost, processing time, length of stay, key requirements and direct links to Immigration New Zealand.</p><div className={styles.freshness}><span className={sourceOk?styles.liveDot:styles.fallbackDot}/><strong>Immigration NZ source checked:</strong> {formatNZDate(checkedAt)} · refreshes every 6 hours</div></div>
-        <div className={styles.heroCard}><span>Current published cost</span><strong>{cost}</strong><small>Always confirm your exact fee with Immigration New Zealand before applying.</small></div>
-      </section>
+    <nav className={styles.jumpNav}><span>Jump to:</span><a href="#facts">Cost & time</a><a href="#requirements">Requirements</a><a href="#funds">Funds</a><a href="#apply">Apply online</a><a href="#faq">FAQs</a></nav>
 
-      <nav className={styles.jumpNav}><span>Jump to:</span><a href="#overview">Overview</a><a href="#requirements">Requirements</a><a href="#documents">Documents</a><a href="#apply">Apply</a><a href="#faq">FAQs</a></nav>
+    <section id="facts" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Quick answer</span><h2>NZ Visitor Visa cost, processing time and stay</h2></div><div className={styles.cardGrid}>
+      <article className={styles.card}><h3>Cost</h3><p><strong>{cost}</strong></p><p>Exact fee can depend on citizenship and application location.</p></article>
+      <article className={styles.card}><h3>Processing time</h3><p><strong>{processing}</strong></p><p>Current recent-application average is about one week.</p></article>
+      <article className={styles.card}><h3>Length of stay</h3><p><strong>{stay}</strong></p><p>Your eVisa conditions control the actual period granted.</p></article>
+    </div></section>
 
-      <section id="overview" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>At a glance</span><h2>New Zealand Visitor Visa: key facts</h2></div><div className={styles.cardGrid}>
-        <article className={styles.card}><h3>Length of stay</h3><p>{stay}</p></article>
-        <article className={styles.card}><h3>Cost</h3><p>{cost}</p></article>
-        <article className={styles.card}><h3>Processing time</h3><p>{processing}</p></article>
-      </div></section>
+    <section id="requirements" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Visitor Visa requirements</span><h2>What do you need for a New Zealand Visitor Visa?</h2><p>Immigration New Zealand assesses your genuine intention to visit, ability to support yourself, plans to leave and the other requirements of the visa.</p></div><div className={styles.infoGrid}>{requirements.map((item,index)=><article key={index}><h3>{index+1}. Requirement</h3><p>{item}</p></article>)}</div></section>
 
-      <section id="requirements" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility</span><h2>NZ Visitor Visa requirements</h2><p>These are the main points pulled from the current Immigration New Zealand Visitor Visa page. Your own application may require additional evidence.</p></div><div className={styles.infoGrid}>{requirements.map((item,index)=><article key={index}><h3>{index+1}. Requirement</h3><p>{item}</p></article>)}</div></section>
+    <section id="funds" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Money & onward travel</span><h2>Show you can support your visit and leave New Zealand</h2><p>Your application may need evidence of funds or an acceptable sponsor, plus evidence you can leave New Zealand at the end of the visit. Bank statements, prepaid accommodation and onward travel evidence may be relevant depending on your application.</p></div></section>
 
-      <section id="documents" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>What it lets you do</span><h2>What a Visitor Visa can allow</h2></div><div className={styles.cardGrid}>{letsYou.map((item,index)=><article className={styles.card} key={index}><h3>{index+1}</h3><p>{item}</p></article>)}</div><div className={styles.notice} style={{marginTop:16}}><strong>Travel warning:</strong> Immigration New Zealand recommends not booking non-refundable travel until your visa is approved.</div></section>
+    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>What the visa allows</span><h2>What can you do on a Visitor Visa?</h2></div><div className={styles.cardGrid}>{letsYou.map((item,index)=><article className={styles.card} key={index}><h3>{index+1}</h3><p>{item}</p></article>)}</div><div className={styles.notice} style={{marginTop:16}}><strong>Do not book non-refundable travel early:</strong> Immigration New Zealand recommends waiting until your Visitor Visa is approved.</div></section>
 
-      <section id="apply" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official application</span><h2>Apply through Immigration New Zealand</h2><p>Webfit News does not accept visa applications and does not assess eligibility. Use the official Immigration New Zealand application system.</p><a className={styles.cta} href="https://www.immigration.govt.nz/visas/visitor-visa/" target="_blank" rel="noopener noreferrer">Open official Visitor Visa page ↗</a><div className={styles.metaRow}><span>Source checked: {formatNZDate(checkedAt)}</span><span>Official source: Immigration New Zealand</span></div></div></section>
+    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Pacific fee reduction</span><h2>Temporary lower fee for eligible Pacific nationals</h2><p>From 1 June 2026 for 12 months, eligible Pacific nationals applying outside New Zealand have a temporary total Visitor Visa cost of <strong>NZD $161</strong>. Immigration New Zealand says this group does not pay the IVL. Parent Boost and Group Visitor Visas are excluded from this temporary reduction.</p></div></section>
 
-      <section id="faq" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>Visitor Visa NZ: common questions</h2></div><div className={styles.faqList}>{faq.map(item=><details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div></section>
+    <section id="apply" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official application</span><h2>Apply for a New Zealand Visitor Visa online</h2><p>Webfit News does not accept applications or make immigration decisions. Use Immigration New Zealand’s official Visitor Visa service.</p><a className={styles.cta} href="https://www.immigration.govt.nz/visas/visitor-visa/" target="_blank" rel="noopener noreferrer">Apply on Immigration New Zealand ↗</a></div></section>
 
-      <aside className={styles.disclaimer}><strong>Information notice:</strong> This is general information, not immigration advice. Visa rules, costs, evidence requirements and processing times can change. Immigration New Zealand is the authoritative source. <Link href="/immigration">See the Webfit News NZ visa guide.</Link></aside>
-    </main>
-    <PublicFooter/>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replace(/</g,'\\u003c')}}/>
-  </>;
+    <section id="faq" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>New Zealand Visitor Visa questions</h2></div><div className={styles.faqList}>{faq.map(item=><details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div></section>
+
+    <aside className={styles.disclaimer}><strong>Information notice:</strong> This is general information, not immigration advice. Visa rules, costs, evidence requirements and processing times can change. Immigration New Zealand is the authoritative source. <Link href="/immigration">Compare New Zealand visa pathways →</Link></aside>
+  </main><PublicFooter/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replace(/</g,'\\u003c')}}/></>;
 }
