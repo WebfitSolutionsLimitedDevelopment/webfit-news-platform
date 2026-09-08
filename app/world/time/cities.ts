@@ -1,1 +1,0 @@
-export const WORLD_TIME_CITIES = ['Auckland','Wellington','Sydney','Melbourne','Delhi','Mumbai','Singapore','Dubai','Tokyo','Seoul','London','Paris','Berlin','New York','Los Angeles','Toronto','Vancouver','Honolulu','Johannesburg','São Paulo'];
