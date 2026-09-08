@@ -5,152 +5,75 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { getPassportSnapshot, passportSources } from '@/lib/passport-renewal';
 import styles from '@/components/UtilityGuide.module.css';
 
-export const revalidate = 604800;
-
-export const metadata: Metadata = {
-  title: 'New Zealand Passport Application 2026 | NZ Passport Cost, Time & Requirements',
-  description: 'Apply for a New Zealand passport with current adult and child passport costs, processing times, first passport requirements, identity referee rules, photos and official application links.',
-  keywords: [
-    'new zealand passport application',
-    'NZ passport application',
-    'New Zealand passport',
-    'apply for NZ passport',
-    'first NZ passport',
-    'child passport NZ',
-    'adult passport NZ',
-    'NZ passport cost',
-    'NZ passport processing time',
-  ],
-  alternates: { canonical: '/new-zealand-passport-application' },
-  openGraph: {
-    title: 'New Zealand Passport Application 2026',
-    description: 'Current NZ passport application costs, processing times, requirements and official application links.',
-    url: '/new-zealand-passport-application',
-    type: 'website',
-  },
+export const revalidate=604800;
+export const metadata:Metadata={
+  title:'NZ Passport Application 2026 | Cost, Processing Time & Apply Online',
+  description:'Apply for a New Zealand passport in 2026. Adult passport $247, child $144, standard processing at least 4 weeks. Requirements, fees and official online link.',
+  keywords:['NZ passport application','new zealand passport application','apply for NZ passport','New Zealand passport cost','NZ passport processing time','first NZ passport','child passport NZ'],
+  alternates:{canonical:'/new-zealand-passport-application'},
+  openGraph:{title:'NZ Passport Application 2026 | Cost, Time & Apply Online',description:'Current New Zealand passport fees, processing times, requirements and official online application link.',url:'/new-zealand-passport-application',type:'website'},
 };
+const formatNZDate=(value:string)=>new Intl.DateTimeFormat('en-NZ',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Pacific/Auckland',timeZoneName:'short'}).format(new Date(value));
 
-const formatNZDate = (value: string) => new Intl.DateTimeFormat('en-NZ', {
-  day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  timeZone: 'Pacific/Auckland', timeZoneName: 'short',
-}).format(new Date(value));
-
-export default async function NewZealandPassportApplicationPage() {
-  const snapshot = await getPassportSnapshot();
-  const faq = [
-    { q: 'Who can apply for a New Zealand passport?', a: 'You must be a New Zealand citizen to apply for a New Zealand passport.' },
-    { q: 'How much is a New Zealand passport in 2026?', a: `The current standard fee is NZD $${snapshot.adultStandard} for an adult passport and NZD $${snapshot.childStandard} for a child passport, plus courier delivery.` },
-    { q: 'How long does a New Zealand passport application take?', a: `NZ Passports currently says to allow at least ${snapshot.standardTime} for standard processing, plus delivery time. Urgent applications aim for ${snapshot.urgentTime}.` },
-    { q: 'What do I need for a first New Zealand passport?', a: 'You generally need proof of entitlement to a New Zealand passport where required, a compliant passport photo, an identity referee or witness, payment and delivery details.' },
-    { q: 'Does a child need a separate New Zealand passport?', a: 'Yes. Children aged 15 and under apply for a child passport, which is valid for up to 5 years. Parental or guardian consent requirements apply.' },
+export default async function NewZealandPassportApplicationPage(){
+  const snapshot=await getPassportSnapshot();
+  const faq=[
+    {q:'How much is a New Zealand passport in 2026?',a:`A standard passport currently costs NZD $${snapshot.adultStandard} for an adult and NZD $${snapshot.childStandard} for a child, plus courier delivery. Urgent processing costs NZD $${snapshot.adultUrgent} for an adult and NZD $${snapshot.childUrgent} for a child.`},
+    {q:'How long does an NZ passport application take?',a:`NZ Passports says to allow at least ${snapshot.standardTime} for standard processing, plus delivery. It currently aims to process urgent applications within ${snapshot.urgentTime}. First-time and child applications can need additional checks.`},
+    {q:'Can I apply for a New Zealand passport online?',a:'Yes. NZ Passports says applying online is the fastest way to get or renew a passport. Standard and urgent applications can be made online.'},
+    {q:'Who can apply for a New Zealand passport?',a:'You must be a New Zealand citizen to be issued a New Zealand passport. Some people born overseas may need citizenship-by-descent registration before a passport can be issued.'},
+    {q:'What do I need for a first NZ passport?',a:'You generally need a compliant passport photo, identity referee or witness details, citizenship or entitlement information where required, payment and delivery details. Additional checks can apply to first applications.'},
+    {q:'How long is a child NZ passport valid?',a:'A New Zealand child passport for a child aged 15 or under is valid for a maximum of 5 years. An adult passport is valid for a maximum of 10 years.'},
   ];
-  const ld = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebPage',
-        name: 'New Zealand Passport Application 2026',
-        url: 'https://www.webfitnews.com/new-zealand-passport-application',
-        dateModified: snapshot.checkedAt,
-        isPartOf: { '@type': 'WebSite', name: 'Webfit News', url: 'https://www.webfitnews.com' },
-      },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'NZ Guides', item: 'https://www.webfitnews.com/nz-guides' },
-          { '@type': 'ListItem', position: 2, name: 'New Zealand Passport Application', item: 'https://www.webfitnews.com/new-zealand-passport-application' },
-        ],
-      },
-      {
-        '@type': 'FAQPage',
-        mainEntity: faq.map((item) => ({ '@type': 'Question', name: item.q, acceptedAnswer: { '@type': 'Answer', text: item.a } })),
-      },
+  const faqEntities=faq.map(item=>({'@type':'Question',name:item.q,acceptedAnswer:{'@type':'Answer',text:item.a}}));
+  const ld={
+    '@context':'https://schema.org',
+    '@graph':[
+      {'@type':'WebPage',name:'NZ Passport Application 2026',url:'https://webfitnews.com/new-zealand-passport-application',dateModified:snapshot.checkedAt,description:metadata.description,isPartOf:{'@type':'WebSite',name:'Webfit News',url:'https://webfitnews.com'}},
+      {'@type':'FAQPage',mainEntity:faqEntities},
+      {'@type':'BreadcrumbList',itemListElement:[
+        {'@type':'ListItem',position:1,name:'Webfit News',item:'https://webfitnews.com'},
+        {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://webfitnews.com/nz-guides'},
+        {'@type':'ListItem',position:3,name:'NZ Passport Application',item:'https://webfitnews.com/new-zealand-passport-application'},
+      ]},
     ],
   };
 
-  return <>
-    <SiteHeader/>
-    <main className={`shell ${styles.page}`}>
-      <section className={styles.hero}>
-        <div>
-          <span className={styles.eyebrow}>New Zealand Passport Guide</span>
-          <h1>New Zealand Passport Application 2026</h1>
-          <p className={styles.lead}>A practical guide for first-time, adult and child NZ passport applications, with current official costs, processing times and direct government application links.</p>
-          <div className={styles.freshness}><span className={snapshot.sourceOk ? styles.liveDot : styles.fallbackDot}/><strong>Official NZ Passports sources checked:</strong> {formatNZDate(snapshot.checkedAt)}</div>
-        </div>
-        <div className={styles.heroCard}>
-          <span>Standard adult passport</span>
-          <strong>NZD ${snapshot.adultStandard}</strong>
-          <small>Courier delivery is additional. Adult passports are generally valid for up to 10 years.</small>
-        </div>
-      </section>
+  return <><SiteHeader/><main className={`shell ${styles.page}`}>
+    <section className={styles.hero}><div><span className={styles.eyebrow}>New Zealand Passport Guide</span><h1>NZ Passport Application 2026</h1><p className={styles.lead}>Check the current New Zealand passport cost, processing time and application requirements, then go directly to the official online application.</p><div className={styles.freshness}><span className={snapshot.sourceOk?styles.liveDot:styles.fallbackDot}/><strong>NZ Passports sources checked:</strong> {formatNZDate(snapshot.checkedAt)}</div></div><div className={styles.heroCard}><span>Standard passport</span><strong>Adult $247 · Child $144</strong><small>Allow at least 4 weeks for standard processing, plus delivery.</small></div></section>
 
-      <nav className={styles.jumpNav} aria-label="Passport application sections">
-        <span>Jump to:</span><a href="#who">Who can apply</a><a href="#cost">Cost</a><a href="#time">Processing time</a><a href="#need">What you need</a><a href="#child">Child passport</a><a href="#apply">Apply</a><a href="#faq">FAQs</a>
-      </nav>
+    <nav className={styles.jumpNav} aria-label="Passport application sections"><span>Jump to:</span><a href="#cost">Cost</a><a href="#time">Processing time</a><a href="#need">Requirements</a><a href="#child">Child passport</a><a href="#apply">Apply online</a><a href="#faq">FAQs</a></nav>
 
-      <section id="who" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility</span><h2>Who can apply for a New Zealand passport?</h2><p>You must be a New Zealand citizen. If you were born overseas to a New Zealand parent, you may need to register your citizenship by descent before a passport can be issued.</p></div>
-        <div className={styles.infoGrid}>
-          <article><h3>First NZ passport</h3><p>Use the general passport application process. Additional identity and citizenship checks can apply, so first applications can take longer.</p></article>
-          <article><h3>Renewing instead?</h3><p>If you already hold or previously held a New Zealand passport, use our dedicated renewal guide.</p><Link className={styles.cta} href="/nz-passport-renewal">Open NZ passport renewal guide →</Link></article>
-        </div>
-      </section>
+    <section id="cost" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Passport fees</span><h2>How much does an NZ passport cost in 2026?</h2><p>Current New Zealand application fees are below. Courier delivery is additional and varies by destination.</p></div><div className={styles.cardGrid}>
+      <article className={styles.card}><h3>Adult standard</h3><p><strong>NZD ${snapshot.adultStandard}</strong></p></article>
+      <article className={styles.card}><h3>Child standard</h3><p><strong>NZD ${snapshot.childStandard}</strong></p></article>
+      <article className={styles.card}><h3>Adult urgent</h3><p><strong>NZD ${snapshot.adultUrgent}</strong></p></article>
+      <article className={styles.card}><h3>Child urgent</h3><p><strong>NZD ${snapshot.childUrgent}</strong></p></article>
+    </div></section>
 
-      <section id="cost" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Current fees</span><h2>NZ passport application cost</h2><p>These are the current official passport fees for applications processed in New Zealand. Courier delivery is extra.</p></div>
-        <div className={styles.cardGrid}>
-          <article className={styles.card}><h3>Adult standard</h3><p>NZD ${snapshot.adultStandard}</p></article>
-          <article className={styles.card}><h3>Child standard</h3><p>NZD ${snapshot.childStandard}</p></article>
-          <article className={styles.card}><h3>Adult urgent</h3><p>NZD ${snapshot.adultUrgent}</p></article>
-        </div>
-      </section>
+    <section id="time" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Current processing time</span><h2>How long does a New Zealand passport take?</h2></div><div className={styles.infoGrid}>
+      <article><h3>Standard: allow at least 4 weeks</h3><p>NZ Passports currently says to allow at least 20 working days for processing, then add courier delivery time.</p></article>
+      <article><h3>Urgent: aim within 3 working days</h3><p>Urgent service aims to process the application within three working days, although demand and additional checks can affect timing.</p></article>
+      <article><h3>First and child applications</h3><p>NZ Passports warns these applications can take longer because additional checks may be required.</p></article>
+    </div></section>
 
-      <section id="time" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Timing</span><h2>New Zealand passport processing time</h2></div>
-        <div className={styles.infoGrid}>
-          <article><h3>Standard service</h3><p>Allow at least {snapshot.standardTime}, then add courier delivery time.</p></article>
-          <article><h3>Urgent service</h3><p>Urgent applications aim to be processed within {snapshot.urgentTime}. First-time and child applications may need additional checks.</p></article>
-        </div>
-      </section>
+    <section id="need" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Passport requirements</span><h2>What do I need to apply for an NZ passport?</h2></div><div className={styles.cardGrid}>
+      <article className={styles.card}><h3>NZ citizenship</h3><p>You must be a New Zealand citizen. If citizenship status needs to be established or registered first, complete that process before relying on the passport application alone.</p></article>
+      <article className={styles.card}><h3>Compliant photo</h3><p>Use a recent passport photo that meets NZ Passports technical rules. Selfies and unsuitable photos can delay processing.</p></article>
+      <article className={styles.card}><h3>Identity referee or witness</h3><p>Online applications generally require an eligible identity referee who meets the official age, relationship and identification rules.</p></article>
+      <article className={styles.card}><h3>Payment and delivery</h3><p>Have payment and delivery details ready. Courier cost is calculated separately from the passport application fee.</p></article>
+    </div></section>
 
-      <section id="need" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Application checklist</span><h2>What you need for an NZ passport application</h2></div>
-        <div className={styles.cardGrid}>
-          <article className={styles.card}><h3>Passport photo</h3><p>A recent compliant passport photo. NZ Passports warns that selfies and photos that do not meet technical requirements can delay an application.</p></article>
-          <article className={styles.card}><h3>Identity referee or witness</h3><p>For online applications, an eligible identity referee must generally be aged 16 or older, have known you for more than one year, hold a current or expired NZ passport, and not be related to you, your partner, or living at your address.</p></article>
-          <article className={styles.card}><h3>Citizenship and previous passport details</h3><p>You may need citizenship or entitlement information, and previous passport details if you have held one before.</p></article>
-        </div>
-      </section>
+    <section id="child" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Children 15 and under</span><h2>NZ child passport application</h2><p>A child needs their own passport. A child passport costs <strong>NZD ${snapshot.childStandard}</strong> for standard service and is valid for a maximum of five years. Parent or guardian consent requirements apply.</p></div></section>
 
-      <section id="child" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Children aged 15 and under</span><h2>Child passport application NZ</h2><p>A child needs their own passport. Child passports are valid for up to 5 years. A parent or legal guardian must provide the required consent, and first child applications can involve additional citizenship checks.</p></div>
-        <div className={styles.notice}><strong>Current standard child passport fee:</strong> NZD ${snapshot.childStandard}, plus courier delivery.</div>
-      </section>
+    <section id="apply" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official online application</span><h2>Apply for a New Zealand passport online</h2><p>NZ Passports says online is the fastest way to get or renew a passport. Paper applications require extra processing.</p><a className={styles.cta} href="https://www.passports.govt.nz/most-citizens-can-apply-for-their-passport-online/most-citizens-can-apply-for-their-passport-online" target="_blank" rel="noopener noreferrer">Apply on the official NZ Passports website ↗</a></div></section>
 
-      <section id="apply" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Official application</span><h2>Apply for a New Zealand passport</h2><p>Most New Zealand citizens can apply online. If you need a paper form, the official NZ Passports website provides separate adult, renewal and child application forms.</p>
-          <a className={styles.cta} href="https://www.passports.govt.nz/most-citizens-can-apply-for-their-passport-online/most-citizens-can-apply-for-their-passport-online" target="_blank" rel="noopener noreferrer">Start on the official NZ Passports website ↗</a>
-        </div>
-      </section>
+    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Already have a passport?</span><h2>Renewing rather than applying for the first time?</h2><p>If you already hold or previously held a New Zealand passport, the renewal guide focuses specifically on renewal requirements, cost and timing.</p><Link className={styles.cta} href="/nz-passport-renewal">Open the NZ passport renewal guide →</Link></div></section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Where this information comes from</h2></div>
-        <div className={styles.sourceList}>{passportSources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer"><div><strong>{source.name}</strong><small>{source.primary ? 'Primary fee source' : 'Official NZ Passports source'}</small></div><span>Open official page ↗</span></a>)}</div>
-        <div className={styles.sourceList} style={{marginTop:10}}>
-          <a href="https://www.passports.govt.nz/what-you-need-for-your-application/identity-referee-or-witness" target="_blank" rel="noopener noreferrer"><div><strong>New Zealand Passports — Identity referee or witness</strong><small>Official identity requirements</small></div><span>Open official page ↗</span></a>
-          <a href="https://www.passports.govt.nz/paper-application-forms" target="_blank" rel="noopener noreferrer"><div><strong>New Zealand Passports — Paper application forms</strong><small>Adult, renewal and child forms</small></div><span>Open official page ↗</span></a>
-        </div>
-      </section>
+    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>New Zealand Passports information</h2></div><div className={styles.sourceList}>{passportSources.map(source=><a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer"><div><strong>{source.name}</strong><small>{source.primary?'Primary fee source':'Official NZ Passports source'}</small></div><span>Open official page ↗</span></a>)}</div></section>
 
-      <section id="faq" className={styles.section}>
-        <div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>New Zealand passport application: common questions</h2></div>
-        <div className={styles.faqList}>{faq.map((item) => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div>
-      </section>
+    <section id="faq" className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>NZ passport application questions</h2></div><div className={styles.faqList}>{faq.map(item=><details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div></section>
 
-      <aside className={styles.disclaimer}><strong>Information notice:</strong> Passport fees, timeframes and eligibility requirements can change. The Department of Internal Affairs / NZ Passports website remains the authoritative source.</aside>
-    </main>
-    <PublicFooter/>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(ld).replace(/</g,'\\u003c')}}/>
-  </>;
+    <aside className={styles.disclaimer}><strong>Information notice:</strong> Passport fees, timeframes and eligibility requirements can change. The Department of Internal Affairs / NZ Passports website remains the authoritative source.</aside>
+  </main><PublicFooter/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(ld).replace(/</g,'\\u003c')}}/></>;
 }
