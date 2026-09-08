@@ -4,9 +4,9 @@ import {SiteHeader} from '@/components/SiteHeader';
 import {PublicFooter} from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 import KiwiSaverCalculator from './KiwiSaverCalculator';
-import {getKiwiSaverSnapshot,kiwiSaverSources,KIWISAVER_REVALIDATE_SECONDS} from '@/lib/kiwisaver';
+import {getKiwiSaverSnapshot,kiwiSaverSources} from '@/lib/kiwisaver';
 
-export const revalidate=KIWISAVER_REVALIDATE_SECONDS;
+export const revalidate=604800;
 
 export const metadata:Metadata={
   title:'NZ KiwiSaver Calculator 2026 | Employee, Employer, ESCT & Government Contribution',
