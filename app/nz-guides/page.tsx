@@ -5,13 +5,13 @@ import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
-  title: 'New Zealand Guides | Wages, Tax, KiwiSaver, Super, Citizenship, Rates, Tenancy, Visas & Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, tax codes, KiwiSaver, student loans, NZ Super, citizenship, rates rebates, tenancy, leave, holidays, visas, passports and jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','NZ tax code finder','KiwiSaver calculator NZ','student loan calculator NZ','NZ Superannuation','NZ citizenship','NZ citizenship application','rates rebate NZ','NZ rates rebate calculator','NZ tenancy','rent increase NZ','tenant rights NZ','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
+  title: 'New Zealand Guides | Wages, Tax, ACC, KiwiSaver, Super, Citizenship, Rates, Tenancy, Visas & Jobs',
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, PAYE and tax, ACC levies, tax codes, KiwiSaver, student loans, NZ Super, citizenship, rates rebates, tenancy, leave, holidays, visas, passports and jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','PAYE calculator NZ','NZ tax calculator','ACC levy calculator NZ','ACC levy NZ','NZ tax code finder','KiwiSaver calculator NZ','student loan calculator NZ','NZ Superannuation','NZ citizenship','NZ citizenship application','rates rebate NZ','NZ rates rebate calculator','NZ tenancy','rent increase NZ','tenant rights NZ','sick leave calculator NZ','annual leave entitlement NZ','holiday pay calculator NZ','public holidays NZ','school holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','jobs in New Zealand','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
-    description: 'Current New Zealand guides for wages, tax, KiwiSaver, NZ Super, citizenship, rates rebates, tenancy, leave, holidays, visas, passports and jobs, organised around official government sources.',
+    description: 'Current New Zealand guides for wages, tax, ACC, KiwiSaver, NZ Super, citizenship, rates rebates, tenancy, leave, holidays, visas, passports and jobs, organised around official government sources.',
     url: '/nz-guides',
     type: 'website',
   },
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 const guides=[
   {href:'/minimum-wage',title:'Minimum Wage NZ',text:'Current adult, starting-out and training minimum wage rates, pay examples and calculator.',fresh:'Regular official-source checks'},
   {href:'/nz-paye-calculator',title:'NZ PAYE & Tax Calculator',text:'Estimate income tax, ACC, KiwiSaver, student-loan deductions and take-home pay using current IRD settings.',fresh:'Interactive calculator · regular IRD source checks'},
+  {href:'/nz-acc-levy-calculator',title:'NZ ACC Levy Calculator 2026/27',text:'Estimate the ACC Earners’ levy on salary or wages, compare the current and next confirmed rates, and understand self-employed ACC levy differences.',fresh:'Interactive calculator · daily ACC and IRD source checks'},
   {href:'/nz-tax-code-finder',title:'NZ Tax Code Finder',text:'Find the likely IRD tax code for main income, secondary income, student loans and common M, ME, SB, S, SH, ST and SA situations.',fresh:'Interactive finder · regular IRD source checks'},
   {href:'/nz-kiwisaver-calculator',title:'NZ KiwiSaver Calculator',text:'Estimate employee contributions, employer contributions after ESCT, and the current government KiwiSaver contribution.',fresh:'Interactive calculator · regular IRD source checks'},
   {href:'/nz-student-loan-calculator',title:'NZ Student Loan Repayment Calculator',text:'Estimate student-loan deductions by pay period, compare main and secondary jobs, and model extra repayments.',fresh:'Interactive calculator · regular IRD source checks'},
@@ -72,7 +73,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>19 live guides</strong>
+          <strong>20 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
