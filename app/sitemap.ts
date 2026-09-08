@@ -12,6 +12,7 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/world/currency-converter`,changeFrequency:'daily',priority:0.95},
   {url:`${SITE_URL}/world/gold-price`,changeFrequency:'hourly',priority:0.95},
   {url:`${SITE_URL}/world/time`,changeFrequency:'daily',priority:0.95},
+  {url:`${SITE_URL}/world/major-sports`,changeFrequency:'daily',priority:0.95},
   {url:`${SITE_URL}/nz-guides`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/minimum-wage`,changeFrequency:'daily',priority:0.9},
   {url:`${SITE_URL}/nz-paye-calculator`,changeFrequency:'weekly',priority:0.95},
