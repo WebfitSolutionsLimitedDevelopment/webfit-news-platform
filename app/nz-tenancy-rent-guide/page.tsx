@@ -28,16 +28,36 @@ const faq:[string,string][]=[
 export default async function NzTenancyPage(){
   const snapshot=await getNzTenancySnapshot();
   const checked=new Intl.DateTimeFormat('en-NZ',{dateStyle:'medium',timeStyle:'short',timeZone:'Pacific/Auckland'}).format(new Date(snapshot.checkedAt));
+  const mainEntity=faq.map(([q,a])=>({
+    '@type':'Question',
+    name:q,
+    acceptedAnswer:{
+      '@type':'Answer',
+      text:a,
+    },
+  }));
   const ld={
     '@context':'https://schema.org',
     '@graph':[
-      {'@type':'WebApplication',name:'NZ Rent Increase Checker',url:'https://www.webfitnews.com/nz-tenancy-rent-guide',applicationCategory:'UtilityApplication',operatingSystem:'Web'},
-      {'@type':'FAQPage',mainEntity':faq.map(([q,a])=>({'@type':'Question',name:q,acceptedAnswer:{'@type':'Answer',text:a}}))},
-      {'@type':'BreadcrumbList',itemListElement:[
-        {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
-        {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
-        {'@type':'ListItem',position:3,name:'NZ Tenancy & Rent Guide',item:'https://www.webfitnews.com/nz-tenancy-rent-guide'},
-      ]},
+      {
+        '@type':'WebApplication',
+        name:'NZ Rent Increase Checker',
+        url:'https://www.webfitnews.com/nz-tenancy-rent-guide',
+        applicationCategory:'UtilityApplication',
+        operatingSystem:'Web',
+      },
+      {
+        '@type':'FAQPage',
+        mainEntity,
+      },
+      {
+        '@type':'BreadcrumbList',
+        itemListElement:[
+          {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
+          {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
+          {'@type':'ListItem',position:3,name:'NZ Tenancy & Rent Guide',item:'https://www.webfitnews.com/nz-tenancy-rent-guide'},
+        ],
+      },
     ],
   };
 
