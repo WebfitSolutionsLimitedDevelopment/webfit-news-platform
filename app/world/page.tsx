@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "World Guides | Weather, Holidays, Visas, Currency & More | Webfit News",
   description:
-    "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, sports, technology and world news.",
+    "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, major sports, travel, technology and world news.",
   alternates: { canonical: "/world" },
   openGraph: {
     title: "World Guides | Webfit News",
@@ -20,8 +20,8 @@ const tools = [
   { href: "/world/currency-converter", title: "World Currency Converter", text: "Major currency conversions using regularly refreshed ECB reference rates.", status: "Live" },
   { href: "/world/gold-price", title: "Gold Price Today", text: "Latest gold spot price per ounce and gram in major currencies.", status: "Live" },
   { href: "/world/time", title: "World Time", text: "Current local time across major cities and time zones with automatic daylight-saving handling.", status: "Live" },
-  { href: "#", title: "World Cup & Major Sports", text: "Fixtures, scores and major international sporting events.", status: "Coming next" },
-  { href: "#", title: "International Travel Requirements", text: "Entry rules, documents and travel requirement updates.", status: "Planned" },
+  { href: "/world/major-sports", title: "World Cup & Major Sports", text: "Major international sports events with automatic status and official fixture/result links.", status: "Live" },
+  { href: "#", title: "International Travel Requirements", text: "Entry rules, documents and travel requirement updates.", status: "Coming next" },
   { href: "#", title: "AI & Technology", text: "Latest major AI and technology developments from around the world.", status: "Planned" },
   { href: "#", title: "World News", text: "Latest important international news and developments.", status: "Planned" },
 ];
@@ -52,7 +52,7 @@ export default function WorldPage() {
       <section style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World Guides</h1>
         <p style={{ fontSize: 18, maxWidth: 780, lineHeight: 1.6, marginTop: 14 }}>
-          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time and the other global tools we are adding.
+          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time, Major Sports and the other global tools we are adding.
         </p>
       </section>
 
