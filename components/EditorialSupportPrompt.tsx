@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import styles from './EditorialSupportPrompt.module.css';
 
-const STORAGE_KEY='webfit-news-support-prompt-dismissed';
+const STORAGE_KEY='webfit-news-support-prompt-dismissed-v2';
 const DISMISS_FOR_MS=7*24*60*60*1000;
 
 export function EditorialSupportPrompt(){
