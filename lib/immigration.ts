@@ -82,12 +82,15 @@ function normalizeItem(value: string) {
 }
 
 function isUsefulItem(value: string) {
-  if (value.length < 5 || value.length > 360) return false;
+  if (value.length < 8 || value.length > 360) return false;
   if (/\{\{|\}\}|innerText|ng-|v-for|x-for|item\.|undefined|null/i.test(value)) return false;
   if (/^(step\s*\d+|submit your application|check your application status|how to pay|log in to your account|visa labels and evisas)\b/i.test(value)) return false;
   if (/^(and|or|with an|be with an|a|the)$/i.test(value)) return false;
+  if (/\b(?:on|in|at|from|to)\s+(?:a|an|the)\s+(?:by|with|to|from|in|on)\s+(?:a|an|the)?\b/i.test(value)) return false;
+  if (/\b(?:a|an)\s+(?:by|with|to|from|in|on)\s+(?:a|an)\b/i.test(value)) return false;
+  if (/\b(?:on a by an|on an by a|in a by an|in an by a)\b/i.test(value)) return false;
   const words = value.split(/\s+/).filter(Boolean);
-  if (words.length < 2) return false;
+  if (words.length < 3) return false;
   return true;
 }
 
@@ -168,6 +171,6 @@ async function fetchVisaSnapshotUncached(definition: VisaDefinition): Promise<Vi
 export async function getVisaSnapshot(slug: string) {
   const definition = getVisaDefinition(slug);
   if (!definition) return null;
-  const cached = unstable_cache(() => fetchVisaSnapshotUncached(definition), [`inz-visa-${definition.slug}-v2`], { revalidate: 21600, tags: [`inz-visa-${definition.slug}`, 'inz-visas'] });
+  const cached = unstable_cache(() => fetchVisaSnapshotUncached(definition), [`inz-visa-${definition.slug}-v3`], { revalidate: 21600, tags: [`inz-visa-${definition.slug}`, 'inz-visas'] });
   return cached();
 }
