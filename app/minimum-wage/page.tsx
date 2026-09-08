@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
-import { getMinimumWageSnapshot, minimumWageSources, MINIMUM_WAGE_REFRESH_SECONDS } from '@/lib/minimum-wage';
+import { getMinimumWageSnapshot, minimumWageSources } from '@/lib/minimum-wage';
 import { MinimumWageCalculator } from './MinimumWageCalculator';
 import styles from './MinimumWage.module.css';
 
-export const revalidate = MINIMUM_WAGE_REFRESH_SECONDS;
+export const revalidate = 172800;
 
 export const metadata: Metadata = {
   title: 'Minimum Wage NZ 2026 | New Zealand Minimum Wage Rates & Calculator',
