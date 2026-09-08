@@ -6,6 +6,7 @@ const SITE_URL = 'https://webfitnews.com';
 const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/nz-guides`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/minimum-wage`,changeFrequency:'daily',priority:0.9},
+  {url:`${SITE_URL}/nz-paye-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/public-holidays`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/immigration`,changeFrequency:'daily',priority:0.9},
   {url:`${SITE_URL}/visitor-visa-nz`,changeFrequency:'daily',priority:0.9},
