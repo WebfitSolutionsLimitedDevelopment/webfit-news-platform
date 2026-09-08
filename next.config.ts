@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      { source: '/ILikePDF', destination: '/ilikepdf', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
