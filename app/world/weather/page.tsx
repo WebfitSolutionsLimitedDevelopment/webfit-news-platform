@@ -6,6 +6,13 @@ export const metadata = {
   title: "World Weather Today | Live Weather & 5-Day Forecast | Webfit News",
   description:
     "Check live weather, temperature, humidity, wind and a 5-day forecast for cities around the world. Updated automatically from a live weather provider.",
+  alternates: { canonical: "/world/weather" },
+  openGraph: {
+    title: "World Weather Today | Webfit News",
+    description: "Live weather and 5-day forecasts for cities worldwide.",
+    url: "/world/weather",
+    type: "website",
+  },
 };
 
 export default function WorldWeatherPage() {
@@ -14,7 +21,7 @@ export default function WorldWeatherPage() {
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
         <span>/</span>
-        <Link href="/world">World</Link>
+        <Link href="/world">World Guides</Link>
         <span>/</span>
         <span>Weather</span>
       </nav>
@@ -43,6 +50,8 @@ export default function WorldWeatherPage() {
           <p>This tool is for general information. Warnings and safety decisions should always be checked against the relevant national meteorological or emergency-management authority.</p>
         </article>
       </section>
+
+      <p style={{marginTop:28,fontWeight:700}}><Link href="/world">← Back to World Guides</Link></p>
     </main>
   );
 }
