@@ -18,8 +18,8 @@ const tools = [
   { href: "/world/public-holidays", title: "World Public Holidays", text: "Country-by-country public holidays with upcoming and past status.", status: "Live" },
   { href: "/world/visa-immigration", title: "World Visa & Immigration", text: "Official government visa and immigration portals with freshness checks.", status: "Live" },
   { href: "/world/currency-converter", title: "World Currency Converter", text: "Major currency conversions using regularly refreshed ECB reference rates.", status: "Live" },
-  { href: "#", title: "Gold Price Today", text: "Latest gold prices with major market references.", status: "Coming next" },
-  { href: "#", title: "World Time", text: "Current local time across major cities and time zones.", status: "Planned" },
+  { href: "/world/gold-price", title: "Gold Price Today", text: "Latest gold spot price per ounce and gram in major currencies.", status: "Live" },
+  { href: "#", title: "World Time", text: "Current local time across major cities and time zones.", status: "Coming next" },
   { href: "#", title: "World Cup & Major Sports", text: "Fixtures, scores and major international sporting events.", status: "Planned" },
   { href: "#", title: "International Travel Requirements", text: "Entry rules, documents and travel requirement updates.", status: "Planned" },
   { href: "#", title: "AI & Technology", text: "Latest major AI and technology developments from around the world.", status: "Planned" },
@@ -52,7 +52,7 @@ export default function WorldPage() {
       <section style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World Guides</h1>
         <p style={{ fontSize: 18, maxWidth: 780, lineHeight: 1.6, marginTop: 14 }}>
-          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter and the other global tools we are adding.
+          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today and the other global tools we are adding.
         </p>
       </section>
 
