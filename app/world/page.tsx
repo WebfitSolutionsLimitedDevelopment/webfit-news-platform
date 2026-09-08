@@ -8,8 +8,8 @@ export const metadata = {
 
 const tools = [
   { href: "/world/weather", title: "World Weather", text: "Current conditions and 5-day forecasts for cities worldwide.", status: "Live" },
-  { href: "#", title: "World Public Holidays", text: "Country-by-country public holidays with upcoming and past status.", status: "Coming next" },
-  { href: "#", title: "World Visa & Immigration", text: "Country visa and immigration information with freshness checks.", status: "Planned" },
+  { href: "/world/public-holidays", title: "World Public Holidays", text: "Country-by-country public holidays with upcoming and past status.", status: "Live" },
+  { href: "#", title: "World Visa & Immigration", text: "Country visa and immigration information with freshness checks.", status: "Coming next" },
   { href: "#", title: "World Currency Converter", text: "Latest exchange rates and currency conversion tools.", status: "Planned" },
   { href: "#", title: "Gold Price Today", text: "Latest gold prices with major market references.", status: "Planned" },
   { href: "#", title: "World Time", text: "Current local time across major cities and time zones.", status: "Planned" },
