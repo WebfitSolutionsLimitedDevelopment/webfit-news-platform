@@ -21,8 +21,8 @@ const tools = [
   { href: "/world/gold-price", title: "Gold Price Today", text: "Latest gold spot price per ounce and gram in major currencies.", status: "Live" },
   { href: "/world/time", title: "World Time", text: "Current local time across major cities and time zones with automatic daylight-saving handling.", status: "Live" },
   { href: "/world/major-sports", title: "World Cup & Major Sports", text: "Major international sports events with automatic status and official fixture/result links.", status: "Live" },
-  { href: "#", title: "International Travel Requirements", text: "Entry rules, documents and travel requirement updates.", status: "Coming next" },
-  { href: "#", title: "AI & Technology", text: "Latest major AI and technology developments from around the world.", status: "Planned" },
+  { href: "/world/travel-requirements", title: "International Travel Requirements", text: "Official visa, entry, transit, passport and arrival-rule sources for major destinations.", status: "Live" },
+  { href: "#", title: "AI & Technology", text: "Latest major AI and technology developments from around the world.", status: "Coming next" },
   { href: "#", title: "World News", text: "Latest important international news and developments.", status: "Planned" },
 ];
 
@@ -52,7 +52,7 @@ export default function WorldPage() {
       <section style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World Guides</h1>
         <p style={{ fontSize: 18, maxWidth: 780, lineHeight: 1.6, marginTop: 14 }}>
-          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time, Major Sports and the other global tools we are adding.
+          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time, Major Sports, International Travel Requirements and the other global tools we are adding.
         </p>
       </section>
 
