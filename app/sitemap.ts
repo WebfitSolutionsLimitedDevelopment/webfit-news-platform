@@ -9,6 +9,7 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/public-holidays`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/immigration`,changeFrequency:'daily',priority:0.9},
   {url:`${SITE_URL}/visitor-visa-nz`,changeFrequency:'daily',priority:0.9},
+  {url:`${SITE_URL}/new-zealand-passport-application`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/nz-passport-renewal`,changeFrequency:'weekly',priority:0.85},
   {url:`${SITE_URL}/government-jobs-nz`,changeFrequency:'hourly',priority:0.9},
 ];

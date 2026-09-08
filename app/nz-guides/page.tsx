@@ -6,8 +6,8 @@ import styles from '@/components/UtilityGuide.module.css';
 
 export const metadata: Metadata = {
   title: 'New Zealand Guides | Wages, Holidays, Visas, Passports & Government Jobs',
-  description: 'Practical New Zealand guides from Webfit News covering minimum wage, public holidays, visas, passport renewal and government jobs, with official government sources.',
-  keywords: ['New Zealand guides','NZ information','minimum wage NZ','public holidays NZ','visitor visa NZ','NZ passport renewal','government jobs NZ'],
+  description: 'Practical New Zealand guides from Webfit News covering minimum wage, public holidays, visas, passport applications and renewals, and government jobs, with official government sources.',
+  keywords: ['New Zealand guides','NZ information','minimum wage NZ','public holidays NZ','visitor visa NZ','NZ passport application','NZ passport renewal','government jobs NZ'],
   alternates: { canonical: '/nz-guides' },
   openGraph: {
     title: 'New Zealand Guides | Webfit News',
@@ -22,6 +22,7 @@ const guides=[
   {href:'/public-holidays',title:'Public Holidays NZ',text:'2026 and 2027 national holidays, anniversary days, observed dates and public holiday pay.',fresh:'Date-aware Past, Today and Upcoming status'},
   {href:'/immigration',title:'New Zealand Visa Guide',text:'Work, study, visit, residence and family visa pathways with official Immigration New Zealand links.',fresh:'Live visa source monitoring'},
   {href:'/visitor-visa-nz',title:'Visitor Visa NZ',text:'Current Visitor Visa cost, processing time, stay length, requirements and application links.',fresh:'Frequent Immigration NZ source checks'},
+  {href:'/new-zealand-passport-application',title:'New Zealand Passport Application',text:'First passport, adult and child application requirements, current fees, processing times and official application links.',fresh:'Regular NZ Passports source checks'},
   {href:'/nz-passport-renewal',title:'NZ Passport Renewal',text:'Passport renewal cost, current processing times, photo rules and application requirements.',fresh:'Regular NZ Passports source checks'},
   {href:'/government-jobs-nz',title:'Government Jobs NZ',text:'Current Public Service vacancies, job categories, graduate programmes and official job links.',fresh:'Frequent vacancy checks'},
 ];
@@ -59,7 +60,7 @@ export default function NzGuidesPage(){
         </div>
         <div className={styles.heroCard}>
           <span>Evergreen information</span>
-          <strong>6 live guides</strong>
+          <strong>7 live guides</strong>
           <small>Built to stay useful beyond the daily news cycle.</small>
         </div>
       </section>
