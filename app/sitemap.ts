@@ -3,7 +3,7 @@ import { createClient } from '../lib/supabase-server';
 
 const SITE_URL = 'https://webfitnews.com';
 
-const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge-pdf','split-pdf','compress-pdf','pdf-to-png','rotate-pdf','watermark-pdf'];
+const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge-pdf','split-pdf','compress-pdf','pdf-to-png','rotate-pdf','watermark-pdf','png-to-pdf','pdf-to-text','word-to-jpg','remove-pdf-pages','organize-pdf-pages','add-page-numbers-to-pdf','text-to-pdf'];
 const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/ilikemypdf`,changeFrequency:'monthly',priority:0.95},
   ...pdfToolSlugs.map(slug=>({url:`${SITE_URL}/ilikemypdf/${slug}`,changeFrequency:'monthly' as const,priority:0.9})),
