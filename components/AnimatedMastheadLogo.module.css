@@ -2,35 +2,48 @@
   --brand-gold:#ddb451;
   --brand-gold-deep:#9a762a;
   --brand-blue:#0a354d;
-  display:flex;
+  display:grid;
+  grid-template-columns:clamp(74px,7vw,104px) minmax(0,1fr);
   align-items:center;
-  justify-content:flex-start;
-  gap:clamp(10px,1.4vw,22px);
-  min-height:clamp(104px,12vw,182px);
-  overflow:visible;
+  column-gap:clamp(12px,1.8vw,26px);
+  min-height:clamp(120px,12vw,182px);
+  overflow:hidden;
   font-family:Arial Black,Arial,sans-serif;
   font-weight:900;
   line-height:.78;
   letter-spacing:-.08em;
   white-space:nowrap;
 }
+.webfitSlot{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:clamp(108px,10vw,158px);
+  overflow:visible;
+}
 .webfit{
-  display:inline-block;
-  transform:rotate(-90deg);
+  display:block;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) rotate(-90deg);
   transform-origin:center;
-  font-size:clamp(30px,4.4vw,66px);
-  letter-spacing:-.07em;
+  font-size:clamp(28px,3.7vw,56px);
+  letter-spacing:-.06em;
   background:linear-gradient(115deg,var(--brand-gold-deep),#f2d47f 42%,var(--brand-gold) 68%,var(--brand-gold-deep));
   -webkit-background-clip:text;
   background-clip:text;
   -webkit-text-fill-color:transparent;
-  animation:webfitSwingIn .9s cubic-bezier(.18,.8,.24,1.15) both;
+  animation:webfitSwingIn .82s cubic-bezier(.18,.8,.24,1.12) both;
 }
 .news{
   display:inline-flex;
   align-items:flex-end;
+  min-width:0;
   color:var(--brand-blue);
-  font-size:clamp(64px,11.5vw,166px);
+  font-size:clamp(62px,11vw,158px);
   letter-spacing:-.095em;
 }
 .news i{
@@ -38,28 +51,35 @@
   font:inherit;
   font-style:normal;
   transform-origin:50% 100%;
-  animation:letterBounce .7s cubic-bezier(.25,.9,.3,1.35) both;
+  animation:letterBounce .66s cubic-bezier(.25,.9,.3,1.3) both;
 }
-.news i:nth-child(1){animation-delay:.18s}
-.news i:nth-child(2){animation-delay:.27s}
-.news i:nth-child(3){animation-delay:.36s}
-.news i:nth-child(4){animation-delay:.45s}
+.news i:nth-child(1){animation-delay:.14s}
+.news i:nth-child(2){animation-delay:.22s}
+.news i:nth-child(3){animation-delay:.30s}
+.news i:nth-child(4){animation-delay:.38s}
 @keyframes webfitSwingIn{
-  0%{opacity:0;transform:translateX(-34px) rotate(-125deg) scale(.72)}
-  58%{opacity:1;transform:translateX(5px) rotate(-82deg) scale(1.06)}
-  78%{transform:translateX(-2px) rotate(-94deg) scale(.99)}
-  100%{opacity:1;transform:translateX(0) rotate(-90deg) scale(1)}
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(-116deg) scale(.78)}
+  62%{opacity:1;transform:translate(-50%,-50%) rotate(-84deg) scale(1.04)}
+  82%{transform:translate(-50%,-50%) rotate(-93deg) scale(.99)}
+  100%{opacity:1;transform:translate(-50%,-50%) rotate(-90deg) scale(1)}
 }
 @keyframes letterBounce{
-  0%{opacity:0;transform:translateY(-44px) rotate(-8deg) scale(.72)}
-  62%{opacity:1;transform:translateY(8px) rotate(2deg) scale(1.04)}
-  80%{transform:translateY(-4px) rotate(-1deg) scale(.99)}
-  100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}
+  0%{opacity:0;transform:translateY(-32px) scale(.8)}
+  64%{opacity:1;transform:translateY(6px) scale(1.03)}
+  82%{transform:translateY(-3px) scale(.995)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
+@media(max-width:900px){
+  .logo{grid-template-columns:66px minmax(0,1fr);column-gap:10px;min-height:108px}
+  .webfitSlot{height:98px}
+  .webfit{font-size:34px}
+  .news{font-size:clamp(58px,13vw,110px)}
 }
 @media(max-width:620px){
-  .logo{gap:6px;min-height:82px}
-  .webfit{font-size:7.2vw}
-  .news{font-size:15vw}
+  .logo{grid-template-columns:54px minmax(0,1fr);column-gap:7px;min-height:88px}
+  .webfitSlot{height:78px}
+  .webfit{font-size:26px}
+  .news{font-size:14vw}
 }
 @media(prefers-reduced-motion:reduce){
   .webfit,.news i{animation:none}
