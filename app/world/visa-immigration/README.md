@@ -1,0 +1,1 @@
+World Visa & Immigration uses official government portals rather than third-party eligibility claims. Page-level revalidation is 48 hours, but users are directed to the live government source for current rules, fees, processing times and application requirements.

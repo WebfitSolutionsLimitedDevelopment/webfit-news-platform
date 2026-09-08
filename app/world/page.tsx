@@ -1,16 +1,23 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "World | Weather, Holidays, Visas, Currency, Markets & More | Webfit News",
+  title: "World Guides | Weather, Holidays, Visas, Currency & More | Webfit News",
   description:
-    "Explore live and regularly refreshed global information including weather, public holidays, visas, currency, gold prices, world time, sports, technology and world news.",
+    "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, sports, technology and world news.",
+  alternates: { canonical: "/world" },
+  openGraph: {
+    title: "World Guides | Webfit News",
+    description: "Live and regularly refreshed global guides, tools and information.",
+    url: "/world",
+    type: "website",
+  },
 };
 
 const tools = [
   { href: "/world/weather", title: "World Weather", text: "Current conditions and 5-day forecasts for cities worldwide.", status: "Live" },
   { href: "/world/public-holidays", title: "World Public Holidays", text: "Country-by-country public holidays with upcoming and past status.", status: "Live" },
-  { href: "#", title: "World Visa & Immigration", text: "Country visa and immigration information with freshness checks.", status: "Coming next" },
-  { href: "#", title: "World Currency Converter", text: "Latest exchange rates and currency conversion tools.", status: "Planned" },
+  { href: "/world/visa-immigration", title: "World Visa & Immigration", text: "Official government visa and immigration portals with freshness checks.", status: "Live" },
+  { href: "#", title: "World Currency Converter", text: "Latest exchange rates and currency conversion tools.", status: "Coming next" },
   { href: "#", title: "Gold Price Today", text: "Latest gold prices with major market references.", status: "Planned" },
   { href: "#", title: "World Time", text: "Current local time across major cities and time zones.", status: "Planned" },
   { href: "#", title: "World Cup & Major Sports", text: "Fixtures, scores and major international sporting events.", status: "Planned" },
@@ -20,17 +27,36 @@ const tools = [
 ];
 
 export default function WorldPage() {
+  const liveTools = tools.filter((tool) => tool.href !== "#");
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "World Guides",
+    url: "https://webfitnews.com/world",
+    description: "Live and regularly refreshed world guides and utility pages from Webfit News.",
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: liveTools.map((tool, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: tool.title,
+        url: `https://webfitnews.com${tool.href}`,
+      })),
+    },
+  };
+
   return (
     <main style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 20px 64px" }}>
-      <p style={{ fontSize: 14, marginBottom: 10 }}><Link href="/">Home</Link> / World</p>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <p style={{ fontSize: 14, marginBottom: 10 }}><Link href="/">Home</Link> / World Guides</p>
       <section style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World</h1>
+        <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World Guides</h1>
         <p style={{ fontSize: 18, maxWidth: 780, lineHeight: 1.6, marginTop: 14 }}>
-          Live and regularly refreshed global information from Webfit News. Each service is designed around a defined source, freshness window and fallback state so the page does not become stale.
+          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration and the other global tools we are adding.
         </p>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 16 }} aria-label="World Guides">
         {tools.map((tool) => {
           const active = tool.href !== "#";
           const card = (
