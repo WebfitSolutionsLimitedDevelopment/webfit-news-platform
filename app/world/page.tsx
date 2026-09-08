@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "World Guides | Weather, Holidays, Visas, Currency & More | Webfit News",
   description:
-    "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, major sports, travel, technology and world news.",
+    "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, major sports, travel, AI, technology and world news.",
   alternates: { canonical: "/world" },
   openGraph: {
     title: "World Guides | Webfit News",
@@ -22,8 +22,8 @@ const tools = [
   { href: "/world/time", title: "World Time", text: "Current local time across major cities and time zones with automatic daylight-saving handling.", status: "Live" },
   { href: "/world/major-sports", title: "World Cup & Major Sports", text: "Major international sports events with automatic status and official fixture/result links.", status: "Live" },
   { href: "/world/travel-requirements", title: "International Travel Requirements", text: "Official visa, entry, transit, passport and arrival-rule sources for major destinations.", status: "Live" },
-  { href: "#", title: "AI & Technology", text: "Latest major AI and technology developments from around the world.", status: "Coming next" },
-  { href: "#", title: "World News", text: "Latest important international news and developments.", status: "Planned" },
+  { href: "/world/ai-technology", title: "AI & Technology", text: "Major AI and technology themes, primary sources and global regulation resources.", status: "Live" },
+  { href: "#", title: "World News", text: "Latest important international news and developments.", status: "Coming next" },
 ];
 
 export default function WorldPage() {
@@ -52,7 +52,7 @@ export default function WorldPage() {
       <section style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 1.05, margin: 0 }}>World Guides</h1>
         <p style={{ fontSize: 18, maxWidth: 780, lineHeight: 1.6, marginTop: 14 }}>
-          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time, Major Sports, International Travel Requirements and the other global tools we are adding.
+          Live and regularly refreshed global information from Webfit News. Use this page as the main index to move between World Weather, Public Holidays, Visa & Immigration, Currency Converter, Gold Price Today, World Time, Major Sports, International Travel Requirements, AI & Technology and the other global tools we are adding.
         </p>
       </section>
 
