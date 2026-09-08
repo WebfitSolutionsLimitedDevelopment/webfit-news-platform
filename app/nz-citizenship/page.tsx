@@ -44,16 +44,40 @@ export default async function NzCitizenshipPage(){
     ['Is there an NZ citizenship test now?','Not yet for current applicants. The government has announced a citizenship test for most citizenship-by-grant applicants from late 2027. The current grant process remains in place until that future change takes effect.'],
     ['How long does an NZ citizenship application take?','The government currently says it takes about 3 to 14 months to find out whether an application has been approved.'],
   ];
+
+  const faqEntities=faq.map(([q,a])=>{
+    return {
+      '@type':'Question',
+      name:q,
+      acceptedAnswer:{
+        '@type':'Answer',
+        text:a,
+      },
+    };
+  });
+
   const ld={
     '@context':'https://schema.org',
     '@graph':[
-      {'@type':'WebApplication',name:'NZ Citizenship Eligibility Checker',url:'https://www.webfitnews.com/nz-citizenship',applicationCategory:'GovernmentService',operatingSystem:'Web'},
-      {'@type':'FAQPage',mainEntity':faq.map(([q,a])=>({'@type':'Question',name:q,acceptedAnswer:{'@type':'Answer',text:a}}))},
-      {'@type':'BreadcrumbList',itemListElement:[
-        {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
-        {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
-        {'@type':'ListItem',position:3,name:'NZ Citizenship',item:'https://www.webfitnews.com/nz-citizenship'},
-      ]},
+      {
+        '@type':'WebApplication',
+        name:'NZ Citizenship Eligibility Checker',
+        url:'https://www.webfitnews.com/nz-citizenship',
+        applicationCategory:'GovernmentService',
+        operatingSystem:'Web',
+      },
+      {
+        '@type':'FAQPage',
+        mainEntity:faqEntities,
+      },
+      {
+        '@type':'BreadcrumbList',
+        itemListElement:[
+          {'@type':'ListItem',position:1,name:'Webfit News',item:'https://www.webfitnews.com'},
+          {'@type':'ListItem',position:2,name:'NZ Guides',item:'https://www.webfitnews.com/nz-guides'},
+          {'@type':'ListItem',position:3,name:'NZ Citizenship',item:'https://www.webfitnews.com/nz-citizenship'},
+        ],
+      },
     ],
   };
 
