@@ -56,6 +56,12 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
   return <>
     <SiteHeader/>
     <main className={`shell ${styles.page}`}>
+      <nav className={styles.breadcrumb} aria-label="Immigration navigation">
+        <Link href="/immigration">← Back to New Zealand Visa Guide</Link>
+        <span aria-hidden="true">/</span>
+        <span>{visa.name}</span>
+      </nav>
+
       <div className={styles.visaHero}>
         <div>
           <span className={styles.eyebrow}>{visa.category} visa guide</span>
@@ -118,6 +124,14 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
             <p>If the source cannot be read reliably, we show a warning rather than invent or retain a potentially misleading extracted value.</p>
           </section>
         </aside>
+      </div>
+
+      <div className={styles.returnPanel}>
+        <div>
+          <strong>Looking for another visa?</strong>
+          <p>Return to the main New Zealand Visa Guide to browse work, study, visitor, residence and family visa information.</p>
+        </div>
+        <Link className={styles.primary} href="/immigration">← Back to New Zealand Visa Guide</Link>
       </div>
 
       <div className={styles.disclaimer}>
