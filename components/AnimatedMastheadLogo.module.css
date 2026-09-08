@@ -3,9 +3,9 @@
   --brand-gold-deep:#9a762a;
   --brand-blue:#0a354d;
   display:grid;
-  grid-template-columns:clamp(72px,6.8vw,98px) minmax(0,1fr);
+  grid-template-columns:clamp(58px,5.2vw,72px) minmax(0,1fr);
   align-items:center;
-  column-gap:clamp(12px,1.8vw,24px);
+  column-gap:clamp(2px,.45vw,6px);
   min-height:clamp(132px,12vw,182px);
   overflow:hidden;
   font-family:Arial Black,Arial,sans-serif;
@@ -70,13 +70,13 @@
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 @media(max-width:900px){
-  .logo{grid-template-columns:62px minmax(0,1fr);column-gap:10px;min-height:112px}
+  .logo{grid-template-columns:48px minmax(0,1fr);column-gap:4px;min-height:112px}
   .webfitSlot{height:104px}
   .webfit{font-size:30px}
   .news{font-size:clamp(58px,13vw,110px)}
 }
 @media(max-width:620px){
-  .logo{grid-template-columns:50px minmax(0,1fr);column-gap:7px;min-height:92px}
+  .logo{grid-template-columns:38px minmax(0,1fr);column-gap:3px;min-height:92px}
   .webfitSlot{height:84px}
   .webfit{font-size:22px}
   .news{font-size:14vw}
