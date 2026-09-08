@@ -27,12 +27,12 @@ export const metadata: Metadata = {
   },
 };
 
-const categories: Array<{name: VisaCategory; id: string; description: string}> = [
-  {name: 'Work', id: 'work-visas', description: 'New Zealand work visas for employment, post-study work, seasonal work and other approved work purposes.'},
-  {name: 'Study', id: 'study-visas', description: 'New Zealand student visas for international study, scholarships, exchange programmes and approved study pathways.'},
-  {name: 'Visit', id: 'visit-visas', description: 'New Zealand visitor visas for holidays, family visits, medical treatment, transit and other temporary stays.'},
-  {name: 'Residence', id: 'residence-visas', description: 'New Zealand residence pathways for skilled workers, investors, entrepreneurs and qualifying humanitarian categories.'},
-  {name: 'Family', id: 'family-visas', description: 'New Zealand partner, parent, child and other family visa pathways.'},
+const categories: Array<{name: VisaCategory; id: string; route: string; description: string}> = [
+  {name: 'Work', id: 'work-visas', route: '/immigration/work-visas', description: 'New Zealand work visas for employment, post-study work, seasonal work and other approved work purposes.'},
+  {name: 'Study', id: 'study-visas', route: '/immigration/student-visas', description: 'New Zealand student visas for international study, scholarships, exchange programmes and approved study pathways.'},
+  {name: 'Visit', id: 'visit-visas', route: '/immigration/visitor-visas', description: 'New Zealand visitor visas for holidays, family visits, medical treatment, transit and other temporary stays.'},
+  {name: 'Residence', id: 'residence-visas', route: '/immigration/residence-visas', description: 'New Zealand residence pathways for skilled workers, investors, entrepreneurs and qualifying humanitarian categories.'},
+  {name: 'Family', id: 'family-visas', route: '/immigration/family-visas', description: 'New Zealand partner, parent, child and other family visa pathways.'},
 ];
 
 const popularSlugs = [
@@ -110,6 +110,15 @@ export default function ImmigrationHubPage() {
         </div>
       </section>
 
+      <section className={styles.sourcePanel} aria-labelledby="visa-category-guides">
+        <span className={styles.sectionLabel}>In-depth NZ visa category guides</span>
+        <h2 id="visa-category-guides">Browse New Zealand visas by search intent</h2>
+        <p>Use these dedicated category pages when you want to compare one type of New Zealand visa in more depth, then open the individual visa that matches the purpose you are researching.</p>
+        <div className={styles.questions}>
+          {categories.map((category) => <Link key={category.route} className={styles.question} href={category.route}>{category.name === 'Study' ? 'New Zealand student visas' : `New Zealand ${category.name.toLowerCase()} visas`}</Link>)}
+        </div>
+      </section>
+
       <section className={styles.sourcePanel} aria-labelledby="popular-nz-visas">
         <span className={styles.sectionLabel}>Popular New Zealand visa searches</span>
         <h2 id="popular-nz-visas">Popular NZ visa guides</h2>
@@ -127,8 +136,9 @@ export default function ImmigrationHubPage() {
           <div className={styles.categoryHeading}>
             <div>
               <span className={styles.sectionLabel}>{category.name}</span>
-              <h2>New Zealand {category.name.toLowerCase()} visas</h2>
+              <h2>New Zealand {category.name === 'Study' ? 'student' : category.name.toLowerCase()} visas</h2>
               <p>{category.description}</p>
+              <p><Link className={styles.openGuide} href={category.route}>Explore the full {category.name === 'Study' ? 'NZ student visa' : `NZ ${category.name.toLowerCase()} visa`} category guide →</Link></p>
             </div>
             <a className={styles.backTop} href="#top">Back to top ↑</a>
           </div>
