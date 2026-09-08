@@ -4,7 +4,7 @@ import { createClient } from '../lib/supabase-server';
 const SITE_URL = 'https://webfitnews.com';
 
 const evergreenPages: MetadataRoute.Sitemap = [
-  {url:`${SITE_URL}/ilikepdf`,changeFrequency:'monthly',priority:0.95},
+  {url:`${SITE_URL}/ilikemypdf`,changeFrequency:'monthly',priority:0.95},
   {url:`${SITE_URL}/world`,changeFrequency:'daily',priority:0.95},
   {url:`${SITE_URL}/world/weather`,changeFrequency:'hourly',priority:0.95},
   {url:`${SITE_URL}/world/public-holidays`,changeFrequency:'daily',priority:0.95},
