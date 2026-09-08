@@ -4,7 +4,7 @@ import PdfToolbox from '../ilikepdf/PdfToolbox';
 import styles from '../ilikepdf/ilikepdf.module.css';
 
 export const metadata: Metadata = {
-  title: 'ILikeMyPdf – Free PDF Converter & PDF Tools Online | Webfit News',
+  title: 'ILikeMyPdf – Free PDF Converter & PDF Tools Online',
   description: 'Use ILikeMyPdf by Webfit News for free PDF conversion and editing. Convert PDF to JPG, PNG, Word or text, convert Word/JPG/PNG to PDF, merge PDF, split PDF, compress PDF and more.',
   keywords: [
     'ILikeMyPdf', 'free PDF converter', 'free PDF tools', 'online PDF converter', 'PDF converter free', 'convert PDF online free',
