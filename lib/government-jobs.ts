@@ -1,0 +1,12 @@
+export const GOVERNMENT_JOBS_REFRESH_SECONDS=60*60*3;
+const SEARCH_URL='https://jobs.govt.nz/jobtools/jncustomsearch.searchResults?in_jobDate=All&in_organid=16563&in_orderby=dateinput+desc';
+export const governmentJobsSources=[
+{name:'NZ Government Jobs — official vacancy search',url:'https://jobs.govt.nz/',primary:true},
+{name:'Public Service Commission — Working in the Public Service',url:'https://www.publicservice.govt.nz/working-in-public-service',primary:false},
+{name:'Public Service Commission — Graduate programmes and internships',url:'https://www.publicservice.govt.nz/working-in-public-service/joining-the-public-service/graduate-programmes-and-internships',primary:false},
+] as const;
+export type GovernmentJob={title:string;href:string;location?:string;listed?:string;closing?:string};
+function decode(v:string){return v.replace(/<[^>]+>/g,' ').replace(/&amp;/gi,'&').replace(/&nbsp;/gi,' ').replace(/&#39;/gi,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
+async function get(url:string){try{const r=await fetch(url,{headers:{'User-Agent':'WebfitNews/1.0 (+https://www.webfitnews.com)'},next:{revalidate:GOVERNMENT_JOBS_REFRESH_SECONDS,tags:['government-jobs-nz']}});return r.ok?await r.text():null}catch{return null}}
+function parseJobs(html:string|null):GovernmentJob[]{if(!html)return[];const rows=[...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)];const jobs:GovernmentJob[]=[];for(const row of rows){const anchor=row[1].match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);if(!anchor)continue;const title=decode(anchor[2]);if(!title||/skip|cookie|next|previous/i.test(title))continue;const cells=[...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map(m=>decode(m[1]));if(cells.length<3)continue;let href=anchor[1];try{href=new URL(href,'https://jobs.govt.nz').toString()}catch{}jobs.push({title,href,location:cells[1],listed:cells[2],closing:cells[3]});if(jobs.length>=12)break;}return jobs}
+export async function getGovernmentJobsSnapshot(){const [results,home,psc,graduates]=await Promise.all([get(SEARCH_URL),get(governmentJobsSources[0].url),get(governmentJobsSources[1].url),get(governmentJobsSources[2].url)]);const count=results?.match(/([\d,]+)\s+jobs available/i)?.[1]||null;return{availableCount:count,jobs:parseJobs(results),checkedAt:new Date().toISOString(),sourceOk:Boolean(results&&home),sourcesChecked:[home,psc,graduates].filter(Boolean).length,searchUrl:SEARCH_URL};}
