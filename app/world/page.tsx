@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "World Guides | Weather, Holidays, Visas, Currency, Gold & News | Webfit News",
+  title: "World Guides | Weather, Holidays, Visas, Currency, Gold & News",
   description:
     "Explore live and regularly refreshed world guides for weather, public holidays, visas, currency, gold prices, world time, major sports, travel requirements, AI, technology and world news.",
   alternates: { canonical: "/world" },
