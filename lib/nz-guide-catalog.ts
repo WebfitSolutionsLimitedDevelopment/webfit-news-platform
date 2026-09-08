@@ -1,0 +1,53 @@
+export type NzGuideCategory='Money & tax'|'Work & employment'|'Housing & household costs'|'Immigration & citizenship'|'Holidays & family'|'Jobs & careers';
+
+export type NzGuideEntry={
+  href:string;
+  title:string;
+  shortTitle:string;
+  description:string;
+  category:NzGuideCategory;
+  searchTerms:string[];
+  fresh:string;
+  related:string[];
+};
+
+export const NZ_GUIDE_SITE_URL='https://webfitnews.com';
+
+export const nzGuideCategories:NzGuideCategory[]=[
+  'Money & tax',
+  'Work & employment',
+  'Housing & household costs',
+  'Immigration & citizenship',
+  'Holidays & family',
+  'Jobs & careers',
+];
+
+export const nzGuides:NzGuideEntry[]=[
+  {href:'/minimum-wage',title:'Minimum Wage NZ 2026',shortTitle:'Minimum Wage NZ',description:'Current adult, starting-out and training minimum wage rates, pay examples, eligibility and calculator.',category:'Work & employment',searchTerms:['minimum wage nz','new zealand minimum wage','minimum wage calculator nz'],fresh:'Regular official-source checks',related:['/nz-paye-calculator','/nz-holiday-pay-calculator','/nz-leave-entitlement-calculator','/jobs-in-new-zealand']},
+  {href:'/nz-paye-calculator',title:'NZ PAYE & Tax Calculator 2026',shortTitle:'NZ PAYE Calculator',description:'Estimate income tax, ACC, KiwiSaver, student-loan deductions and New Zealand take-home pay.',category:'Money & tax',searchTerms:['paye calculator nz','nz tax calculator','salary calculator nz','take home pay calculator nz'],fresh:'Regular IRD source checks',related:['/nz-tax-code-finder','/nz-acc-levy-calculator','/nz-kiwisaver-calculator','/nz-student-loan-calculator']},
+  {href:'/nz-acc-levy-calculator',title:'NZ ACC Levy Calculator 2026/27',shortTitle:'NZ ACC Levy Calculator',description:'Estimate the ACC Earners’ levy on salary or wages and compare current and confirmed next-year settings.',category:'Money & tax',searchTerms:['acc levy calculator nz','acc levy nz','acc earners levy'],fresh:'Daily ACC and IRD source checks',related:['/nz-paye-calculator','/minimum-wage','/nz-tax-code-finder','/jobs-in-new-zealand']},
+  {href:'/nz-tax-code-finder',title:'NZ Tax Code Finder 2026',shortTitle:'NZ Tax Code Finder',description:'Find the likely IRD tax code for main income, secondary income and student-loan situations.',category:'Money & tax',searchTerms:['nz tax code finder','tax code nz','secondary tax code nz','m tax code nz'],fresh:'Regular IRD source checks',related:['/nz-paye-calculator','/nz-student-loan-calculator','/nz-kiwisaver-calculator','/minimum-wage']},
+  {href:'/nz-kiwisaver-calculator',title:'NZ KiwiSaver Calculator 2026',shortTitle:'NZ KiwiSaver Calculator',description:'Estimate employee and employer KiwiSaver contributions, ESCT and the government contribution.',category:'Money & tax',searchTerms:['kiwisaver calculator nz','nz kiwisaver calculator','kiwisaver contribution rate'],fresh:'Regular IRD source checks',related:['/nz-paye-calculator','/nz-tax-code-finder','/nz-superannuation','/nz-student-loan-calculator']},
+  {href:'/nz-student-loan-calculator',title:'NZ Student Loan Repayment Calculator 2026',shortTitle:'NZ Student Loan Calculator',description:'Estimate student-loan deductions by pay period for main and secondary jobs and model extra repayments.',category:'Money & tax',searchTerms:['student loan calculator nz','student loan repayment nz','student loan threshold nz'],fresh:'Regular IRD source checks',related:['/nz-paye-calculator','/nz-tax-code-finder','/nz-kiwisaver-calculator','/jobs-in-new-zealand']},
+  {href:'/nz-superannuation',title:'NZ Superannuation 2026',shortTitle:'NZ Superannuation',description:'Check core NZ Super eligibility, residence requirements, current rates and overseas-pension rules.',category:'Money & tax',searchTerms:['nz superannuation','nz super rates 2026','nz super eligibility','new zealand pension'],fresh:'Daily Work and Income source checks',related:['/nz-rates-rebate-calculator','/nz-tax-code-finder','/nz-citizenship','/nz-kiwisaver-calculator']},
+  {href:'/nz-rates-rebate-calculator',title:'NZ Rates Rebate Calculator 2026/27',shortTitle:'NZ Rates Rebate Calculator',description:'Estimate the government council-rates rebate using rates, household income, dependants and SuperGold status.',category:'Housing & household costs',searchTerms:['rates rebate nz','nz rates rebate calculator','rates rebate eligibility nz'],fresh:'Daily official-source checks',related:['/nz-superannuation','/nz-tenancy-rent-guide','/nz-paye-calculator','/nz-guides']},
+  {href:'/nz-tenancy-rent-guide',title:'NZ Tenancy & Rent Increase Guide 2026',shortTitle:'NZ Tenancy & Rent Guide',description:'Check rent-increase timing, bond limits, periodic-tenancy notice periods and Healthy Homes obligations.',category:'Housing & household costs',searchTerms:['rent increase nz','nz tenancy','tenant rights nz','bond nz tenancy'],fresh:'Daily Tenancy Services source checks',related:['/nz-rates-rebate-calculator','/public-holidays','/jobs-in-new-zealand','/nz-guides']},
+  {href:'/nz-holiday-pay-calculator',title:'NZ Holiday Pay Calculator 2026',shortTitle:'NZ Holiday Pay Calculator',description:'Estimate annual-holiday pay and public-holiday pay using current New Zealand employment rules.',category:'Work & employment',searchTerms:['holiday pay calculator nz','holiday pay nz','public holiday pay nz'],fresh:'Current Employment NZ rules',related:['/nz-leave-entitlement-calculator','/public-holidays','/minimum-wage','/nz-paye-calculator']},
+  {href:'/nz-leave-entitlement-calculator',title:'NZ Sick Leave & Annual Leave Calculator 2026',shortTitle:'NZ Leave Entitlement Calculator',description:'Check sick-leave eligibility, carry-over and the statutory four-week annual-holiday entitlement.',category:'Work & employment',searchTerms:['sick leave calculator nz','annual leave calculator nz','annual leave entitlement nz'],fresh:'Daily Employment NZ source checks',related:['/nz-holiday-pay-calculator','/minimum-wage','/public-holidays','/jobs-in-new-zealand']},
+  {href:'/public-holidays',title:'Public Holidays NZ 2026 & 2027',shortTitle:'Public Holidays NZ',description:'National and regional public holidays, observed dates and holiday-pay guidance with date-aware status.',category:'Holidays & family',searchTerms:['public holidays nz','nz public holidays 2026','nz public holidays 2027'],fresh:'Date-aware current status',related:['/school-holidays-nz','/nz-holiday-pay-calculator','/nz-leave-entitlement-calculator','/nz-guides']},
+  {href:'/school-holidays-nz',title:'School Holidays NZ 2026 & 2027',shortTitle:'School Holidays NZ',description:'New Zealand school terms and holiday dates with current, past and upcoming status.',category:'Holidays & family',searchTerms:['school holidays nz','nz school holidays 2026','school term dates nz'],fresh:'Date-aware Ministry calendar',related:['/public-holidays','/nz-leave-entitlement-calculator','/nz-guides']},
+  {href:'/immigration',title:'New Zealand Visa & Immigration Guide',shortTitle:'NZ Visa & Immigration Guide',description:'Work, study, visit, residence and family visa pathways with direct Immigration New Zealand sources.',category:'Immigration & citizenship',searchTerms:['immigration nz','new zealand visa','immigration new zealand','nz visa'],fresh:'Live visa-source monitoring',related:['/visitor-visa-nz','/nz-citizenship','/jobs-in-new-zealand','/new-zealand-passport-application']},
+  {href:'/visitor-visa-nz',title:'Visitor Visa NZ 2026',shortTitle:'Visitor Visa NZ',description:'Current New Zealand Visitor Visa cost, processing time, stay length, requirements and official application links.',category:'Immigration & citizenship',searchTerms:['visitor visa nz','new zealand visitor visa','nz tourist visa'],fresh:'Frequent Immigration NZ source checks',related:['/immigration','/nz-citizenship','/jobs-in-new-zealand','/new-zealand-passport-application']},
+  {href:'/nz-citizenship',title:'NZ Citizenship 2026',shortTitle:'NZ Citizenship',description:'Check citizenship-by-grant eligibility, physical-presence rules, fees, application steps and requirements.',category:'Immigration & citizenship',searchTerms:['nz citizenship','new zealand citizenship','nz citizenship application','nz citizenship eligibility'],fresh:'Daily NZ Government source checks',related:['/immigration','/new-zealand-passport-application','/nz-passport-renewal','/nz-superannuation']},
+  {href:'/new-zealand-passport-application',title:'New Zealand Passport Application 2026',shortTitle:'NZ Passport Application',description:'First passport, adult and child application requirements, current fees, processing times and official links.',category:'Immigration & citizenship',searchTerms:['new zealand passport application','nz passport application','apply for nz passport'],fresh:'Regular NZ Passports source checks',related:['/nz-passport-renewal','/nz-citizenship','/immigration','/visitor-visa-nz']},
+  {href:'/nz-passport-renewal',title:'NZ Passport Renewal 2026',shortTitle:'NZ Passport Renewal',description:'Passport renewal cost, processing times, photo rules, referee requirements and application guidance.',category:'Immigration & citizenship',searchTerms:['nz passport renewal','new zealand passport renewal','renew nz passport'],fresh:'Regular NZ Passports source checks',related:['/new-zealand-passport-application','/nz-citizenship','/immigration','/visitor-visa-nz']},
+  {href:'/jobs-in-new-zealand',title:'Jobs in New Zealand 2026',shortTitle:'Jobs in New Zealand',description:'Part-time, no-experience, remote, government and visa-related job-search pathways with official guidance.',category:'Jobs & careers',searchTerms:['jobs in new zealand','jobs nz','part time jobs nz','visa sponsorship jobs nz'],fresh:'Regular official job-source checks',related:['/government-jobs-nz','/immigration','/minimum-wage','/nz-paye-calculator']},
+  {href:'/government-jobs-nz',title:'Government Jobs NZ 2026',shortTitle:'Government Jobs NZ',description:'Current New Zealand Public Service vacancies, job categories, graduate programmes and official job links.',category:'Jobs & careers',searchTerms:['government jobs nz','nz government jobs','public service jobs nz'],fresh:'Frequent vacancy checks',related:['/jobs-in-new-zealand','/minimum-wage','/nz-paye-calculator','/immigration']},
+];
+
+export function getNzGuide(href:string){return nzGuides.find(guide=>guide.href===href);}
+export function getRelatedNzGuides(href:string,limit=4){
+  const guide=getNzGuide(href);
+  if(!guide)return [];
+  return guide.related.map(path=>getNzGuide(path)).filter((item):item is NzGuideEntry=>Boolean(item)&&item!.href!==href).slice(0,limit);
+}

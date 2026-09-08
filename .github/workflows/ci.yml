@@ -20,6 +20,8 @@ jobs:
           cache-dependency-path: package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: NZ guide SEO check
+        run: npm run seo:check
       - name: Typecheck
         run: npm run typecheck
       - name: Production build
@@ -27,4 +29,4 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_SITE_URL: https://webfitnews.co.nz
+          NEXT_PUBLIC_SITE_URL: https://webfitnews.com
