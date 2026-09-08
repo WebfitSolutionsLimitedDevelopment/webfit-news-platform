@@ -12,6 +12,7 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/nz-tax-code-finder`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-kiwisaver-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-student-loan-calculator`,changeFrequency:'weekly',priority:0.95},
+  {url:`${SITE_URL}/nz-superannuation`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-holiday-pay-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-leave-entitlement-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/public-holidays`,changeFrequency:'weekly',priority:0.9},
