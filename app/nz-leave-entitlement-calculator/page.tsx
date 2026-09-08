@@ -4,9 +4,9 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import styles from '@/components/UtilityGuide.module.css';
 import LeaveEntitlementCalculator from './LeaveEntitlementCalculator';
-import { getLeaveSourceSnapshot, leaveSources, LEAVE_SOURCE_REVALIDATE_SECONDS } from '@/lib/leave-entitlements';
+import { getLeaveSourceSnapshot, leaveSources } from '@/lib/leave-entitlements';
 
-export const revalidate=LEAVE_SOURCE_REVALIDATE_SECONDS;
+export const revalidate=86400;
 
 export const metadata:Metadata={
   title:'NZ Sick Leave & Annual Leave Entitlement Calculator 2026',
