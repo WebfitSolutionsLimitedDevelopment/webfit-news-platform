@@ -50,7 +50,8 @@
 .mastMeta div{display:flex;gap:18px}
 .heroWrap{width:min(1320px,calc(100% - 40px));margin:0 auto;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(330px,.75fr);gap:30px;padding:34px 0 44px}
 .heroLead :global(.story-card){border:0}
-.heroLead :global(.story-card-lead h2){font-family:Georgia,serif;font-size:clamp(42px,5.4vw,78px);line-height:.94;letter-spacing:-.045em}
+.heroLead :global(.story-card-lead h2){font-family:Georgia,serif;font-size:clamp(36px,4.4vw,64px);line-height:1.02;letter-spacing:-.035em}
+.heroLead :global(.story-card-lead h2 a){text-decoration-line:underline;text-decoration-color:#c8232c;text-decoration-thickness:3px;text-underline-offset:.12em;text-decoration-skip-ink:auto}
 .heroLead :global(.story-image){border-radius:2px}
 .heroRail{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .heroRail :global(.story-card-compact h2){font-size:20px}
@@ -112,7 +113,8 @@
   .mastMeta{align-items:flex-start;flex-direction:column;margin-top:18px}
   .mastMeta div{gap:12px;overflow:auto;width:100%}
   .heroWrap{padding:22px 0 30px}
-  .heroLead :global(.story-card-lead h2){font-size:42px}
+  .heroLead :global(.story-card-lead h2){font-size:32px;line-height:1.04;letter-spacing:-.025em}
+  .heroLead :global(.story-card-lead h2 a){text-decoration-thickness:2px;text-underline-offset:.14em}
   .heroRail{grid-template-columns:1fr 1fr}
   .heroRail :global(.story-card-compact h2){font-size:16px}
   .popular{padding:28px 14px}
