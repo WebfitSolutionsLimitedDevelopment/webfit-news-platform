@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ArticleAudioPlayer } from '@/components/ArticleAudioPlayer';
 import { getVisaDefinition, getVisaSnapshot, visaDefinitions } from '@/lib/immigration';
+import { getPracticalGuidance } from '@/lib/immigration-practical';
 import styles from '../Immigration.module.css';
 
 export const revalidate = 21600;
@@ -36,7 +37,11 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
   const visa = getVisaDefinition(slug);
   if (!visa) notFound();
 
-  const snapshot = await getVisaSnapshot(slug);
+  const [snapshot, practical] = await Promise.all([
+    getVisaSnapshot(slug),
+    getPracticalGuidance(slug),
+  ]);
+
   const facts = [
     ['Length of stay', snapshot?.lengthOfStay],
     ['Cost', snapshot?.cost],
@@ -48,6 +53,7 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
     visa.name,
     visa.summary,
     ...facts.map(([label, value]) => `${label}: ${value}`),
+    ...(practical?.facts || []).map((fact) => `${fact.label}: ${fact.value}. ${fact.note || ''}`),
     snapshot?.applyRequirements.length ? `To apply, Immigration New Zealand currently lists: ${snapshot.applyRequirements.join('. ')}` : '',
     snapshot?.visaLetsYou.length ? `This visa can allow: ${snapshot.visaLetsYou.join('. ')}` : '',
     'This is general information, not immigration advice. Always confirm current requirements with Immigration New Zealand.',
@@ -84,6 +90,32 @@ export default async function VisaGuidePage({ params }: { params: Promise<{ slug
 
       {facts.length ? <section className={styles.facts} aria-label="Visa facts">
         {facts.map(([label, value]) => <div key={label} className={styles.fact}><span>{label}</span><strong>{value}</strong></div>)}
+      </section> : null}
+
+      {practical ? <section className={styles.practicalSection} aria-label={practical.title}>
+        <div className={styles.practicalHeading}>
+          <div>
+            <span className={styles.sectionLabel}>Practical information</span>
+            <h2>{practical.title}</h2>
+            <p>{practical.intro}</p>
+          </div>
+          <div className={practical.sourceOk ? styles.sourceOk : styles.sourceWarn}>
+            {practical.sourceOk ? `✓ Official sources checked ${formatCheckedAt(practical.checkedAt)}` : 'Official practical-source refresh unavailable'}
+          </div>
+        </div>
+        {practical.facts.length ? <div className={styles.practicalGrid}>
+          {practical.facts.map((fact) => <article className={styles.practicalCard} key={fact.label}>
+            <span>{fact.label}</span>
+            <strong>{fact.value}</strong>
+            {fact.note ? <p>{fact.note}</p> : null}
+            <a href={fact.sourceUrl} target="_blank" rel="noreferrer">Official source ↗</a>
+          </article>)}
+        </div> : <p>Please use the official government links on this page while this source check is unavailable.</p>}
+        {slug === 'fee-paying-student-visa' ? <div className={styles.pathwayLink}>
+          <strong>Finished or finishing your study?</strong>
+          <span>See what the current Post Study Work Visa can allow after an eligible New Zealand qualification.</span>
+          <Link href="/immigration/post-study-work-visa">View Post Study Work Visa guide →</Link>
+        </div> : null}
       </section> : null}
 
       <div className={styles.actions}>
