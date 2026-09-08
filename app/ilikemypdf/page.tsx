@@ -7,28 +7,9 @@ export const metadata: Metadata = {
   title: 'ILikeMyPdf – Free PDF Converter & PDF Tools Online | Webfit News',
   description: 'Use ILikeMyPdf by Webfit News for free PDF conversion and editing. Convert PDF to JPG, PNG, Word or text, convert Word/JPG/PNG to PDF, merge PDF, split PDF, compress PDF and more.',
   keywords: [
-    'ILikeMyPdf',
-    'free PDF converter',
-    'free PDF tools',
-    'online PDF converter',
-    'PDF converter free',
-    'convert PDF online free',
-    'PDF to JPG',
-    'JPG to PDF',
-    'PDF to Word',
-    'Word to PDF',
-    'PDF to PNG',
-    'PNG to PDF',
-    'merge PDF',
-    'split PDF',
-    'compress PDF',
-    'rotate PDF',
-    'remove PDF pages',
-    'organize PDF pages',
-    'PDF page numbers',
-    'watermark PDF',
-    'PDF to text',
-    'Word to JPG',
+    'ILikeMyPdf', 'free PDF converter', 'free PDF tools', 'online PDF converter', 'PDF converter free', 'convert PDF online free',
+    'PDF to JPG', 'JPG to PDF', 'PDF to Word', 'Word to PDF', 'PDF to PNG', 'PNG to PDF', 'merge PDF', 'split PDF',
+    'compress PDF', 'rotate PDF', 'remove PDF pages', 'organize PDF pages', 'PDF page numbers', 'watermark PDF', 'PDF to text', 'Word to JPG',
   ],
   alternates: { canonical: '/ilikemypdf' },
   robots: { index: true, follow: true },
@@ -41,84 +22,40 @@ export const metadata: Metadata = {
 };
 
 const faq = [
-  {
-    q: 'Is ILikeMyPdf free to use?',
-    a: 'Yes. ILikeMyPdf provides free PDF tools without requiring a paid account for the tools currently available on this page.',
-  },
-  {
-    q: 'Are my PDF or Word files uploaded to Webfit News?',
-    a: 'The tools currently available on ILikeMyPdf process files locally in your browser. Webfit News does not need to store those documents to complete these conversions.',
-  },
-  {
-    q: 'Can I convert PDF to JPG for free?',
-    a: 'Yes. Choose PDF to JPG, select a PDF and ILikeMyPdf renders the pages into JPG images and packages them into a ZIP download.',
-  },
-  {
-    q: 'Can I convert JPG or PNG images to PDF?',
-    a: 'Yes. Select JPG / PNG to PDF and choose one or more images. The tool creates a PDF with one image per page.',
-  },
-  {
-    q: 'Can I convert PDF to Word online?',
-    a: 'Yes for text-based PDFs. Complex layouts, scanned pages, forms and tables may require manual cleanup after conversion.',
-  },
-  {
-    q: 'Can I merge, split and compress PDFs for free?',
-    a: 'Yes. ILikeMyPdf includes free tools to merge PDFs, split selected pages and compress image-heavy PDF files in your browser.',
-  },
+  { q: 'Is ILikeMyPdf free to use?', a: 'Yes. ILikeMyPdf provides free PDF tools without requiring a paid account for the tools currently available on this page.' },
+  { q: 'Are my PDF or Word files uploaded to Webfit News?', a: 'The tools currently available on ILikeMyPdf process files locally in your browser. Webfit News does not need to store those documents to complete these conversions.' },
+  { q: 'Can I convert PDF to JPG for free?', a: 'Yes. Choose PDF to JPG, select a PDF and ILikeMyPdf renders the pages into JPG images and packages them into a ZIP download.' },
+  { q: 'Can I convert JPG or PNG images to PDF?', a: 'Yes. Select JPG / PNG to PDF and choose one or more images. The tool creates a PDF with one image per page.' },
+  { q: 'Can I convert PDF to Word online?', a: 'Yes for text-based PDFs. Complex layouts, scanned pages, forms and tables may require manual cleanup after conversion.' },
+  { q: 'Can I merge, split and compress PDFs for free?', a: 'Yes. ILikeMyPdf includes free tools to merge PDFs, split selected pages and compress image-heavy PDF files in your browser.' },
 ];
 
-const roadmap = [
-  'PDF to PowerPoint',
-  'PowerPoint to PDF',
-  'PDF to Excel',
-  'Excel to PDF',
-  'OCR PDF',
-  'Protect PDF',
-  'Unlock PDF',
-  'Redact PDF',
-  'Repair PDF',
-  'PDF to PDF/A',
-  'Compare PDFs',
-  'HTML to PDF',
+const popularTools = [
+  { href: '/ilikemypdf/pdf-to-jpg', title: 'PDF to JPG', text: 'Convert PDF pages into JPG images for free.' },
+  { href: '/ilikemypdf/jpg-to-pdf', title: 'JPG to PDF', text: 'Turn JPG or PNG images into a PDF document.' },
+  { href: '/ilikemypdf/pdf-to-word', title: 'PDF to Word', text: 'Extract text from a PDF into an editable Word document.' },
+  { href: '/ilikemypdf/word-to-pdf', title: 'Word to PDF', text: 'Convert a Word document into a PDF in your browser.' },
+  { href: '/ilikemypdf/merge-pdf', title: 'Merge PDF', text: 'Combine multiple PDF files into one document.' },
+  { href: '/ilikemypdf/split-pdf', title: 'Split PDF', text: 'Extract selected pages from a PDF into a new file.' },
+  { href: '/ilikemypdf/compress-pdf', title: 'Compress PDF', text: 'Reduce the size of image-heavy PDF files.' },
+  { href: '/ilikemypdf/pdf-to-png', title: 'PDF to PNG', text: 'Convert PDF pages into PNG images.' },
+  { href: '/ilikemypdf/rotate-pdf', title: 'Rotate PDF', text: 'Rotate PDF pages by 90, 180 or 270 degrees.' },
+  { href: '/ilikemypdf/watermark-pdf', title: 'Watermark PDF', text: 'Add a visible text watermark to PDF pages.' },
 ];
+
+const roadmap = ['PDF to PowerPoint', 'PowerPoint to PDF', 'PDF to Excel', 'Excel to PDF', 'OCR PDF', 'Protect PDF', 'Unlock PDF', 'Redact PDF', 'Repair PDF', 'PDF to PDF/A', 'Compare PDFs', 'HTML to PDF'];
 
 export default function ILikeMyPdfPage() {
-  const faqJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faq.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
-    })),
-  };
-
+  const faqJsonLd = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((item) => ({ '@type': 'Question', name: item.q, acceptedAnswer: { '@type': 'Answer', text: item.a } })) };
   const appJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'ILikeMyPdf by Webfit News',
-    alternateName: 'ILikeMyPdf',
-    applicationCategory: 'UtilitiesApplication',
-    operatingSystem: 'Any modern web browser',
-    url: 'https://webfitnews.com/ilikemypdf',
-    description: 'Free browser-based PDF converter and PDF utility tools from Webfit News.',
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'NZD' },
-    featureList: [
-      'Merge PDF', 'Split PDF', 'Organize PDF', 'Remove PDF pages', 'Rotate PDF',
-      'Add PDF page numbers', 'Watermark PDF', 'Compress PDF', 'JPG and PNG to PDF',
-      'PDF to JPG', 'PDF to PNG', 'PDF to text', 'PDF to Word', 'Word to PDF',
-      'Word to JPG', 'Text to PDF',
-    ],
+    '@context': 'https://schema.org', '@type': 'WebApplication', name: 'ILikeMyPdf by Webfit News', alternateName: 'ILikeMyPdf', applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any modern web browser',
+    url: 'https://webfitnews.com/ilikemypdf', description: 'Free browser-based PDF converter and PDF utility tools from Webfit News.', offers: { '@type': 'Offer', price: '0', priceCurrency: 'NZD' },
+    featureList: ['Merge PDF', 'Split PDF', 'Organize PDF', 'Remove PDF pages', 'Rotate PDF', 'Add PDF page numbers', 'Watermark PDF', 'Compress PDF', 'JPG and PNG to PDF', 'PDF to JPG', 'PDF to PNG', 'PDF to text', 'PDF to Word', 'Word to PDF', 'Word to JPG', 'Text to PDF'],
   };
-
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://webfitnews.com/' },
-      { '@type': 'ListItem', position: 2, name: 'ILikeMyPdf', item: 'https://webfitnews.com/ilikemypdf' },
-    ],
-  };
+  const breadcrumbJsonLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://webfitnews.com/' },
+    { '@type': 'ListItem', position: 2, name: 'ILikeMyPdf', item: 'https://webfitnews.com/ilikemypdf' },
+  ] };
 
   return (
     <main className={styles.page}>
@@ -126,20 +63,29 @@ export default function ILikeMyPdfPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link><span>/</span><span>ILikeMyPdf</span>
-      </nav>
+      <nav className={styles.breadcrumb} aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>ILikeMyPdf</span></nav>
 
       <header className={styles.hero}>
         <p className={styles.brand}>ILikeMyPdf • A WEBFIT NEWS UTILITY</p>
         <h1>Free PDF converter and everyday PDF tools</h1>
         <p>Convert, merge, split, compress and edit PDFs for free. ILikeMyPdf handles common document jobs directly in your browser, with no account required for the tools available here.</p>
-        <div className={styles.heroBadges} aria-label="Tool benefits">
-          <span>Free to use</span><span>No account required</span><span>Browser processing</span><span>Mobile friendly</span>
-        </div>
+        <div className={styles.heroBadges} aria-label="Tool benefits"><span>Free to use</span><span>No account required</span><span>Browser processing</span><span>Mobile friendly</span></div>
       </header>
 
       <PdfToolbox />
+
+      <section className={styles.section} aria-labelledby="popular-pdf-tools">
+        <h2 id="popular-pdf-tools">Popular free PDF tools</h2>
+        <p className={styles.sectionLead}>Open a dedicated guide for the PDF job you need. Each page explains the conversion, common limitations and how to use the relevant ILikeMyPdf tool.</p>
+        <div className={styles.featureGrid}>
+          {popularTools.map((tool) => (
+            <article className={styles.featureCard} key={tool.href}>
+              <h3><Link href={tool.href}>{tool.title}</Link></h3>
+              <p>{tool.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className={styles.section}>
         <h2>Free online PDF converter for everyday document jobs</h2>
@@ -151,10 +97,7 @@ export default function ILikeMyPdfPage() {
         </div>
       </section>
 
-      <section className={styles.section}>
-        <h2>Private browser-based PDF processing</h2>
-        <p className={styles.sectionLead}>The tools currently available on ILikeMyPdf are designed to process source documents inside your browser instead of sending them to a remote conversion queue. Very large files can take longer because the work happens on your device.</p>
-      </section>
+      <section className={styles.section}><h2>Private browser-based PDF processing</h2><p className={styles.sectionLead}>The tools currently available on ILikeMyPdf are designed to process source documents inside your browser instead of sending them to a remote conversion queue. Very large files can take longer because the work happens on your device.</p></section>
 
       <section className={styles.section}>
         <h2>More free document tools being evaluated</h2>
@@ -162,10 +105,7 @@ export default function ILikeMyPdfPage() {
         <div className={styles.roadmap}>{roadmap.map((item) => <span key={item}>{item}</span>)}</div>
       </section>
 
-      <section className={styles.section}>
-        <h2>ILikeMyPdf free PDF tool FAQ</h2>
-        <div className={styles.faq}>{faq.map((item) => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div>
-      </section>
+      <section className={styles.section}><h2>ILikeMyPdf free PDF tool FAQ</h2><div className={styles.faq}>{faq.map((item) => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div></section>
     </main>
   );
 }
