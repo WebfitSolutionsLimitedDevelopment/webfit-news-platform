@@ -6,15 +6,20 @@ import styles from '@/components/UtilityGuide.module.css';
 import {NZ_GUIDE_SITE_URL,nzGuideCategories,nzGuides} from '@/lib/nz-guide-catalog';
 
 export const metadata:Metadata={
-  title:'New Zealand Calculators & Guides 2026 | Tax, Pay, ACC, Visas, Holidays & Jobs',
-  description:'Free New Zealand calculators and practical 2026 guides for PAYE, minimum wage, ACC, KiwiSaver, student loans, NZ Super, rates rebates, tenancy, holidays, visas, passports and jobs, checked against official NZ sources.',
-  keywords:['New Zealand calculators','NZ calculators','NZ guides 2026','PAYE calculator NZ','minimum wage NZ','ACC levy calculator NZ','KiwiSaver calculator NZ','student loan calculator NZ','rates rebate calculator NZ','public holidays NZ','school holidays NZ','immigration NZ','NZ citizenship','NZ passport','jobs in New Zealand'],
+  title:'New Zealand Calculators & Guides 2026 | Tax, Pay, Visas & Holidays',
+  description:'Free New Zealand calculators and practical 2026 guides for PAYE, wages, ACC, KiwiSaver, rates rebates, tenancy, holidays, visas, passports and jobs, with official NZ sources.',
   alternates:{canonical:'/nz-guides'},
+  robots:{index:true,follow:true},
   openGraph:{
     title:'New Zealand Calculators & Guides 2026 | Webfit News',
     description:'Practical NZ calculators and guides for money, work, housing, immigration, holidays and jobs, built around official government sources.',
     url:'/nz-guides',
     type:'website',
+  },
+  twitter:{
+    card:'summary_large_image',
+    title:'New Zealand Calculators & Guides 2026 | Webfit News',
+    description:'Practical NZ calculators and guides for money, work, housing, immigration, holidays and jobs.',
   },
 };
 
@@ -61,12 +66,12 @@ export default function NzGuidesPage(){
         <div>
           <span className={styles.eyebrow}>Webfit News NZ Guides</span>
           <h1>New Zealand calculators & guides 2026</h1>
-          <p className={styles.lead}>Free, practical New Zealand calculators and guides for tax, wages, ACC, KiwiSaver, leave, rates, tenancy, immigration, citizenship, passports, holidays and jobs. Each guide is written for a specific search question and points back to the relevant official New Zealand source.</p>
+          <p className={styles.lead}>Find practical New Zealand calculators and guides for tax, wages, ACC, KiwiSaver, leave, rates, tenancy, immigration, citizenship, passports, holidays and jobs. Each page explains the topic clearly and links to the relevant official New Zealand source where appropriate.</p>
         </div>
         <div className={styles.heroCard}>
           <span>NZ utility library</span>
           <strong>{nzGuides.length} live guides</strong>
-          <small>Grouped by topic so people — and search engines — can move naturally between related New Zealand information.</small>
+          <small>Useful calculators and guides grouped by topic, with related information easy to find.</small>
         </div>
       </section>
 
@@ -77,9 +82,9 @@ export default function NzGuidesPage(){
 
       <section className={styles.section}>
         <div className={styles.sectionHeading}>
-          <span className={styles.kicker}>Popular searches</span>
-          <h2>Start with the most-used New Zealand calculators</h2>
-          <p>These pages answer common high-intent searches such as “PAYE calculator NZ”, “minimum wage NZ”, “rates rebate calculator NZ”, “public holidays NZ” and “immigration NZ”.</p>
+          <span className={styles.kicker}>Popular guides</span>
+          <h2>Start with popular New Zealand calculators and guides</h2>
+          <p>Quickly check take-home pay, minimum wage, rates rebates, public holidays, immigration information and citizenship guidance. Each page is designed to give you a useful answer and point you to the official source when you need to confirm a detail.</p>
         </div>
         <div className={styles.infoGrid}>
           {['/nz-paye-calculator','/minimum-wage','/nz-rates-rebate-calculator','/public-holidays','/immigration','/nz-citizenship'].map(href=>{
@@ -116,9 +121,9 @@ export default function NzGuidesPage(){
 
       <section className={styles.section}>
         <div className={styles.sectionHeading}>
-          <span className={styles.kicker}>How we maintain these pages</span>
-          <h2>Built for useful search results, not keyword stuffing</h2>
-          <p>Webfit News organises official public information into calculators, tables, checklists and plain-language answers. We use descriptive page titles and headings, direct internal links between related subjects, self-referencing canonical URLs and official-source links. Government agencies remain the authority for legal eligibility, rates, fees, dates and decisions.</p>
+          <span className={styles.kicker}>About these guides</span>
+          <h2>Clear information backed by official New Zealand sources</h2>
+          <p>Webfit News turns public information into practical calculators, tables, checklists and plain-language guides. Important rates, dates, eligibility rules and application requirements should always be confirmed with the government agency linked from the relevant page.</p>
         </div>
       </section>
 
