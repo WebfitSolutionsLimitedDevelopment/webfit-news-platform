@@ -9,7 +9,7 @@ import {getKiwiSaverSnapshot,kiwiSaverSources} from '@/lib/kiwisaver';
 export const revalidate=604800;
 
 export const metadata:Metadata={
-  title:'KiwiSaver Calculator NZ 2026 | Employee, Employer, ESCT & Government Contribution',
+  title:'KiwiSaver Calculator NZ 2026 | Contributions, ESCT & Government Top-Up',
   description:'Use our 2026 KiwiSaver calculator to estimate employee and employer contributions, ESCT, government contribution and total annual KiwiSaver savings from salary.',
   keywords:['KiwiSaver calculator NZ','NZ KiwiSaver calculator','KiwiSaver employer contribution','KiwiSaver contribution rates 2026','ESCT calculator','KiwiSaver government contribution'],
   alternates:{canonical:'/nz-kiwisaver-calculator'},

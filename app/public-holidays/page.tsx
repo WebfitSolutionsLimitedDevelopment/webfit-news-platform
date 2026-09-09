@@ -8,7 +8,7 @@ import styles from '@/components/UtilityGuide.module.css';
 export const revalidate = 2592000;
 
 export const metadata: Metadata = {
-  title: 'Public Holidays NZ 2026 & 2027 | Dates, Observed Days & Anniversary Holidays',
+  title: 'Public Holidays NZ 2026 & 2027 | Dates, Observed Days & Anniversaries',
   description: 'See all NZ public holidays for 2026 and 2027, including observed dates, regional anniversary days, Matariki, Easter, Christmas and public holiday pay rules.',
   keywords: ['public holidays nz','NZ public holidays','New Zealand public holidays','public holidays NZ 2026','public holidays NZ 2027','NZ holiday dates','Auckland anniversary day','Matariki public holiday','public holiday pay NZ'],
   alternates: { canonical: '/public-holidays' },

@@ -35,6 +35,7 @@ export default function NzGuidesPage(){
         url:`${NZ_GUIDE_SITE_URL}/nz-guides`,
         description:metadata.description,
         isPartOf:{'@type':'WebSite',name:'Webfit News',url:NZ_GUIDE_SITE_URL},
+        publisher:{'@type':'NewsMediaOrganization',name:'Webfit News',url:NZ_GUIDE_SITE_URL},
         about:[
           {'@type':'Thing',name:'New Zealand tax and personal finance'},
           {'@type':'Thing',name:'New Zealand employment rights'},
@@ -66,13 +67,14 @@ export default function NzGuidesPage(){
         <div className={styles.heroCard}>
           <span>NZ utility library</span>
           <strong>{nzGuides.length} live guides</strong>
-          <small>Grouped by topic so people — and search engines — can move naturally between related New Zealand information.</small>
+          <small>Grouped by topic so readers can move naturally between related New Zealand information.</small>
         </div>
       </section>
 
       <nav className={styles.jumpNav} aria-label="New Zealand guide categories">
         <span>Browse:</span>
         {nzGuideCategories.map(category=><a key={category} href={`#${category.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`}>{category}</a>)}
+        <a href="#standards">Source standards</a>
       </nav>
 
       <section className={styles.section}>
@@ -114,11 +116,17 @@ export default function NzGuidesPage(){
         </section>;
       })}
 
-      <section className={styles.section}>
+      <section id="standards" className={styles.section}>
         <div className={styles.sectionHeading}>
-          <span className={styles.kicker}>How we maintain these pages</span>
-          <h2>Built for useful search results, not keyword stuffing</h2>
-          <p>Webfit News organises official public information into calculators, tables, checklists and plain-language answers. We use descriptive page titles and headings, direct internal links between related subjects, self-referencing canonical URLs and official-source links. Government agencies remain the authority for legal eligibility, rates, fees, dates and decisions.</p>
+          <span className={styles.kicker}>Source, trust & corrections</span>
+          <h2>How Webfit News maintains its New Zealand guides</h2>
+          <p>These pages reorganise official public information into calculators, tables, checklists and direct answers. Rates, fees, legal rules, visa settings and dates are linked back to the responsible New Zealand agency so readers can verify important decisions at the source.</p>
+        </div>
+        <div className={styles.infoGrid}>
+          <article><h3>Official sources first</h3><p>Where a government agency publishes the underlying rule or rate, the guide links to that source and avoids treating third-party summaries as the authority.</p></article>
+          <article><h3>Visible update signals</h3><p>Many guides show when official sources were last checked. We do not change dates merely to make a page look fresh.</p></article>
+          <article><h3>Editorial accountability</h3><p>Webfit News publishes an editorial policy and corrections process, and is listed as a member of the New Zealand Media Council.</p><p><Link href="/editorial-policy">Read our Editorial Policy →</Link><br/><Link href="/corrections">Corrections & feedback →</Link><br/><a href="https://www.mediacouncil.org.nz/membership/" target="_blank" rel="noopener noreferrer">Verify Media Council membership ↗</a></p></article>
+          <article><h3>General information, not official decisions</h3><p>Calculators are practical estimates. Government agencies, employers, councils and other responsible bodies remain the authority for individual eligibility, payroll, immigration, tenancy and legal decisions.</p></article>
         </div>
       </section>
 
