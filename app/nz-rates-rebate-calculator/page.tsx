@@ -9,10 +9,11 @@ import {getRatesRebateSnapshot,ratesRebateSources} from '@/lib/rates-rebate';
 export const revalidate=86400;
 export const metadata:Metadata={
   title:'Rates Rebate Calculator NZ 2026/27 | Check Your $830 Rebate',
-  description:'Use the NZ rates rebate calculator for 2026/27. Estimate how much council rates rebate you may get using the $830 maximum, income, SuperGold and dependants.',
-  keywords:['rates rebate calculator NZ','rates rebate NZ','NZ rates rebate calculator','rates rebate 2026 2027','rates rebate eligibility NZ','rates rebate income threshold','SuperGold rates rebate','council rates rebate NZ'],
+  description:'Calculate your estimated NZ rates rebate for 2026/27 using the $830 maximum, household income, SuperGold status, dependants and annual council rates.',
   alternates:{canonical:'/nz-rates-rebate-calculator'},
+  robots:{index:true,follow:true},
   openGraph:{title:'Rates Rebate Calculator NZ 2026/27 | Check Your $830 Rebate',description:'Estimate your 2026/27 New Zealand council rates rebate using current income thresholds, SuperGold rules and dependants.',url:'/nz-rates-rebate-calculator',type:'website'},
+  twitter:{card:'summary_large_image',title:'Rates Rebate Calculator NZ 2026/27 | $830 Maximum',description:'Estimate a 2026/27 NZ council rates rebate using current thresholds, SuperGold status and dependants.'},
 };
 const faq:[string,string][]=[
  ['How much rates rebate can I get in NZ in 2026/27?','The maximum rates rebate for the rating year beginning 1 July 2026 is $830. Your actual rebate can be lower depending on annual rates, household income, dependants and the statutory calculation.'],
@@ -31,6 +32,7 @@ export default async function Page(){
   {'@type':'ListItem',position:3,name:'Rates Rebate Calculator NZ',item:'https://webfitnews.com/nz-rates-rebate-calculator'},
  ];
  const ld={'@context':'https://schema.org','@graph':[
+  {'@type':'WebPage',name:'Rates Rebate Calculator NZ 2026/27',url:'https://webfitnews.com/nz-rates-rebate-calculator',description:metadata.description,dateModified:snapshot.checkedAt,isPartOf:{'@type':'WebSite',name:'Webfit News',url:'https://webfitnews.com'}},
   {'@type':'WebApplication',name:'Rates Rebate Calculator NZ 2026/27',url:'https://webfitnews.com/nz-rates-rebate-calculator',applicationCategory:'FinanceApplication',operatingSystem:'Web',description:metadata.description},
   {'@type':'FAQPage',mainEntity:faqEntities},
   {'@type':'BreadcrumbList',itemListElement:breadcrumbItems},
@@ -54,6 +56,7 @@ export default async function Page(){
    <article><h3>Your council decides</h3><p>Your local council makes the final decision after checking the application and relevant property, residence, rates and income information.</p></article>
   </div></section>
   <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Eligibility</span><h2>Who can apply for a rates rebate in New Zealand?</h2><p>The scheme is primarily for qualifying ratepayers of residential property they use as their usual home. You apply through your local council for each rating year. Even if your income is above the headline threshold, it is still worth checking because the statutory formula can produce a partial rebate.</p></div></section>
+  <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Related guides</span><h2>More New Zealand household and money guides</h2></div><div className={styles.infoGrid}><article><h3>PAYE Calculator NZ</h3><p>Estimate take-home pay after tax, ACC, KiwiSaver and student loan deductions.</p><Link href="/nz-paye-calculator">Calculate NZ take-home pay →</Link></article><article><h3>NZ Tenancy & Rent Guide</h3><p>Check common New Zealand tenancy, bond and rent-increase rules.</p><Link href="/nz-tenancy-rent-guide">Open tenancy and rent guide →</Link></article><article><h3>NZ Superannuation Guide</h3><p>Review New Zealand Super rates and common eligibility information.</p><Link href="/nz-superannuation">Open NZ Super guide →</Link></article></div></section>
   <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Official NZ rates rebate information</h2><p>Last checked {checked}. {snapshot.reachable}/{snapshot.total} official source pages responded successfully.</p></div><div className={styles.infoGrid}>{ratesRebateSources.map(s=><article key={s.url}><h3>{s.label}</h3><a href={s.url} target="_blank" rel="noreferrer">Open official source →</a></article>)}</div></section>
   <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>FAQs</span><h2>NZ rates rebate calculator: common questions</h2></div><div className={styles.infoGrid}>{faq.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
   <aside className={styles.disclaimer}><strong>Important:</strong> This calculator is a general estimate based on the statutory formula. It does not determine legal eligibility. Ownership structures, moves during the rating year, household circumstances and council assessment can affect the result.</aside><p><Link href="/nz-guides">← Back to NZ Guides</Link></p>

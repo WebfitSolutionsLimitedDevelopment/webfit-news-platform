@@ -10,10 +10,11 @@ export const revalidate=604800;
 
 export const metadata:Metadata={
   title:'PAYE Calculator NZ 2026 | Salary, Tax & Take-Home Pay',
-  description:'Use our NZ PAYE calculator to estimate 2026 take-home pay from salary or wages, including income tax, ACC, KiwiSaver and student loan deductions.',
-  keywords:['PAYE calculator NZ','NZ tax calculator','New Zealand tax calculator','salary calculator NZ','take home pay calculator NZ','income tax calculator NZ','KiwiSaver calculator','student loan repayment NZ'],
+  description:'Calculate NZ take-home pay for 2026 from salary or wages, including income tax, ACC, KiwiSaver and student loan deductions using current IRD settings.',
   alternates:{canonical:'/nz-paye-calculator'},
-  openGraph:{title:'PAYE Calculator NZ 2026 | Salary, Tax & Take-Home Pay',description:'Estimate New Zealand take-home pay after income tax, ACC, KiwiSaver and student loan deductions.',url:'/nz-paye-calculator',type:'website'},
+  robots:{index:true,follow:true},
+  openGraph:{title:'PAYE Calculator NZ 2026 | Salary, Tax & Take-Home Pay',description:'Calculate New Zealand take-home pay after income tax, ACC, KiwiSaver and student loan deductions.',url:'/nz-paye-calculator',type:'website'},
+  twitter:{card:'summary_large_image',title:'PAYE Calculator NZ 2026 | Salary, Tax & Take-Home Pay',description:'Calculate New Zealand take-home pay after tax, ACC, KiwiSaver and student loan deductions.'},
 };
 
 const formatNz=(value:string)=>new Intl.DateTimeFormat('en-NZ',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Pacific/Auckland',timeZoneName:'short'}).format(new Date(value));
@@ -29,6 +30,7 @@ export default async function Page(){
     {q:'Is this the same as the official IRD PAYE calculator?',a:'No. Webfit News provides a general salary and take-home estimate. Exact payroll PAYE depends on tax code, pay period and individual circumstances, so use the official IRD PAYE calculator for payroll-exact deductions.'},
   ];
   const ld={'@context':'https://schema.org','@graph':[
+    {'@type':'WebPage',name:'PAYE Calculator NZ 2026',url:'https://webfitnews.com/nz-paye-calculator',description:metadata.description,dateModified:s.checkedAt,isPartOf:{'@type':'WebSite',name:'Webfit News',url:'https://webfitnews.com'}},
     {'@type':'WebApplication',name:'PAYE Calculator NZ 2026',url:'https://webfitnews.com/nz-paye-calculator',applicationCategory:'FinanceApplication',operatingSystem:'Web',description:metadata.description},
     {'@type':'FAQPage',mainEntity:faq.map(x=>({'@type':'Question',name:x.q,acceptedAnswer:{'@type':'Answer',text:x.a}}))},
     {'@type':'BreadcrumbList',itemListElement:[{'@type':'ListItem',position:1,name:'Webfit News',item:'https://webfitnews.com'},{'@type':'ListItem',position:2,name:'NZ Guides',item:'https://webfitnews.com/nz-guides'},{'@type':'ListItem',position:3,name:'PAYE Calculator NZ',item:'https://webfitnews.com/nz-paye-calculator'}]},
@@ -47,7 +49,7 @@ export default async function Page(){
 
     <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Exact PAYE</span><h2>When to use Inland Revenue’s PAYE calculator</h2><p>Webfit News gives a useful annual salary estimate. Exact PAYE can differ because payroll deductions depend on tax code, pay frequency, tailored rates, secondary income, special student-loan settings, bonuses and other circumstances.</p><a className={styles.cta} href="https://www.ird.govt.nz/paye-calculator" target="_blank" rel="noopener noreferrer">Open official IRD PAYE calculator ↗</a></div></section>
 
-    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Related guides</span><h2>More New Zealand tax and pay tools</h2></div><div className={styles.infoGrid}><article><h3>Minimum Wage NZ</h3><p>Check the current adult, starting-out and training minimum wage rates.</p><Link className={styles.cta} href="/minimum-wage">Check NZ minimum wage →</Link></article><article><h3>NZ Tax Code Finder</h3><p>Find the likely IRD tax code for main and secondary income.</p><Link className={styles.cta} href="/nz-tax-code-finder">Find your NZ tax code →</Link></article><article><h3>NZ KiwiSaver Calculator</h3><p>Estimate employee and employer contributions, ESCT and the government contribution.</p><Link className={styles.cta} href="/nz-kiwisaver-calculator">Calculate KiwiSaver contributions →</Link></article><article><h3>NZ Student Loan Calculator</h3><p>Estimate salary and wage student-loan deductions by pay period.</p><Link className={styles.cta} href="/nz-student-loan-calculator">Calculate student-loan repayments →</Link></article></div></section>
+    <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Related guides</span><h2>More New Zealand tax and pay tools</h2></div><div className={styles.infoGrid}><article><h3>Minimum Wage NZ</h3><p>Check the current adult, starting-out and training minimum wage rates.</p><Link className={styles.cta} href="/minimum-wage">Check NZ minimum wage →</Link></article><article><h3>NZ Tax Code Finder</h3><p>Find the likely IRD tax code for main and secondary income.</p><Link className={styles.cta} href="/nz-tax-code-finder">Find your NZ tax code →</Link></article><article><h3>NZ KiwiSaver Calculator</h3><p>Estimate employee and employer contributions, ESCT and the government contribution.</p><Link className={styles.cta} href="/nz-kiwisaver-calculator">Calculate KiwiSaver contributions →</Link></article><article><h3>NZ Rates Rebate Calculator</h3><p>Estimate a 2026/27 council rates rebate using current thresholds and the statutory maximum.</p><Link className={styles.cta} href="/nz-rates-rebate-calculator">Check your rates rebate →</Link></article></div></section>
 
     <section className={styles.section}><div className={styles.sectionHeading}><span className={styles.kicker}>Official sources</span><h2>Inland Revenue sources used</h2></div><div className={styles.sourceList}>{nzTaxSources.map(source=><a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer"><div><strong>{source.name}</strong><small>Official Inland Revenue source</small></div><span>Open official page ↗</span></a>)}</div></section>
 
