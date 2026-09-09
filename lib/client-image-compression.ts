@@ -5,6 +5,8 @@ const DEFAULT_MAX_DIMENSION = 2200;
 const MIN_DIMENSION = 720;
 const MIN_WEBP_QUALITY = 0.68;
 const MAX_WEBP_QUALITY = 0.94;
+const MIN_JPEG_QUALITY = 0.55;
+const MAX_JPEG_QUALITY = 0.92;
 
 type CompressOptions = {
   maxBytes?: number;
@@ -108,12 +110,13 @@ function resizeDimensions(
 
 async function encodeAtBestQuality(
   canvas: HTMLCanvasElement,
-  targetBytes: number
+  targetBytes: number,
+  mime: string,
+  minQuality: number,
+  maxQuality: number
 ) {
-  const mime = 'image/webp';
-
-  let low = MIN_WEBP_QUALITY;
-  let high = MAX_WEBP_QUALITY;
+  let low = minQuality;
+  let high = maxQuality;
 
   let bestBlob: Blob | null = null;
 
@@ -139,11 +142,11 @@ async function encodeAtBestQuality(
   }
 
   /*
-   * Do not destroy visible detail just to hit the byte target.
-   * If the minimum acceptable quality is still too large, return it
-   * and let the caller reduce dimensions before encoding again.
+   * Keep visible detail where possible. If the minimum acceptable quality is
+   * still too large, return it and let the caller reduce dimensions before
+   * encoding again.
    */
-  return canvasBlob(canvas, mime, MIN_WEBP_QUALITY);
+  return canvasBlob(canvas, mime, minQuality);
 }
 
 export async function compressImageForUpload(
@@ -205,12 +208,19 @@ export async function compressImageForUpload(
     );
   }
 
+  const outputMime = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp';
+  const minQuality = outputMime === 'image/jpeg' ? MIN_JPEG_QUALITY : MIN_WEBP_QUALITY;
+  const maxQuality = outputMime === 'image/jpeg' ? MAX_JPEG_QUALITY : MAX_WEBP_QUALITY;
+
   let bestBlob: Blob | null = null;
 
   /*
-   * Each pass tries a range of WebP qualities.
-   * If quality alone cannot reach the target,
-   * reduce dimensions and try again.
+   * JPEG photos are recompressed as JPEG rather than being forced through a
+   * WebP encoder. This avoids browser-specific WebP canvas encoding failures
+   * while retaining the existing WebP path for other image types.
+   *
+   * Each pass tries a range of qualities. If quality alone cannot reach the
+   * target, reduce dimensions and try again.
    */
   for (let resizeAttempt = 0; resizeAttempt < 14; resizeAttempt += 1) {
     canvas.width = width;
@@ -236,7 +246,10 @@ export async function compressImageForUpload(
 
     const blob = await encodeAtBestQuality(
       canvas,
-      targetBytes
+      targetBytes,
+      outputMime,
+      minQuality,
+      maxQuality
     );
 
     if (
@@ -265,7 +278,7 @@ export async function compressImageForUpload(
 
     /*
      * If we have reached the minimum dimensions,
-     * perform one final quality-safe encoding attempt.
+     * perform one final encoding attempt at the minimum quality.
      */
     if (
       width === previousWidth &&
@@ -273,8 +286,8 @@ export async function compressImageForUpload(
     ) {
       const emergencyBlob = await canvasBlob(
         canvas,
-        'image/webp',
-        MIN_WEBP_QUALITY
+        outputMime,
+        minQuality
       );
 
       if (
@@ -298,10 +311,10 @@ export async function compressImageForUpload(
     [bestBlob],
     outputFilename(
       file.name,
-      bestBlob.type || 'image/webp'
+      bestBlob.type || outputMime
     ),
     {
-      type: bestBlob.type || 'image/webp',
+      type: bestBlob.type || outputMime,
       lastModified: Date.now(),
     }
   );
