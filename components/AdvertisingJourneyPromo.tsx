@@ -8,12 +8,6 @@ const socialLabels:Record<string,string>={
   youtube:'YouTube',
 };
 
-const socialGlyphs:Record<string,string>={
-  facebook:'f',
-  instagram:'◎',
-  youtube:'▶',
-};
-
 export async function AdvertisingJourneyPromo(){
   const settings=await getPublicSiteSettings();
   const social=['facebook','instagram','youtube']
@@ -21,20 +15,35 @@ export async function AdvertisingJourneyPromo(){
     .filter(item=>Boolean(item.url));
 
   return <section className={styles.wrap} aria-labelledby="advertising-journey-title">
-    <div className={styles.socialBlock}>
-      <h2>Find us here</h2>
-      <div className={styles.socialIcons}>
-        {social.map(({name,url})=><a key={name} className={styles.socialIcon} href={url} target="_blank" rel="noopener noreferrer" aria-label={socialLabels[name]} title={socialLabels[name]}>{socialGlyphs[name]}</a>)}
+    <div className={styles.findUs}>
+      <div>
+        <h2>Find us here</h2>
+        <div className={styles.socialIcons}>
+          {social.map(({name,url})=><a key={name} className={styles.socialIcon} href={url} target="_blank" rel="noopener noreferrer" aria-label={socialLabels[name]} title={socialLabels[name]}>{name==='facebook'?'f':name==='instagram'?'◎':'▶'}</a>)}
+        </div>
       </div>
-      <a className={styles.phone} href="tel:0221299323">☎ <span>022 129 9323</span></a>
+      <div className={styles.contactLines}>
+        <a href="tel:0221299323">☎ <span>022 129 9323</span></a>
+        <a href="mailto:Sandy@WebfitNews.co.nz">✉ <span>Sandy@WebfitNews.co.nz</span></a>
+      </div>
     </div>
 
     <div className={styles.journeyCard}>
-      <div className={styles.devices} aria-hidden="true">
-        <span className={styles.laptop}>▱</span>
-        <span className={styles.tablet}>▯</span>
-        <span className={styles.mobile}>▯</span>
+      <div className={styles.deviceArtwork} aria-hidden="true">
+        <div className={styles.laptop}>
+          <div className={styles.laptopScreen}>
+            <span/><span/><span/>
+          </div>
+          <div className={styles.laptopBase}/>
+        </div>
+        <div className={styles.tablet}>
+          <div className={styles.tabletScreen}><span/><span/></div>
+        </div>
+        <div className={styles.phoneDevice}>
+          <div className={styles.phoneScreen}><span/><span/><span/></div>
+        </div>
       </div>
+
       <div className={styles.journeyCopy}>
         <h2 id="advertising-journey-title">Start your advertising journey</h2>
         <p>All information about our advertising solutions is available here.</p>
