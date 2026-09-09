@@ -13,7 +13,7 @@ const audience=[
   ['1K+','YouTube subscribers'],
   ['500+','LinkedIn followers'],
   ['936','TikTok followers'],
-  ['14.2K','Active website users*'],
+  ['14.2K','Active website users, 13 Aug to 9 Sep 2026'],
 ];
 
 const options=[
@@ -33,15 +33,14 @@ export default function AdvertiseMediaKitPage(){
         <p className={styles.lead}>Connect your business, event or campaign with a growing New Zealand audience across Webfit News, social media and community-focused digital coverage.</p>
         <div className={styles.heroActions}>
           <a className={styles.primary} href="mailto:Sandy@WebfitNews.co.nz?subject=Advertising%20with%20Webfit%20News">Request rates & availability</a>
-          <a className={styles.secondary} href="tel:02212999323">Call 02212999323</a>
+          <a className={styles.secondary} href="tel:0221299323">Call 022 129 9323</a>
         </div>
       </section>
 
       <section className={styles.section}>
         <h2>Our digital audience</h2>
-        <p className={styles.intro}>Webfit News reaches readers through its website and a growing cross-platform social presence. These figures are provided as current audience snapshots, not guaranteed campaign impressions.</p>
+        <p className={styles.intro}>Webfit News reaches readers through its website and a growing cross-platform social presence.</p>
         <div className={styles.stats}>{audience.map(([value,label])=><div className={styles.stat} key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
-        <p className={styles.note}>*Google Analytics active users reported for 13 August to 9 September 2026. Social audience figures may change over time.</p>
       </section>
 
       <section className={styles.section}>
@@ -52,7 +51,7 @@ export default function AdvertiseMediaKitPage(){
 
       <section className={styles.section}>
         <h2>How it works</h2>
-        <p className={styles.intro}>Send us the essentials and we will come back with the most suitable options. No mystery package, no invented reach numbers.</p>
+        <p className={styles.intro}>Send us the essentials and we will come back with the most suitable options.</p>
         <div className={styles.steps}>
           <div className={styles.step}><b>1. Tell us your goal</b><p>Share your business, campaign objective, target audience and preferred dates.</p></div>
           <div className={styles.step}><b>2. Choose the right format</b><p>We will discuss website, social, sponsored or community-focused options that fit.</p></div>
@@ -68,7 +67,7 @@ export default function AdvertiseMediaKitPage(){
 
       <section className={styles.contact}>
         <div><h2>Ready to advertise?</h2><p>Contact Sandy for current rates, specifications, campaign deadlines and placement availability.</p></div>
-        <div className={styles.contactLinks}><a href="tel:02212999323">02212999323</a><a href="mailto:Sandy@WebfitNews.co.nz">Sandy@WebfitNews.co.nz</a></div>
+        <div className={styles.contactLinks}><a href="tel:0221299323">022 129 9323</a><a href="mailto:Sandy@WebfitNews.co.nz">Sandy@WebfitNews.co.nz</a></div>
       </section>
 
       <p className={styles.fine}>Webfit News maintains editorial independence. Advertising does not determine newsroom coverage or editorial decisions. Sponsored or paid material is identified where applicable.</p>
