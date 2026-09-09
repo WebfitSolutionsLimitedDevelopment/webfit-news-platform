@@ -69,8 +69,6 @@ export async function generateMetadata(): Promise<Metadata> {
       url: siteUrl,
       description: tagline,
     },
-
-    alternates: { canonical: '/' },
   };
 }
 
