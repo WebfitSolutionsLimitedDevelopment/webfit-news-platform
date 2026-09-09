@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getPublicSiteSettings } from '@/lib/public-settings';
+import { AdvertisingJourneyPromo } from '@/components/AdvertisingJourneyPromo';
 
 export async function PublicFooter(){
   const settings=await getPublicSiteSettings();
@@ -9,6 +10,7 @@ export async function PublicFooter(){
   const socialLabels:Record<string,string>={facebook:'Facebook Page',facebook_profile:'Facebook Profile',instagram:'Instagram',linkedin:'LinkedIn',youtube:'YouTube',x:'X / Twitter',tiktok:'TikTok'};
   const mediaCouncil=<a className="footer-credential" href="https://www.mediacouncil.org.nz/membership/" target="_blank" rel="noopener noreferrer">Member, New Zealand Media Council ↗</a>;
   return <footer className="site-footer-premium"><div className="shell">
+    <AdvertisingJourneyPromo/>
     <div className="footer-top"><div className="footer-brand"><img src="/webfit-news-logo.png" alt={siteName}/><p>{tagline}</p>{settings.footer.media_council_member!==false?mediaCouncil:null}</div><div className="footer-news"><strong>News & NZ tools</strong><Link href="/category/new-zealand">New Zealand</Link><Link href="/category/auckland">Auckland</Link><Link href="/category/politics">Politics</Link><Link href="/category/business">Business</Link><Link href="/category/immigration">Immigration News</Link><Link href="/nz-guides">NZ Calculators & Guides</Link><Link href="/nz-paye-calculator">NZ PAYE Calculator</Link><Link href="/minimum-wage">Minimum Wage NZ</Link><Link href="/public-holidays">Public Holidays NZ</Link><Link href="/immigration">NZ Visa & Immigration Guide</Link></div><div className="footer-about"><strong>Standards & trust</strong><Link href="/about">About Webfit News</Link><Link href="/editorial-policy">Editorial Policy</Link><Link href="/corrections">Corrections</Link><Link href="/contact">Contact Newsroom</Link><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms">Terms</Link></div><div className="footer-social"><strong>Connect</strong><Link href="/advertise-media-kit">Advertise</Link><Link href="/support-us">Support Webfit News</Link><Link href="/login">Reader Sign In</Link><Link href="/rss.xml">RSS</Link>{social.length?social.map(([name,url])=><a key={name} href={url} target="_blank" rel="noopener noreferrer">{socialLabels[name]||name.replaceAll('_',' ')}</a>):null}</div></div>
     <div className="footer-bottom"><span>© {new Date().getFullYear()} {settings.footer.copyright_name||siteName}</span>{settings.footer.media_council_member!==false?<a href="https://www.mediacouncil.org.nz/membership/" target="_blank" rel="noopener noreferrer">Member, New Zealand Media Council ↗</a>:null}<a className="powered-by" href="https://webfitt.co.nz" target="_blank" rel="noopener noreferrer">Powered by Webfit Solutions Limited</a></div>
   </div></footer>;
