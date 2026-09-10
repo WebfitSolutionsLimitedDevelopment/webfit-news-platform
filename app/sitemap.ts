@@ -20,6 +20,7 @@ const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/world/news`,changeFrequency:'hourly',priority:0.98},
   {url:`${SITE_URL}/nz-guides`,changeFrequency:'weekly',priority:0.9},
   {url:`${SITE_URL}/scam-check`,changeFrequency:'daily',priority:0.95},
+  {url:`${SITE_URL}/recalls`,changeFrequency:'hourly',priority:0.95},
   {url:`${SITE_URL}/minimum-wage`,changeFrequency:'daily',priority:0.9},
   {url:`${SITE_URL}/nz-paye-calculator`,changeFrequency:'weekly',priority:0.95},
   {url:`${SITE_URL}/nz-acc-levy-calculator`,changeFrequency:'weekly',priority:0.95},
