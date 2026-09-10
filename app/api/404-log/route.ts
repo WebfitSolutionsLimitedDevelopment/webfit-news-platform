@@ -11,6 +11,10 @@ function sameOrigin(req: Request) {
   }
 }
 
+function shouldIgnore(path: string) {
+  return path.startsWith('/.well-known/sgcaptcha');
+}
+
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return new NextResponse(null, { status: 403 });
 
@@ -28,6 +32,8 @@ export async function POST(req: Request) {
   if (!path.startsWith('/') || path.length > 2048) {
     return new NextResponse(null, { status: 422 });
   }
+
+  if (shouldIgnore(path)) return new NextResponse(null, { status: 204 });
 
   const supabase = await createClient();
   const { error } = await supabase.rpc('log_not_found_event', {
