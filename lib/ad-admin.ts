@@ -18,3 +18,14 @@ export function refreshAdPages() {
     revalidatePath('/category/[slug]', 'page');
   } catch {}
 }
+
+/** "2026-11-30" -> the last second of that day in New Zealand, as an ISO timestamp. */
+export function nzEndOfDay(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const guess = new Date(Date.UTC(y, m - 1, d, 23, 59, 59));
+  const offsetLabel = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', timeZoneName: 'longOffset' })
+    .formatToParts(guess).find(p => p.type === 'timeZoneName')?.value || 'GMT+12:00';
+  const match = offsetLabel.match(/GMT([+-])(\d{2}):(\d{2})/);
+  const minutes = match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : 720;
+  return new Date(guess.getTime() - minutes * 60_000).toISOString();
+}

@@ -1,95 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { IMAGE_TYPES, SLOT_GUIDE, fmtDate, placementState, readImageSize, readVideoInfo, checkFile, uploadToMedia } from '@/lib/ad-upload-client';
 import styles from './AdManager.module.css';
+import { AdList, QuickAdForm } from './QuickAd';
 
 type Any = Record<string, any>;
-
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const IMAGE_MAX_BYTES = 1.5 * 1024 * 1024;
-const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-const VIDEO_MAX_SECONDS = 65;
-
-/** Where each position appears, in plain words, for the placement picker. */
-const SLOT_GUIDE: Record<string, { where: string; desktop: string; mobile: string; video?: boolean }> = {
-  HEADER_LEADERBOARD: { where: 'Top of homepage and every story', desktop: '970×90 or 970×250', mobile: 'Not shown' },
-  HOME_AFTER_HERO: { where: 'Homepage, after the lead stories', desktop: '970×250', mobile: '300×250' },
-  HOME_MIDDLE: { where: 'Homepage, mid-page', desktop: '970×250', mobile: '300×250', video: true },
-  HOME_SIDEBAR_1: { where: 'Homepage, further down the feed', desktop: 'Not shown', mobile: '300×250' },
-  ARTICLE_INLINE_1: { where: 'Every story, after paragraph 3', desktop: '728×90', mobile: '300×250', video: true },
-  ARTICLE_INLINE_2: { where: 'Longer stories, after paragraph 8', desktop: '728×90', mobile: '300×250' },
-  ARTICLE_BOTTOM: { where: 'End of every story', desktop: '728×90', mobile: '300×250' },
-  ARTICLE_RAIL: { where: 'Right-hand column of every story, follows the reader', desktop: '300×600 or 300×250', mobile: 'Not shown', video: true },
-  MOBILE_STICKY: { where: 'Bar pinned to the bottom of stories', desktop: 'Not shown', mobile: '320×50' },
-  CATEGORY_TOP: { where: 'Top of section pages', desktop: '970×250', mobile: '300×250' },
-};
-
-function fmtDate(v?: string | null) {
-  return v ? new Date(v).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Open';
-}
-
-function placementState(a: Any, campaign?: Any) {
-  const now = Date.now();
-  if (campaign && campaign.status !== 'active') return { label: `Campaign ${campaign.status}`, cls: 'status-draft' };
-  if (!a.is_active) return a.ends_at && new Date(a.ends_at).getTime() <= now ? { label: 'Ended', cls: 'status-ended' } : { label: 'Paused', cls: 'status-draft' };
-  if (a.starts_at && new Date(a.starts_at).getTime() > now) return { label: 'Scheduled', cls: 'status-scheduled' };
-  if (a.ends_at && new Date(a.ends_at).getTime() < now) return { label: 'Ended', cls: 'status-ended' };
-  return { label: 'Live', cls: 'status-active' };
-}
-
-function readImageSize(file: File): Promise<{ w: number; h: number }> {
-  return new Promise(resolve => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => { resolve({ w: img.naturalWidth, h: img.naturalHeight }); URL.revokeObjectURL(url); };
-    img.onerror = () => { resolve({ w: 0, h: 0 }); URL.revokeObjectURL(url); };
-    img.src = url;
-  });
-}
-
-function readVideoInfo(file: File): Promise<{ seconds: number; w: number; h: number }> {
-  return new Promise(resolve => {
-    const url = URL.createObjectURL(file);
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.onloadedmetadata = () => { resolve({ seconds: v.duration, w: v.videoWidth, h: v.videoHeight }); URL.revokeObjectURL(url); };
-    v.onerror = () => { resolve({ seconds: 0, w: 0, h: 0 }); URL.revokeObjectURL(url); };
-    v.src = url;
-  });
-}
-
-async function checkFile(file: File | null, kind: 'image' | 'video'): Promise<string> {
-  if (!file) return '';
-  if (kind === 'image') {
-    if (!IMAGE_TYPES.includes(file.type)) return 'Use a JPG, PNG, WebP or GIF image.';
-    if (file.size > IMAGE_MAX_BYTES) return `This image is ${(file.size / 1048576).toFixed(1)} MB. Keep ad images under 1.5 MB.`;
-    return '';
-  }
-  if (file.type !== 'video/mp4') return 'Use an MP4 video (H.264). Export from your editor as MP4.';
-  if (file.size > VIDEO_MAX_BYTES) return `This video is ${(file.size / 1048576).toFixed(0)} MB. Keep it under 50 MB (720p is plenty).`;
-  const info = await readVideoInfo(file);
-  if (info.seconds > VIDEO_MAX_SECONDS) return `This video runs ${Math.round(info.seconds)} seconds. Keep ads to 60 seconds or less.`;
-  return '';
-}
-
-async function uploadToMedia(file: File, altText: string): Promise<string> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Your session has expired. Sign in again.');
-  const safe = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
-  const d = new Date();
-  const path = `ads/${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${crypto.randomUUID()}-${safe}`;
-  const { error: uploadError } = await supabase.storage.from('news-media').upload(path, file, { contentType: file.type, cacheControl: '31536000', upsert: false });
-  if (uploadError) throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
-  const { data: pub } = supabase.storage.from('news-media').getPublicUrl(path);
-  const { data, error } = await supabase.from('media').insert({
-    uploaded_by: user.id, storage_bucket: 'news-media', storage_path: path, public_url: pub.publicUrl,
-    filename: file.name, mime_type: file.type, file_size: file.size, alt_text: altText, caption: '', credit: '', migration_status: 'native',
-  }).select('id').single();
-  if (error) throw new Error(`Saved ${file.name} but could not record it in Media: ${error.message}`);
-  return data.id as string;
-}
 
 function FilePick({ id, label, hint, accept, file, onChange, error, info }: { id: string; label: string; hint: string; accept: string; file: File | null; onChange: (f: File | null) => void; error?: string; info?: string }) {
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ''), [file]);
@@ -203,6 +119,11 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   return <div className="ads-console">
+    <QuickAdForm slots={slots}/>
+    <AdList campaigns={campaigns} creatives={creatives} assignments={assignments} performance={performance} slots={slots}/>
+
+    <details className={styles.advanced}>
+    <summary>Advanced tools <span>campaigns with several ads, separate phone artwork, individual placements, rotation</span></summary>
     {msg ? <div className="admin-alert" role="alert">{msg}</div> : null}
     {ok ? <div className={styles.ok} role="status">{ok}</div> : null}
 
@@ -345,5 +266,6 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
       <div className="admin-card-head"><h2>Where ads appear</h2><span className="admin-note">Positions with nothing booked stay hidden, so readers never see empty boxes.</span></div>
       <div className="ad-slot-grid">{activeSlots.map(s => { const g = SLOT_GUIDE[s.key]; return <div key={s.id}><strong>{s.label}</strong><code>{s.key}</code><span>Desktop {g?.desktop || `${s.recommended_width}×${s.recommended_height}`}</span><span>Mobile {g?.mobile || '-'}</span><small>{g?.where || s.description}</small></div>; })}</div>
     </section>
+    </details>
   </div>;
 }

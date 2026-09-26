@@ -176,16 +176,19 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
     <span className={styles.label}>{label}</span>
     {isVideo ? <>
       <VideoCreative key={ad.assignment_id} ad={ad}/>
-      <div className={styles.cta}>
+      {ad.destination_url ? <div className={styles.cta}>
         <span>{ad.headline || ad.advertiser}</span>
         <a href={clickHref(ad)} target="_blank" rel="sponsored noopener">{ad.cta_label || 'Learn more'}</a>
-      </div>
-    </> : hasImage ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener">
-      <picture>
+      </div> : null}
+    </> : hasImage ? (() => {
+      const picture = <picture>
         {ad.mobile_image ? <source media={MOBILE_QUERY} srcSet={ad.mobile_image}/> : null}
         <img src={ad.desktop_image || ad.mobile_image || ''} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
-      </picture>
-    </a> : null}
+      </picture>;
+      return ad.destination_url
+        ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener">{picture}</a>
+        : <div className={styles.frame}>{picture}</div>;
+    })() : null}
     {ad.is_election_ad && ad.promoter_statement ? <p className={styles.promoter}>{ad.promoter_statement}</p> : null}
     {variant === 'sticky' ? <button type="button" className={styles.close} onClick={close} aria-label="Close advertisement">×</button> : null}
   </aside>;

@@ -49,3 +49,62 @@
 .confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: #a12a2a; font-weight: 700; }
 
 @media (max-width: 1100px) { .steps { grid-template-columns: 1fr; } }
+
+/* Quick ad */
+.quick { border-color: #111317; }
+.quickHead h2 { font-size: 20px !important; margin: 0 0 4px !important; }
+.quickHead p { margin: 0 0 14px; color: #5f6672; font-size: 14px; }
+.quickGrid { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.quickDrop { display: grid; gap: 8px; place-items: center; min-height: 260px; border: 2px dashed #bfc4ca; border-radius: 12px; background: #fafbfc; padding: 12px; cursor: pointer; text-align: center; }
+.quickDrop:hover, .quickDrop:focus-within { border-color: #111317; }
+.quickDrop img, .quickDrop video { width: 100%; max-height: 360px; object-fit: contain; border-radius: 8px; background: #eceef1; }
+.quickDrop input { font-size: 12px; max-width: 100%; }
+.quickDrop small { color: #6b7280; font-size: 12px; }
+.quickDropHint { display: grid; gap: 6px; }
+.quickDropHint b { font-size: 15px; }
+.quickDropHint small { color: #6b7280; }
+.quickFields { display: grid; gap: 14px; }
+.quickFields > label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; }
+.quickFields input:not([type="checkbox"]), .quickFields select { width: 100%; border: 1px solid #d9dee5; border-radius: 8px; padding: 10px 12px; font: inherit; font-weight: 400; background: #fff; }
+.optional { font-weight: 400; color: #8a9099; font-size: 12px; }
+.muted { color: #6b7280; font-size: 12px; }
+.inlineCheck { display: flex !important; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+.whereBox { border: 1px solid #e1e5ea; border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.whereHead { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.linkBtnDark { border: 0; background: none; padding: 0; font-weight: 800; font-size: 13px; text-decoration: underline; cursor: pointer; color: #111317; }
+.wherePills { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.wherePills li { background: #f1f3f5; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700; display: flex; gap: 6px; }
+.wherePills span { font-weight: 400; color: #5f6672; }
+.whereList { display: grid; gap: 4px; }
+.whereList > div { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; }
+.whereList .whereOn { background: #fff6e2; }
+.whereList label { display: grid; grid-template-columns: 18px 1fr; column-gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.whereList label small { grid-column: 2; color: #6b7280; font-weight: 400; font-size: 11.5px; }
+.whereList select { padding: 6px 8px !important; font-size: 12px !important; }
+
+/* Your ads */
+.adRows { display: grid; gap: 10px; }
+.adRow { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 12px; border: 1px solid #e1e5ea; border-radius: 12px; }
+.adThumb { width: 96px; height: 96px; background: #eceef1; border-radius: 8px; overflow: hidden; display: grid; place-items: center; font-size: 11px; color: #6b7280; }
+.adThumb img, .adThumb video { width: 100%; height: 100%; object-fit: contain; }
+.adInfo { display: grid; gap: 4px; min-width: 0; }
+.adTitle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adInfo small { font-size: 12.5px; }
+.rowActions, .inlineEdit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.rowActions button, .inlineEdit > button:not(:global(.admin-primary)) { border: 1px solid #ccd0d5; background: #fff; border-radius: 6px; padding: 6px 10px; font-weight: 700; cursor: pointer; font-size: 12.5px; }
+.rowActions .danger { color: #a12a2a; }
+.inlineEdit label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; }
+.inlineEdit input { border: 1px solid #d9dee5; border-radius: 6px; padding: 6px 8px; font: inherit; }
+
+.advanced { margin-top: 8px; }
+.advanced > summary { cursor: pointer; font-weight: 800; font-size: 14px; padding: 12px 4px; }
+.advanced > summary span { font-weight: 400; color: #6b7280; font-size: 12.5px; margin-left: 6px; }
+.advanced[open] > summary { margin-bottom: 8px; }
+
+@media (max-width: 760px) {
+  .quickGrid { grid-template-columns: 1fr; }
+  .quickDrop { min-height: 180px; }
+  .whereList > div { grid-template-columns: 1fr; }
+  .adRow { grid-template-columns: 72px minmax(0, 1fr); }
+  .adThumb { width: 72px; height: 72px; }
+}
