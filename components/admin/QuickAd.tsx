@@ -21,6 +21,13 @@ const PLACE_OPTIONS: { key: string; label: string }[] = [
 
 const DEVICE_LABEL = { all: 'Desktop + phone', desktop: 'Desktop only', mobile: 'Phone only' } as const;
 
+/** "tickety.co.nz" or "www.tickety.co.nz" -> "https://www.tickety.co.nz". */
+function normaliseLink(value: string) {
+  const v = value.trim();
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : `https://${v.replace(/^\/+/, '')}`;
+}
+
 function todayPlus(days: number) {
   const d = new Date(Date.now() + days * 86400000);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -90,7 +97,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
       const mediaId = await uploadToMedia(file, name);
       const r = await fetch('/api/admin/ads/quick', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, format: kind, media_id: kind === 'image' ? mediaId : null, video_media_id: kind === 'video' ? mediaId : null, destination_url: link, expires_on: expires, placements, is_election_ad: election, promoter_statement: election ? promoter : '' }),
+        body: JSON.stringify({ name, format: kind, media_id: kind === 'image' ? mediaId : null, video_media_id: kind === 'video' ? mediaId : null, destination_url: normaliseLink(link), expires_on: expires, placements, is_election_ad: election, promoter_statement: election ? promoter : '' }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || 'Could not publish the ad.');
@@ -119,7 +126,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
       <div className={styles.quickFields}>
         <label htmlFor="quick-name">Ad name<input id="quick-name" value={name} onChange={e => setName(e.target.value)} required minLength={2} maxLength={120} placeholder="e.g. Bank of Baroda festive offers"/></label>
         <label htmlFor="quick-expires">Show until (last day)<input id="quick-expires" type="date" value={expires} min={todayPlus(0)} onChange={e => setExpires(e.target.value)} required/></label>
-        <label htmlFor="quick-link">Link when clicked <span className={styles.optional}>optional</span><input id="quick-link" type="url" value={link} onChange={e => setLink(e.target.value)} placeholder="https://advertiser.co.nz"/></label>
+        <label htmlFor="quick-link">Link when clicked <span className={styles.optional}>optional</span><input id="quick-link" type="text" inputMode="url" autoComplete="url" value={link} onChange={e => setLink(e.target.value)} onBlur={() => setLink(v => normaliseLink(v))} placeholder="advertiser.co.nz"/></label>
 
         <div className={styles.whereBox}>
           <div className={styles.whereHead}>
