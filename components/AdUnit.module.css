@@ -163,3 +163,16 @@
   .inline { max-width: 100%; margin: 28px 0; }
   .banner { max-width: 100%; }
 }
+
+/* Several ads in one position take turns */
+.count { font-weight: 400; letter-spacing: .08em; }
+.stack { display: grid; }
+.slide { grid-area: 1 / 1; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; display: flex; flex-direction: column; justify-content: center; }
+.slideOn { opacity: 1; visibility: visible; transition: opacity .6s ease, visibility 0s; }
+.dots { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+.dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: #c9ced5; cursor: pointer; transition: width .25s ease, background .25s ease; }
+.dots button.dotOn { width: 22px; background: #0b1117; }
+.dots button:focus-visible { outline: 3px solid #a97718; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .slide, .slideOn { transition: none; }
+}

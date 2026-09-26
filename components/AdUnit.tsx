@@ -41,7 +41,7 @@ function clickHref(ad: LiveAd) {
   return `/api/ads/click?a=${encodeURIComponent(ad.assignment_id)}`;
 }
 
-function VideoCreative({ ad }: { ad: LiveAd }) {
+function VideoCreative({ ad, active = true, onEnded }: { ad: LiveAd; active?: boolean; onEnded?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const started = useRef(false);
   const [muted, setMuted] = useState(true);
@@ -52,6 +52,7 @@ function VideoCreative({ ad }: { ad: LiveAd }) {
     const video = videoRef.current;
     if (!video) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!active) { video.pause(); return; }
     if (reduceMotion || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
@@ -62,7 +63,7 @@ function VideoCreative({ ad }: { ad: LiveAd }) {
     }, { threshold: [0, 0.5, 1] });
     observer.observe(video);
     return () => observer.disconnect();
-  }, []);
+  }, [active]);
 
   const toggleSound = () => {
     const video = videoRef.current;
@@ -91,7 +92,7 @@ function VideoCreative({ ad }: { ad: LiveAd }) {
       aria-label={ad.alt_text || ad.headline || 'Video advertisement'}
       onPlay={() => { setPlaying(true); setEnded(false); if (!started.current) { started.current = true; sendEvent(ad, 'video_start'); } }}
       onPause={() => setPlaying(false)}
-      onEnded={() => { setPlaying(false); setEnded(true); sendEvent(ad, 'video_complete'); }}
+      onEnded={() => { setPlaying(false); setEnded(true); sendEvent(ad, 'video_complete'); onEnded?.(); }}
     />
     <div className={styles.videoControls}>
       <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause video' : ended ? 'Replay video' : 'Play video'}>
@@ -104,38 +105,88 @@ function VideoCreative({ ad }: { ad: LiveAd }) {
   </div>;
 }
 
+/** How long each poster stays up before the next one slides in. */
+const ROTATE_MS = 8000;
+
+function Creative({ ad, variant, active, onVideoEnd }: { ad: LiveAd; variant: AdVariant; active: boolean; onVideoEnd: () => void }) {
+  const altText = ad.alt_text || ad.headline || (ad.advertiser ? `Advertisement from ${ad.advertiser}` : 'Advertisement');
+  const isVideo = ad.format === 'video' && Boolean(ad.video_url);
+  const hasImage = Boolean(ad.desktop_image || ad.mobile_image);
+  return <>
+    {isVideo ? <>
+      <VideoCreative ad={ad} active={active} onEnded={onVideoEnd}/>
+      {ad.destination_url ? <div className={styles.cta}>
+        <span>{ad.headline || ad.advertiser}</span>
+        <a href={clickHref(ad)} target="_blank" rel="sponsored noopener" tabIndex={active ? 0 : -1}>{ad.cta_label || 'Learn more'}</a>
+      </div> : null}
+    </> : hasImage ? (() => {
+      const picture = <picture>
+        {ad.mobile_image ? <source media={MOBILE_QUERY} srcSet={ad.mobile_image}/> : null}
+        <img src={ad.desktop_image || ad.mobile_image || ''} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
+      </picture>;
+      return ad.destination_url
+        ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener" tabIndex={active ? 0 : -1}>{picture}</a>
+        : <div className={styles.frame}>{picture}</div>;
+    })() : null}
+    {ad.is_election_ad && ad.promoter_statement ? <p className={styles.promoter}>{ad.promoter_statement}</p> : null}
+  </>;
+}
+
+/** Order for this visit: weighted random start, then the rest in turn, so every advertiser gets seen. */
+function rotationOrder(ads: LiveAd[]): LiveAd[] {
+  if (ads.length < 2) return ads;
+  const first = pickAd(ads, currentDevice());
+  const i = first ? ads.indexOf(first) : 0;
+  return [...ads.slice(i), ...ads.slice(0, i)];
+}
+
 export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveAd[]; variant?: AdVariant; className?: string }) {
-  // Server render and first paint use the highest-priority ad; the browser
-  // then rotates between everything booked into this position.
-  const [ad, setAd] = useState<LiveAd | null>(ads[0] ?? null);
+  // Server render and first paint show the highest-priority ad. In the browser,
+  // every ad booked into this position takes a turn, one after another.
+  const [list, setList] = useState<LiveAd[]>(ads.slice(0, 1));
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [onScreen, setOnScreen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [stickyVisible, setStickyVisible] = useState(variant !== 'sticky');
   const zoneRef = useRef<HTMLElement>(null);
-  const seen = useRef(false);
+  const counted = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    setAd(pickAd(ads, currentDevice()));
+    const device = currentDevice();
+    setList(rotationOrder(ads.filter(ad => ad.device === 'all' || ad.device === device)));
+    setIndex(0);
   }, [ads]);
 
-  // Count an impression once, when at least half the ad has been on screen for one second.
+  const ad = list[index] ?? null;
+  const many = list.length > 1;
+  const next = useCallback(() => setIndex(i => (list.length ? (i + 1) % list.length : 0)), [list.length]);
+
+  // Is the ad position on screen? Rotation and view counting only happen while it is.
   useEffect(() => {
     const node = zoneRef.current;
-    if (!ad || !node || seen.current || typeof IntersectionObserver === 'undefined') return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-        if (!timer) timer = setTimeout(() => {
-          if (!seen.current) { seen.current = true; sendEvent(ad, 'impression'); }
-          observer.disconnect();
-        }, 1000);
-      } else if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    }, { threshold: [0, 0.5, 1] });
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting && entry.intersectionRatio >= 0.5), { threshold: [0, 0.5, 1] });
     observer.observe(node);
-    return () => { observer.disconnect(); if (timer) clearTimeout(timer); };
-  }, [ad, stickyVisible]);
+    return () => observer.disconnect();
+  }, [list, stickyVisible]);
+
+  // Count a view once per ad, when it has been the one showing, at least half on screen, for one second.
+  useEffect(() => {
+    if (!ad || !onScreen || counted.current.has(ad.assignment_id)) return;
+    const timer = setTimeout(() => {
+      if (!counted.current.has(ad.assignment_id)) { counted.current.add(ad.assignment_id); sendEvent(ad, 'impression'); }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [ad, onScreen]);
+
+  // Move to the next poster every few seconds. Videos play to the end instead.
+  useEffect(() => {
+    if (!many || !ad || paused || !onScreen || ad.format === 'video') return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = setTimeout(next, ROTATE_MS);
+    return () => clearTimeout(timer);
+  }, [many, ad, paused, onScreen, next]);
 
   // Sticky bar: appear once the reader is a third of the way down, remember a close for the session.
   useEffect(() => {
@@ -161,35 +212,43 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
   if (!ad || dismissed) return null;
   if (variant === 'sticky' && !stickyVisible) return null;
 
-  const deviceClass = ad.device === 'desktop' ? styles.desktopOnly : ad.device === 'mobile' ? styles.mobileOnly : '';
+  const deviceClass = !many ? (ad.device === 'desktop' ? styles.desktopOnly : ad.device === 'mobile' ? styles.mobileOnly : '') : '';
   const label = ad.is_election_ad ? 'Election advertisement' : 'Advertisement';
-  const altText = ad.alt_text || ad.headline || (ad.advertiser ? `Advertisement from ${ad.advertiser}` : 'Advertisement');
-  const hasImage = Boolean(ad.desktop_image || ad.mobile_image);
-  const isVideo = ad.format === 'video' && Boolean(ad.video_url);
 
   return <aside
     ref={zoneRef}
     className={`${styles.zone} ${styles[variant]} ${deviceClass} ${className}`}
     aria-label={label}
+    aria-roledescription={many ? 'carousel' : undefined}
     data-ad-slot={ad.slot_key}
+    onMouseEnter={() => setPaused(true)}
+    onMouseLeave={() => setPaused(false)}
+    onFocus={() => setPaused(true)}
+    onBlur={() => setPaused(false)}
   >
-    <span className={styles.label}>{label}</span>
-    {isVideo ? <>
-      <VideoCreative key={ad.assignment_id} ad={ad}/>
-      {ad.destination_url ? <div className={styles.cta}>
-        <span>{ad.headline || ad.advertiser}</span>
-        <a href={clickHref(ad)} target="_blank" rel="sponsored noopener">{ad.cta_label || 'Learn more'}</a>
-      </div> : null}
-    </> : hasImage ? (() => {
-      const picture = <picture>
-        {ad.mobile_image ? <source media={MOBILE_QUERY} srcSet={ad.mobile_image}/> : null}
-        <img src={ad.desktop_image || ad.mobile_image || ''} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
-      </picture>;
-      return ad.destination_url
-        ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener">{picture}</a>
-        : <div className={styles.frame}>{picture}</div>;
-    })() : null}
-    {ad.is_election_ad && ad.promoter_statement ? <p className={styles.promoter}>{ad.promoter_statement}</p> : null}
+    <span className={styles.label}>{label}{many ? <span className={styles.count}> {index + 1} of {list.length}</span> : null}</span>
+    {many ? <div className={styles.stack}>
+      {list.map((item, i) => <div
+        key={item.assignment_id}
+        className={`${styles.slide} ${i === index ? styles.slideOn : ''}`}
+        aria-hidden={i !== index}
+        role="group"
+        aria-roledescription="slide"
+        aria-label={`${i + 1} of ${list.length}`}
+      >
+        <Creative ad={item} variant={variant} active={i === index} onVideoEnd={next}/>
+      </div>)}
+    </div> : <Creative ad={ad} variant={variant} active onVideoEnd={() => {}}/>}
+    {many && variant !== 'sticky' ? <div className={styles.dots}>
+      {list.map((item, i) => <button
+        key={item.assignment_id}
+        type="button"
+        className={i === index ? styles.dotOn : ''}
+        aria-label={`Show advertisement ${i + 1} of ${list.length}`}
+        aria-current={i === index}
+        onClick={() => setIndex(i)}
+      />)}
+    </div> : null}
     {variant === 'sticky' ? <button type="button" className={styles.close} onClick={close} aria-label="Close advertisement">×</button> : null}
   </aside>;
 }
