@@ -105,13 +105,43 @@ export function recommendPlacements(kind: 'image' | 'video', w: number, h: numbe
   return [{ key: 'ARTICLE_INLINE_1', device: 'all' }, { key: 'HOME_MIDDLE', device: 'all' }];
 }
 
-/** Shrink big photos (WhatsApp exports, 2000px posters) before upload so pages stay fast. GIFs are left alone. */
+/** Largest ad image we keep: 1.5 megapixels (about 1100 x 1370 for a 4:5 poster) and 1.5 MB. */
+export const AD_IMAGE_MAX_PIXELS = 1_500_000;
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type, quality));
+}
+
+/**
+ * Resize any uploaded image to at most 1.5 megapixels and re-encode it under
+ * 1.5 MB, so a 5 MB phone photo or a huge PNG poster uploads fine and pages
+ * stay fast. Animated GIFs are left as they are.
+ */
 export async function prepareAdImage(file: File): Promise<File> {
-  if (file.type === 'image/gif' || file.size <= 400 * 1024) return file;
-  try {
-    const { compressImageForUpload } = await import('@/lib/client-image-compression');
-    return await compressImageForUpload(file, { maxBytes: 400 * 1024, maxDimension: 1400 });
-  } catch {
-    return file;
+  if (file.type === 'image/gif') return file;
+  let bitmap: ImageBitmap;
+  try { bitmap = await createImageBitmap(file); } catch { return file; }
+  const pixels = bitmap.width * bitmap.height;
+  const scale = pixels > AD_IMAGE_MAX_PIXELS ? Math.sqrt(AD_IMAGE_MAX_PIXELS / pixels) : 1;
+  if (scale === 1 && file.size <= 400 * 1024) { bitmap.close?.(); return file; }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { bitmap.close?.(); return file; }
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+
+  const base = file.name.replace(/\.[^.]+$/, '') || 'ad';
+  for (const type of ['image/webp', 'image/jpeg']) {
+    for (const quality of [0.86, 0.78, 0.7, 0.6]) {
+      const blob = await canvasToBlob(canvas, type, quality);
+      if (blob && blob.type === type && blob.size <= IMAGE_MAX_BYTES) {
+        return new File([blob], `${base}.${type === 'image/webp' ? 'webp' : 'jpg'}`, { type, lastModified: Date.now() });
+      }
+    }
   }
+  return file;
 }

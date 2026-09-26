@@ -53,11 +53,15 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
   const [ok, setOk] = useState('');
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ''), [file]);
 
-  async function onFile(f: File | null) {
-    setMsg(''); setOk(''); setFile(f); setInfo(''); setFileError('');
-    if (!f) { setPlacements([]); return; }
+  async function onFile(picked: File | null) {
+    let f = picked;
+    setMsg(''); setOk(''); setInfo(''); setFileError('');
+    if (!f) { setFile(null); setPlacements([]); return; }
     const k: 'image' | 'video' = f.type.startsWith('video/') ? 'video' : 'image';
     setKind(k);
+    // Big photos and PNG posters are shrunk here, before the size check, so they are never refused for being too large.
+    if (k === 'image' && IMAGE_TYPES.includes(f.type)) f = await prepareAdImage(f);
+    setFile(f);
     const err = await checkFile(f, k);
     setFileError(err);
     if (err) return;
@@ -83,8 +87,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
     if (!placements.length) { setMsg('Choose at least one place for the ad.'); setShowPlaces(true); return; }
     setBusy(true); setOk('Uploading…');
     try {
-      const upload = kind === 'image' ? await prepareAdImage(file) : file;
-      const mediaId = await uploadToMedia(upload, name);
+      const mediaId = await uploadToMedia(file, name);
       const r = await fetch('/api/admin/ads/quick', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, format: kind, media_id: kind === 'image' ? mediaId : null, video_media_id: kind === 'video' ? mediaId : null, destination_url: link, expires_on: expires, placements, is_election_ad: election, promoter_statement: election ? promoter : '' }),
@@ -107,7 +110,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
     {ok ? <div className={styles.ok} role="status">{ok}</div> : null}
     <form onSubmit={publish} className={styles.quickGrid}>
       <label className={styles.quickDrop} htmlFor="quick-file">
-        {file ? (kind === 'video' ? <video src={preview} muted controls playsInline/> : <img src={preview} alt=""/>) : <span className={styles.quickDropHint}><b>Choose image or video</b><small>JPG, PNG, WebP, GIF or MP4 (up to 60 seconds)</small></span>}
+        {file ? (kind === 'video' ? <video src={preview} muted controls playsInline/> : <img src={preview} alt=""/>) : <span className={styles.quickDropHint}><b>Choose image or video</b><small>Any size JPG, PNG, WebP or GIF (resized automatically), or MP4 up to 60 seconds</small></span>}
         <input id="quick-file" type="file" accept={[...IMAGE_TYPES, 'video/mp4'].join(',')} onChange={e => onFile(e.target.files?.[0] || null)}/>
         {file ? <small>{file.name}{info ? ` · ${info}` : ''} · click to change</small> : null}
         {fileError ? <em className={styles.fileError}>{fileError}</em> : null}

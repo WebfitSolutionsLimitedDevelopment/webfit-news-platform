@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { IMAGE_TYPES, SLOT_GUIDE, fmtDate, placementState, readImageSize, readVideoInfo, checkFile, uploadToMedia } from '@/lib/ad-upload-client';
+import { IMAGE_TYPES, prepareAdImage, SLOT_GUIDE, fmtDate, placementState, readImageSize, readVideoInfo, checkFile, uploadToMedia } from '@/lib/ad-upload-client';
 import styles from './AdManager.module.css';
 import { AdList, QuickAdForm } from './QuickAd';
 
@@ -56,7 +56,8 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
     return j;
   }
 
-  async function pick(key: string, file: File | null, kind: 'image' | 'video', set: (f: File | null) => void) {
+  async function pick(key: string, picked: File | null, kind: 'image' | 'video', set: (f: File | null) => void) {
+    const file = picked && kind === 'image' && IMAGE_TYPES.includes(picked.type) ? await prepareAdImage(picked) : picked;
     set(file);
     const error = await checkFile(file, kind);
     setFileErrors(e => ({ ...e, [key]: error }));
@@ -158,7 +159,7 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
             <button type="button" role="radio" aria-checked={format === 'video'} className={format === 'video' ? styles.segOn : ''} onClick={() => setFormat('video')}>Video (30 or 60 sec)</button>
           </div>
           {format === 'image' ? <>
-            <FilePick id="ad-file-desktop" label="Desktop artwork" hint="Required. 970×250, 728×90 or 300×600. JPG, PNG, WebP or GIF, under 1.5 MB." accept={IMAGE_TYPES.join(',')} file={desktopFile} onChange={f => pick('desktop', f, 'image', setDesktopFile)} error={fileErrors.desktop} info={fileInfo.desktop}/>
+            <FilePick id="ad-file-desktop" label="Desktop artwork" hint="Required. 970×250, 728×90 or 300×600. JPG, PNG, WebP or GIF, any size (resized automatically)." accept={IMAGE_TYPES.join(',')} file={desktopFile} onChange={f => pick('desktop', f, 'image', setDesktopFile)} error={fileErrors.desktop} info={fileInfo.desktop}/>
             <FilePick id="ad-file-mobile" label="Mobile artwork" hint="Optional but recommended. 300×250 (or 320×50 for the sticky bar). Without it, phones get the desktop artwork shrunk down." accept={IMAGE_TYPES.join(',')} file={mobileFile} onChange={f => pick('mobile', f, 'image', setMobileFile)} error={fileErrors.mobile} info={fileInfo.mobile}/>
           </> : <>
             <FilePick id="ad-file-video" label="Video file" hint="Required. MP4, 60 seconds or less, under 50 MB. 16:9 works everywhere; add captions, most people watch muted." accept="video/mp4" file={videoFile} onChange={f => pick('video', f, 'video', setVideoFile)} error={fileErrors.video} info={fileInfo.video}/>
