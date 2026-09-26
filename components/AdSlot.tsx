@@ -1,26 +1,19 @@
-import { createClient } from '@/lib/supabase-server';
+import { getLiveAds } from '@/lib/ads';
+import { AdUnit, type AdVariant } from './AdUnit';
 
-type Props={slotKey:string;className?:string};
+type Props = { slotKey: string; className?: string; variant?: AdVariant };
 
-export async function AdSlot({slotKey,className=''}:Props){
-  const supabase=await createClient();
-  const {data:slot}=await supabase.from('ad_slots').select('id,key,label,recommended_width,recommended_height').eq('key',slotKey).eq('is_active',true).maybeSingle();
-  if(!slot)return null;
-  const {data:assignment}=await supabase.from('ad_assignments')
-    .select('id,creative:creative_id(id,headline,destination_url,alt_text,media:media_id(public_url,alt_text))')
-    .eq('slot_id',slot.id).eq('is_active',true)
-    .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
-    .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
-    .order('priority',{ascending:false}).limit(1).maybeSingle();
-  const creative=(assignment as any)?.creative;
-  const image=creative?.media?.public_url;
-  if(creative&&image){
-    return <aside className={`ad-zone ad-zone-live ${className}`} aria-label="Advertisement">
-      <span className="ad-label">Advertisement</span>
-      <a href={creative.destination_url} target="_blank" rel="sponsored noopener noreferrer">
-        <img src={image} alt={creative.alt_text||creative.media?.alt_text||creative.headline||'Advertisement'}/>
-      </a>
-    </aside>;
-  }
-  return null;
+/**
+ * Renders whatever is booked into a named ad position (see /admin/advertisements).
+ * Renders nothing when the position is empty, so layouts never show blank boxes.
+ */
+export async function AdSlot({ slotKey, className = '', variant = 'banner' }: Props) {
+  const ads = (await getLiveAds())[slotKey];
+  if (!ads?.length) return null;
+  return <AdUnit ads={ads} variant={variant} className={className}/>;
+}
+
+/** True when at least one ad is booked into the position. */
+export async function hasLiveAd(slotKey: string) {
+  return Boolean((await getLiveAds())[slotKey]?.length);
 }

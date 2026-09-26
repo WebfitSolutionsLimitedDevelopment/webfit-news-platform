@@ -1,7 +1,32 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '../../../../../lib/supabase-server';
+import { adAdminContext, refreshAdPages } from '@/lib/ad-admin';
 
-const Input=z.object({slot_id:z.string().uuid(),creative_id:z.string().uuid(),starts_at:z.string().nullable().optional(),ends_at:z.string().nullable().optional(),priority:z.number().int().min(0).max(1000).default(100),is_active:z.boolean().default(true)});
-async function context(){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return null;const {data:p}=await supabase.from('profiles').select('role,is_active').eq('id',user.id).maybeSingle();if(!p?.is_active||!['super_admin','editor','ad_manager'].includes(p.role))return null;return{supabase,user};}
-export async function POST(req:Request){const c=await context();if(!c)return NextResponse.json({error:'Advertising permission required'},{status:403});const parsed=Input.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:'Invalid assignment',details:parsed.error.flatten()},{status:422});const {data,error}=await c.supabase.from('ad_assignments').insert(parsed.data).select('*').single();if(error)return NextResponse.json({error:error.message},{status:400});await c.supabase.from('audit_log').insert({actor_id:c.user.id,action:'ad_assignment.create',entity_type:'ad_assignment',entity_id:data.id,metadata:{slot_id:data.slot_id,creative_id:data.creative_id}});return NextResponse.json({assignment:data},{status:201});}
+const Input = z.object({
+  slot_ids: z.array(z.string().uuid()).min(1, 'Choose at least one position.').optional(),
+  slot_id: z.string().uuid().optional(),
+  creative_id: z.string().uuid(),
+  device: z.enum(['all', 'desktop', 'mobile']).default('all'),
+  starts_at: z.string().nullable().optional(),
+  ends_at: z.string().nullable().optional(),
+  priority: z.number().int().min(1).max(1000).default(100),
+  is_active: z.boolean().default(true),
+}).refine(v => v.slot_ids?.length || v.slot_id, { message: 'Choose at least one position.' });
+
+export async function POST(req: Request) {
+  const c = await adAdminContext();
+  if (!c) return NextResponse.json({ error: 'Advertising permission required' }, { status: 403 });
+  const parsed = Input.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid placement' }, { status: 422 });
+  const { slot_ids, slot_id, ...rest } = parsed.data;
+  const slots = slot_ids?.length ? slot_ids : [slot_id!];
+  if (rest.starts_at && rest.ends_at && new Date(rest.ends_at) <= new Date(rest.starts_at)) {
+    return NextResponse.json({ error: 'The end date must be after the start date.' }, { status: 422 });
+  }
+  const rows = slots.map(id => ({ ...rest, slot_id: id }));
+  const { data, error } = await c.supabase.from('ad_assignments').insert(rows).select('*');
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await c.supabase.from('audit_log').insert((data || []).map(a => ({ actor_id: c.user.id, action: 'ad_assignment.create', entity_type: 'ad_assignment', entity_id: a.id, metadata: { slot_id: a.slot_id, creative_id: a.creative_id, device: a.device } })));
+  refreshAdPages();
+  return NextResponse.json({ assignments: data }, { status: 201 });
+}

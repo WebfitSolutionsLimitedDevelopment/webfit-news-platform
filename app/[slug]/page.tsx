@@ -11,6 +11,8 @@ import { articleHtmlToText, sanitizeArticleHtml } from '@/lib/article-html';
 import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story-display';
 import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
 import discovery from '@/components/ArticleDiscovery.module.css';
+import { AdSlot } from '@/components/AdSlot';
+import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
 
 export const dynamic='force-dynamic';
 
@@ -57,6 +59,13 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const resolvedContent=await resolveInlineArticleMedia(article.content_html||'');
   const clean=sanitizeArticleHtml(resolvedContent);
   const speechText=articleHtmlToText(`${displayTitle}. ${article.subtitle||''}. ${clean}`);
+
+  // Ad breaks: after paragraph 3 on stories with at least 5 paragraphs, and
+  // after paragraph 8 on stories with at least 11, so ads never crowd a short story.
+  const paragraphCount=countTopLevelParagraphs(clean);
+  const breaks=[paragraphCount>=5?3:0,paragraphCount>=11?8:0].filter(Boolean);
+  const bodyChunks=splitArticleHtml(clean,breaks);
+  const breakSlots=['ARTICLE_INLINE_1','ARTICLE_INLINE_2'];
   const cats=(article.article_categories||[]).map((x:any)=>x.category).filter(Boolean);
   const related=await getRelatedStories(article.id,cats.map((c:any)=>c.id),4);
 
@@ -83,6 +92,8 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   return <>
     <SiteHeader/>
 
+    <div className={`shell ${discovery.topAd}`}><AdSlot slotKey="HEADER_LEADERBOARD"/></div>
+
     <div className={discovery.articleLayout}>
       <main className={`${discovery.articleColumn} article-shell`}>
         <article>
@@ -94,18 +105,25 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
-          <div className="article-body" dangerouslySetInnerHTML={{__html:clean}}/>
+          {bodyChunks.map((html,index)=><div key={index}>
+            <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
+            {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}
+          </div>)}
+          <AdSlot slotKey="ARTICLE_BOTTOM" variant="inline"/>
           {cats.length?<div className="article-categories">{cats.map((c:any)=><Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>:null}
         </article>
       </main>
 
-      {popular.length?<aside className={discovery.sidebar} aria-label="Popular stories">
+      <div className={discovery.railColumn}>
+        {popular.length?<aside className={discovery.sidebar} aria-label="Popular stories">
         <span className={discovery.sidebarLabel}>What readers are opening</span>
         <h2 className={discovery.sidebarTitle}>Popular</h2>
         <div className={discovery.popularList}>
           {popular.map((story:any,index:number)=><Link className={discovery.popularItem} key={story.id} href={`/${story.slug}`}><strong>{index+1}</strong><span>{getPublicStoryTitle(story.title)}</span></Link>)}
         </div>
       </aside>:null}
+        <div className={discovery.railAd}><AdSlot slotKey="ARTICLE_RAIL" variant="rail"/></div>
+      </div>
     </div>
 
     {related.length?<section className={`${discovery.discovery} ${discovery.moreBand}`}>
@@ -120,6 +138,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
 
     <EditorialSupportPrompt/>
     <PublicFooter/>
+    <AdSlot slotKey="MOBILE_STICKY" variant="sticky"/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>
   </>;
 }
