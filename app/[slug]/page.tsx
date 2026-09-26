@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
+import { AdSlot } from '@/components/AdSlot';
 import { ArticleAudioPlayer } from '@/components/ArticleAudioPlayer';
 import { EditorialSupportPrompt } from '@/components/EditorialSupportPrompt';
 import { getArticleBySlug, getLatestStories, getRelatedStories, resolveInlineArticleMedia } from '@/lib/news';
@@ -82,6 +83,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
 
   return <>
     <SiteHeader/>
+    <div className="shell"><AdSlot slotKey="ARTICLE_TOP" className="article-ad-top"/></div>
 
     <div className={discovery.articleLayout}>
       <main className={`${discovery.articleColumn} article-shell`}>
@@ -94,7 +96,9 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
+          <AdSlot slotKey="ARTICLE_INLINE_1" className="article-inline-ad"/>
           <div className="article-body" dangerouslySetInnerHTML={{__html:clean}}/>
+          <AdSlot slotKey="ARTICLE_INLINE_2" className="article-inline-ad"/>
           {cats.length?<div className="article-categories">{cats.map((c:any)=><Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>:null}
         </article>
       </main>
@@ -108,6 +112,8 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
       </aside>:null}
     </div>
 
+    <div className="shell"><AdSlot slotKey="ARTICLE_BOTTOM" className="article-ad-bottom"/></div>
+
     {related.length?<section className={`${discovery.discovery} ${discovery.moreBand}`}>
       <div className={discovery.discoveryHeader}><div><span>Related</span><h2>More on this story</h2></div></div>
       <div className={discovery.discoveryGrid}>{related.map((story:any)=><StoryCard key={story.id} story={story}/>)}</div>
@@ -119,6 +125,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
     </section>:null}
 
     <EditorialSupportPrompt/>
+    <AdSlot slotKey="MOBILE_STICKY"/>
     <PublicFooter/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>
   </>;

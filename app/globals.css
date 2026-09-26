@@ -234,3 +234,25 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
 .article-meta{align-items:center;flex-wrap:wrap}.article-byline{margin-right:auto}.article-time-group{display:grid;gap:2px}.article-meta-label{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#7a828b}.article-time-group time{white-space:nowrap}
 .footer-credential{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:8px;padding:6px 9px;border:1px solid #3a4651;border-radius:999px;color:#dbe1e6;font-size:10px;font-weight:800;letter-spacing:.04em}
 @media(max-width:760px){.editorial-trust{align-items:flex-start;flex-direction:column;gap:10px;margin-top:-4px}.editorial-trust-links{width:100%;gap:12px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.editorial-trust-links::-webkit-scrollbar{display:none}.editorial-trust-compact{margin-top:12px}.article-byline{width:100%;margin-right:0}.article-time-group{min-width:calc(50% - 9px)}}
+
+
+/* Campaign media and page-level advertising placements. */
+.ad-zone-live video{display:block;width:auto;max-width:100%;max-height:250px;margin:0 auto;object-fit:contain}
+.ad-cta{display:inline-flex;margin:10px auto 2px;padding:8px 14px;border-radius:999px;background:#0a354d;color:#fff;font-size:12px;font-weight:800;text-decoration:none}
+.ad-creative-preview{display:grid;gap:8px;padding:12px;border:1px solid #dfe2e6;border-radius:9px;background:#f8f9fa}
+.ad-creative-preview>span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#69707b}
+.ad-creative-preview img,.ad-creative-preview video{display:block;max-width:100%;max-height:320px;margin:0 auto;object-fit:contain;background:#eceef1}
+.ad-small-button{font-size:11px;padding:7px 10px;white-space:nowrap}
+.article-ad-top,.article-ad-bottom,.category-ad-top{width:min(970px,100%)}
+.article-inline-ad{width:min(728px,100%);margin:24px auto}
+.category-ad-top{margin-top:8px}
+.mobile-sticky-ad{display:none}
+.mobile-sticky-ad-close{display:none}
+@media(max-width:720px){
+  .mobile-sticky-ad{display:block;position:fixed;z-index:1000;left:0;right:0;bottom:0;padding:0 8px env(safe-area-inset-bottom,0px);background:#fff;border-top:1px solid #d9dde3;box-shadow:0 -6px 20px rgba(18,25,35,.14)}
+  .mobile-sticky-ad .ad-zone{max-width:320px;min-height:50px;margin:0 auto;border-radius:0}
+  .mobile-sticky-ad .ad-zone-live{padding-top:14px;background:#fff}
+  .mobile-sticky-ad .ad-zone-live img{width:auto;max-width:100%;max-height:50px;object-fit:contain}
+  .mobile-sticky-ad-close{display:block;position:absolute;right:8px;top:1px;z-index:4;width:24px;height:24px;border:0;border-radius:50%;background:#111;color:#fff;font-size:18px;line-height:1;cursor:pointer}
+  .article-ad-top,.article-ad-bottom,.category-ad-top{width:100%}
+}

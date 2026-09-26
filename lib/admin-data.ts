@@ -51,7 +51,20 @@ export async function getHomepageAdmin() {
 }
 
 export async function getCategoriesAdmin(){const supabase=await createClient();const {data,error}=await supabase.from('categories').select('id,name,slug,description,is_active,sort_order,parent:parent_id(name)').order('name');if(error)throw error;return data||[];}
-export async function getAdsAdmin(){const supabase=await createClient();const [{data:slots},{data:campaigns},{data:creatives},{data:assignments},{data:media}]=await Promise.all([supabase.from('ad_slots').select('*').order('label'),supabase.from('ad_campaigns').select('*').order('created_at',{ascending:false}),supabase.from('ad_creatives').select('*,media:media_id(id,filename,public_url)').order('created_at',{ascending:false}),supabase.from('ad_assignments').select('*,slot:slot_id(key,label),creative:creative_id(id,headline)').order('created_at',{ascending:false}),supabase.from('media').select('id,filename,public_url').like('mime_type','image/%').order('created_at',{ascending:false}).limit(120)]);return {slots:slots||[],campaigns:campaigns||[],creatives:creatives||[],assignments:assignments||[],media:media||[]};}
+export async function getAdsAdmin(){
+  const supabase=await createClient();
+  const results=await Promise.all([
+    supabase.from('ad_slots').select('*').order('label'),
+    supabase.from('ad_campaigns').select('*').order('created_at',{ascending:false}),
+    supabase.from('ad_creatives').select('*,media:media_id(id,filename,public_url,mime_type),poster:poster_media_id(id,filename,public_url)').order('created_at',{ascending:false}),
+    supabase.from('ad_assignments').select('*,slot:slot_id(id,key,label),creative:creative_id(id,headline,campaign:campaign_id(id,campaign_name,status),media:media_id(filename),poster:poster_media_id(filename))').order('created_at',{ascending:false}),
+    supabase.from('media').select('id,filename,public_url,mime_type,alt_text').or('mime_type.like.image/%,mime_type.like.video/%').order('created_at',{ascending:false}).limit(120)
+  ]);
+  const failed=results.find(result=>result.error);
+  if(failed?.error)throw new Error('Advertising data could not be loaded: '+failed.error.message);
+  const [slotResult,campaignResult,creativeResult,assignmentResult,mediaResult]=results;
+  return {slots:slotResult.data||[],campaigns:campaignResult.data||[],creatives:creativeResult.data||[],assignments:assignmentResult.data||[],media:mediaResult.data||[]};
+}
 export async function getVideosAdmin(){const supabase=await createClient();const {data}=await supabase.from('videos').select('*').order('created_at',{ascending:false});return data||[];}
 export async function getIssuesAdmin(){const supabase=await createClient();const {data}=await supabase.from('digital_issues').select('*').order('publication_date',{ascending:false});return data||[];}
 

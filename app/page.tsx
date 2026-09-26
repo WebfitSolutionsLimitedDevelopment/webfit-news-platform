@@ -127,6 +127,7 @@ export default async function Home(){
 
       {!hero&&!rest.length?<section className="prelaunch"><img src="/webfit-news-logo.png" alt="Webfit News"/><h1>Webfit News newsroom is connected.</h1><p>Editorial content is ready for homepage curation.</p></section>:null}
     </main>
+    <AdSlot slotKey="MOBILE_STICKY"/>
     <PublicFooter/>
   </>;
 }
