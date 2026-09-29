@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import styles from './VotingGuideCard.module.css';
 
 /** Public-information signpost. No personal information is collected. */
