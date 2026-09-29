@@ -13,11 +13,11 @@ const STORAGE_OBJECT = '/storage/v1/object/public/';
 /**
  * Posters are served through Supabase's image resizer at the size the slot
  * actually needs (and as WebP where the browser supports it), instead of the
- * full upload. Anything that isn't a Supabase image, or is a GIF, is left as is.
+ * full upload ("contain" keeps the poster's shape; the default "cover" crops it). Anything that isn't a Supabase image, or is a GIF, is left as is.
  */
 function resized(url: string, width: number) {
   if (!url.includes(STORAGE_OBJECT) || /\.gif($|\?)/i.test(url)) return url;
-  return `${url.replace(STORAGE_OBJECT, '/storage/v1/render/image/public/')}?width=${width}&quality=78`;
+  return `${url.replace(STORAGE_OBJECT, '/storage/v1/render/image/public/')}?width=${width}&resize=contain&quality=78`;
 }
 
 function srcSet(url: string, widths: number[]) {
