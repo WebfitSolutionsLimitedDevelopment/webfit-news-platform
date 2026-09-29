@@ -7,7 +7,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 import { AdSlot } from '@/components/AdSlot';
-import { NOINDEX_SECTIONS, SITE_NAME, absoluteUrl, articleUrl } from '@/lib/site';
+import { NOINDEX_SECTIONS, RSS_ALTERNATE, SITE_NAME, absoluteUrl, articleUrl } from '@/lib/site';
 import { getPublicStoryTitle } from '@/lib/public-story-display';
 
 export const revalidate = 60;
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: { absolute: title },
     description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, types: RSS_ALTERNATE },
     robots: { index: indexable, follow: true },
     openGraph: { type: 'website', url, siteName: SITE_NAME, title, description, locale: 'en_NZ', images: stories[0]?.media?.public_url ? [{ url: stories[0].media.public_url }] : undefined },
     twitter: { card: 'summary_large_image', title, description },

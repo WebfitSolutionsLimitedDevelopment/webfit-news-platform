@@ -12,7 +12,7 @@ import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story
 import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
 import discovery from '@/components/ArticleDiscovery.module.css';
 import { AdSlot } from '@/components/AdSlot';
-import { SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
+import { RSS_ALTERNATE, SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
 import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
 
 /**
@@ -24,7 +24,7 @@ export const revalidate=300;
 export async function generateStaticParams(){return [];}
 
 /** Search titles keep the whole headline (Google trims the display itself); cutting at 60 characters dropped the keywords. */
-const SEARCH_TITLE_MAX_LENGTH=100;
+const SEARCH_TITLE_MAX_LENGTH=110;
 
 function storyDescription(article:any):string{
   const direct=article.meta_description||article.excerpt||article.subtitle;
@@ -39,7 +39,9 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
 
   const canonical=articleCanonical(article.slug,article.canonical_url);
   const publicTitle=getPublicStoryTitle(article.title);
-  const seoTitle=truncateSeoText(article.seo_title||publicTitle,SEARCH_TITLE_MAX_LENGTH)||publicTitle;
+  // Older stories stored a pre-cut SEO title ending in "..."; use the full headline instead.
+  const storedSeoTitle=article.seo_title&&!/(\.\.\.|…)\s*$/.test(article.seo_title)?article.seo_title:null;
+  const seoTitle=truncateSeoText(storedSeoTitle||publicTitle,SEARCH_TITLE_MAX_LENGTH)||publicTitle;
   const metaDescription=storyDescription(article);
   const socialTitle=article.social_title||publicTitle;
   const socialDescription=article.social_description||metaDescription||undefined;
@@ -50,7 +52,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   return{
     title:{absolute:seoTitle},
     description:metaDescription,
-    alternates:{canonical},
+    alternates:{canonical,types:RSS_ALTERNATE},
     robots:{index:indexable,follow:article.robots_follow!==false,googleBot:{index:indexable,follow:article.robots_follow!==false,'max-image-preview':'large','max-snippet':-1,'max-video-preview':-1}},
     authors:article.author?.name?[{name:article.author.name}]:[{name:SITE_NAME}],
     openGraph:{

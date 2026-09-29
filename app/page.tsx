@@ -11,14 +11,14 @@ import { getPublicStoryTitle } from '@/lib/public-story-display';
 import adFlow from './HomeAdFlow.module.css';
 import styles from './EditorialHomepage.module.css';
 import type { Metadata } from 'next';
-import { SITE_NAME, absoluteUrl } from '@/lib/site';
+import { RSS_ALTERNATE, SITE_NAME, absoluteUrl } from '@/lib/site';
 
 export const revalidate=60;
 
 export const metadata:Metadata={
   title:{absolute:'Webfit News: New Zealand news, politics and community stories'},
   description:'Independent New Zealand news from Webfit News: politics, Auckland and community stories, immigration, business and Indian-Kiwi news, updated through the day.',
-  alternates:{canonical:absoluteUrl('/')},
+  alternates:{canonical:absoluteUrl('/'),types:RSS_ALTERNATE},
   openGraph:{type:'website',url:absoluteUrl('/'),siteName:SITE_NAME,title:'Webfit News: New Zealand news, politics and community stories',description:'Independent New Zealand news, analysis and community reporting.',locale:'en_NZ'},
   twitter:{card:'summary_large_image'},
 };

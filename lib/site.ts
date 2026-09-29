@@ -38,3 +38,6 @@ export function articleCanonical(slug: string, stored?: string | null): string {
 
 /** Sections that are advertising or housekeeping, not journalism: kept out of search. */
 export const NOINDEX_SECTIONS = new Set(['advertisement', 'business-ads', 'uncategorized', 'events-offers']);
+
+/** RSS discovery link. Page-level `alternates` replace the layout's, so pages spread this in. */
+export const RSS_ALTERNATE = { 'application/rss+xml': [{ url: '/rss.xml', title: 'Webfit News: latest stories' }] };
