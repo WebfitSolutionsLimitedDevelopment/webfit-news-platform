@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase-browser';
+import { readFileImageSize } from '@/lib/image-dimensions';
 
 type Any = Record<string, any>;
 
@@ -81,7 +82,9 @@ export async function uploadToMedia(file: File, altText: string): Promise<string
   const { error: uploadError } = await supabase.storage.from('news-media').upload(path, file, { contentType: file.type, cacheControl: '31536000', upsert: false });
   if (uploadError) throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
   const { data: pub } = supabase.storage.from('news-media').getPublicUrl(path);
+  const size = await readFileImageSize(file).catch(() => null);
   const { data, error } = await supabase.from('media').insert({
+    width: size?.width ?? null, height: size?.height ?? null,
     uploaded_by: user.id, storage_bucket: 'news-media', storage_path: path, public_url: pub.publicUrl,
     filename: file.name, mime_type: file.type, file_size: file.size, alt_text: altText, caption: '', credit: '', migration_status: 'native',
   }).select('id').single();
