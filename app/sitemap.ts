@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { createClient } from '../lib/supabase-server';
-
-const SITE_URL = 'https://webfitnews.com';
+import { NOINDEX_SECTIONS, SITE_URL, articleUrl } from '../lib/site';
 
 const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge-pdf','split-pdf','compress-pdf','pdf-to-png','rotate-pdf','watermark-pdf','png-to-pdf','pdf-to-text','word-to-jpg','remove-pdf-pages','organize-pdf-pages','add-page-numbers-to-pdf','text-to-pdf'];
 const evergreenPages: MetadataRoute.Sitemap = [
@@ -47,8 +46,13 @@ function safeDate(value:string|null|undefined,fallback:string|null|undefined){co
 
 export default async function sitemap():Promise<MetadataRoute.Sitemap>{
   const supabase=await createClient();const now=new Date().toISOString();
-  const {data,error}=await supabase.from('articles').select('slug,updated_at,published_at').eq('status','published').not('slug','is',null).neq('slug','').not('published_at','is',null).lte('published_at',now).order('published_at',{ascending:false}).limit(50000);
+  const {data,error}=await supabase.from('articles').select('slug,updated_at,published_at,robots_index').eq('status','published').not('slug','is',null).neq('slug','').not('published_at','is',null).lte('published_at',now).order('published_at',{ascending:false}).limit(50000);
   if(error)console.error('Failed to build sitemap:',error.message);
-  const articles=(data||[]).filter(a=>typeof a.slug==='string'&&a.slug.trim().length>0);
-  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...articles.map(a=>({url:`${SITE_URL}/${a.slug.trim()}/`,lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
+  const articles=(data||[]).filter(a=>typeof a.slug==='string'&&a.slug.trim().length>0&&a.robots_index!==false);
+  // Section pages that actually have stories, so Google can find every beat of the newsroom.
+  const {data:sections}=await supabase.from('categories').select('slug,article_categories(count)').eq('is_active',true);
+  const sectionPages=(sections||[])
+    .filter((c:any)=>c.slug&&!NOINDEX_SECTIONS.has(c.slug)&&Number(c.article_categories?.[0]?.count||0)>0)
+    .map((c:any)=>({url:`${SITE_URL}/category/${c.slug}`,changeFrequency:'hourly' as const,priority:0.7}));
+  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...sectionPages,...articles.map(a=>({url:articleUrl(a.slug),lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
 }

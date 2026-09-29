@@ -4,8 +4,10 @@ import { getPublicEnv } from './lib/env';
 
 type CookieToSet = { name: string; value: string; options?: any };
 
-const LEGACY_HOSTS = new Set(['webfitnews.co.nz', 'www.webfitnews.co.nz']);
-const CANONICAL_HOST = 'www.webfitnews.com';
+// Every other host that serves this site redirects to the one canonical host,
+// so Google never sees two copies of a page.
+const LEGACY_HOSTS = new Set(['webfitnews.co.nz', 'www.webfitnews.co.nz', 'www.webfitnews.com']);
+const CANONICAL_HOST = 'webfitnews.com';
 
 function redirectCandidates(pathname: string, search = '') {
   const withoutTrailing = pathname === '/' ? '/' : (pathname.replace(/\/+$/, '') || '/');
@@ -28,6 +30,9 @@ export async function proxy(request: NextRequest) {
     const destination = request.nextUrl.clone();
     destination.protocol = 'https:';
     destination.host = CANONICAL_HOST;
+    destination.port = '';
+    // Drop the WordPress-era trailing slash in the same hop, instead of a second redirect.
+    if (destination.pathname.length > 1) destination.pathname = destination.pathname.replace(/\/+$/, '') || '/';
     return NextResponse.redirect(destination, 308);
   }
 

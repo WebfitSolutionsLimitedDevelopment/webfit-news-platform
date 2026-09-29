@@ -18,7 +18,7 @@ export default function HomepageManager({initialSections,articles}:{initialSecti
   <div className="homepage-admin-list">{sections.map(s=><section className="admin-card homepage-section-admin" key={s.id}>
     <div><span className="drag-handle">⋮⋮</span><div><h2>{s.title}</h2><p>{s.section_type==='manual'?'Manual editorial selection':s.section_type==='category'?`Automatic from ${s.category?.name||'category'}`:'Automatic feed'} · max {s.max_items}</p></div></div>
     <label className="toggle"><input type="checkbox" checked={s.is_enabled} onChange={e=>patchSection(s.id,{is_enabled:e.target.checked})}/><span>Enabled</span></label>
-    {s.section_type==='manual'&&<div className="homepage-slot-list">{(s.slots||[]).map(slot=><div key={slot.position}><b>{slot.position}</b><select value={slot.article?.id||''} onChange={e=>patchSlot(s.id,slot.position,e.target.value)}><option value="">Choose article</option>{articles.map(a=><option key={a.id} value={a.id}>{a.title}</option>)}</select>{slot.article?<a target="_blank" href={`/${slot.article.slug}/`}>View</a>:<span/>}</div>)}</div>}
+    {s.section_type==='manual'&&<div className="homepage-slot-list">{(s.slots||[]).map(slot=><div key={slot.position}><b>{slot.position}</b><select value={slot.article?.id||''} onChange={e=>patchSlot(s.id,slot.position,e.target.value)}><option value="">Choose article</option>{articles.map(a=><option key={a.id} value={a.id}>{a.title}</option>)}</select>{slot.article?<a target="_blank" href={`/${slot.article.slug}`}>View</a>:<span/>}</div>)}</div>}
   </section>)}</div>
  </>
 }

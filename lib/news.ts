@@ -55,7 +55,7 @@ export async function getArticleBySlug(slug: string) {
   // navigation/search could later find the same published record.
   noStore();
   const supabase = await createClient();
-  const articleFields = '*,author:author_id(name,slug,bio),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit),article_categories(category:category_id(id,name,slug))';
+  const articleFields = '*,author:author_id(name,slug,bio,title),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit,width,height),article_categories(category:category_id(id,name,slug))';
 
   const { data, error } = await supabase.from('articles')
     .select(articleFields)

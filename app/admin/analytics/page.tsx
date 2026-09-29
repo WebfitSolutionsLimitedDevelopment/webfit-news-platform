@@ -284,7 +284,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
               <h3>{selectedArticle.title}</h3>
               <div className="story-analytics-big-number">{compact(selectedPerformance?.views || 0)} <span>views</span></div>
               <p>Published {formatPublished(selectedArticle.published_at)}</p>
-              <a className="admin-secondary" href={`/${selectedArticle.slug}/`} target="_blank" rel="noreferrer">Open story</a>
+              <a className="admin-secondary" href={`/${selectedArticle.slug}`} target="_blank" rel="noreferrer">Open story</a>
             </>
           ) : topStory ? (
             <>

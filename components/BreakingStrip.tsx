@@ -24,7 +24,7 @@ export function BreakingStrip({ stories }: { stories: BreakingStory[] }) {
                 <Link
                   className="breaking-item"
                   key={story.id}
-                  href={`/${story.slug}/`}
+                  href={`/${story.slug}`}
                 >
                   <span>{story.title}</span>
                 </Link>
@@ -36,7 +36,7 @@ export function BreakingStrip({ stories }: { stories: BreakingStory[] }) {
                 <Link
                   className="breaking-item"
                   key={`repeat-${story.id}`}
-                  href={`/${story.slug}/`}
+                  href={`/${story.slug}`}
                   tabIndex={-1}
                 >
                   <span>{story.title}</span>

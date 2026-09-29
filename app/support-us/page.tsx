@@ -2,7 +2,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { SupportForm } from '@/components/support/SupportForm';
 
-export const metadata={title:'Support Webfit News',description:'Support independent New Zealand journalism and community reporting from Webfit News.'};
+export const metadata={title:'Support Webfit News',description:'Support independent New Zealand journalism and community reporting from Webfit News.',alternates:{canonical:'https://webfitnews.com/support-us'},robots:{index:true,follow:true}};
 
 export default function SupportPage(){
   return <><SiteHeader/><main className="support-page"><div className="shell support-shell">

@@ -43,6 +43,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
     description: tagline,
 
+    // Let Google show large images, full snippets and video previews in Search,
+    // Top Stories and Discover. Without max-image-preview:large, Discover only
+    // shows small thumbnails.
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+    },
+
+    alternates: {
+      types: { 'application/rss+xml': [{ url: '/rss.xml', title: 'Webfit News: latest stories' }] },
+    },
+
     manifest: '/manifest.json',
 
     appleWebApp: {
@@ -87,6 +100,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         url:CANONICAL_SITE_URL,
         logo:{'@type':'ImageObject',url:`${CANONICAL_SITE_URL}/webfit-news-logo.png`},
         description:'Independent New Zealand news, analysis, community reporting and practical New Zealand information guides.',
+        areaServed:{'@type':'Country',name:'New Zealand'},
+        sameAs:['https://www.facebook.com/webfitnews','https://www.youtube.com/@webfitnews'],
+        publishingPrinciples:`${CANONICAL_SITE_URL}/editorial-policy`,
+        correctionsPolicy:`${CANONICAL_SITE_URL}/corrections`,
+        ethicsPolicy:`${CANONICAL_SITE_URL}/editorial-policy`,
       },
       {
         '@type':'WebSite',
@@ -101,9 +119,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en-NZ">
-      <body>{children}</body>
-
-      <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(siteStructuredData).replace(/</g,'\\u003c')}}/>
+      <body>
+        {children}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(siteStructuredData).replace(/</g,'\\u003c')}}/>
 
       {!isNativeApp && (
         <>
@@ -129,6 +147,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }
         `}
       </Script>
+      </body>
     </html>
   );
 }

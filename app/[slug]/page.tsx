@@ -12,37 +12,53 @@ import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story
 import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
 import discovery from '@/components/ArticleDiscovery.module.css';
 import { AdSlot } from '@/components/AdSlot';
+import { SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
 import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
 
 export const dynamic='force-dynamic';
+
+/** Search titles keep the whole headline (Google trims the display itself); cutting at 60 characters dropped the keywords. */
+const SEARCH_TITLE_MAX_LENGTH=100;
+
+function storyDescription(article:any):string{
+  const direct=article.meta_description||article.excerpt||article.subtitle;
+  if(direct)return truncateSeoText(direct,SEO_DESCRIPTION_MAX_LENGTH);
+  return truncateSeoText(articleHtmlToText(article.content_html||''),SEO_DESCRIPTION_MAX_LENGTH);
+}
 
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{
   const {slug}=await params;
   const article=await getArticleBySlug(slug);
   if(!article)return{};
 
-  const canonical=article.canonical_url||`https://webfitnews.com/${article.slug}/`;
+  const canonical=articleCanonical(article.slug,article.canonical_url);
   const publicTitle=getPublicStoryTitle(article.title);
-  const seoTitle=truncateSeoText(article.seo_title||publicTitle,SEO_TITLE_MAX_LENGTH)||publicTitle;
-  const metaDescription=truncateSeoText(article.meta_description||article.excerpt,SEO_DESCRIPTION_MAX_LENGTH);
+  const seoTitle=truncateSeoText(article.seo_title||publicTitle,SEARCH_TITLE_MAX_LENGTH)||publicTitle;
+  const metaDescription=storyDescription(article);
   const socialTitle=article.social_title||publicTitle;
-  const socialDescription=article.social_description||article.meta_description||article.excerpt||undefined;
-  const socialImage=article.media?.public_url||`https://webfitnews.com/${article.slug}/social-card`;
+  const socialDescription=article.social_description||metaDescription||undefined;
+  const socialImage=article.media?.public_url||`${articleUrl(article.slug)}/social-card`;
+  const indexable=article.robots_index!==false;
+  const cats=(article.article_categories||[]).map((x:any)=>x.category).filter(Boolean);
 
   return{
     title:{absolute:seoTitle},
     description:metaDescription,
     alternates:{canonical},
+    robots:{index:indexable,follow:article.robots_follow!==false,googleBot:{index:indexable,follow:article.robots_follow!==false,'max-image-preview':'large','max-snippet':-1,'max-video-preview':-1}},
+    authors:article.author?.name?[{name:article.author.name}]:[{name:SITE_NAME}],
     openGraph:{
       type:'article',
       url:canonical,
-      siteName:'Webfit News',
+      siteName:SITE_NAME,
       locale:'en_NZ',
       title:socialTitle,
       description:socialDescription,
-      images:[{url:socialImage,alt:article.media?.alt_text||article.title}],
+      images:[{url:socialImage,alt:article.media?.alt_text||publicTitle,...(article.media?.width&&article.media?.height?{width:article.media.width,height:article.media.height}:{})}],
       publishedTime:article.published_at||undefined,
-      modifiedTime:article.updated_at||undefined
+      modifiedTime:article.updated_at||undefined,
+      section:cats[0]?.name,
+      authors:article.author?.name?[article.author.name]:undefined,
     },
     twitter:{card:'summary_large_image',title:socialTitle,description:socialDescription,images:[socialImage]}
   };
@@ -52,7 +68,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const {slug}=await params;
   const article=await getArticleBySlug(slug);
   if(!article)notFound();
-  if(article.slug!==slug)redirect(`/${article.slug}/`);
+  if(article.slug!==slug)redirect(`/${article.slug}`);
 
   const displayTitle=getPublicStoryTitle(article.title);
   const displayType=getPublicStoryTypeLabel(article.article_type,article.title);
@@ -76,17 +92,41 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const popular=discoveryStories.slice(0,4);
   const keepReading=discoveryStories.slice(4,12);
 
+  const pageUrl=articleUrl(article.slug);
+  const bodyText=articleHtmlToText(clean);
+  const image=article.media?.public_url?{'@type':'ImageObject',url:article.media.public_url,...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{}),...(article.media.caption?{caption:article.media.caption}:{})}:undefined;
   const jsonLd={
     '@context':'https://schema.org',
-    '@type':'NewsArticle',
-    headline:displayTitle,
-    description:article.meta_description||article.excerpt,
-    datePublished:article.published_at,
-    dateModified:article.updated_at,
-    image:article.media?.public_url?[article.media.public_url]:undefined,
-    author:{'@type':'Person',name:article.author?.name||'Webfit News'},
-    publisher:{'@type':'Organization',name:'Webfit News',logo:{'@type':'ImageObject',url:'https://webfitnews.com/webfit-news-logo.png'}},
-    mainEntityOfPage:`https://webfitnews.com/${article.slug}/`
+    '@graph':[
+      {
+        '@type':'NewsArticle',
+        '@id':`${pageUrl}#article`,
+        headline:displayTitle.slice(0,110),
+        description:storyDescription(article),
+        datePublished:article.published_at,
+        dateModified:article.updated_at||article.published_at,
+        image:image?[image]:undefined,
+        author:article.author?.name
+          ?{'@type':'Person',name:article.author.name,...(article.author.title?{jobTitle:article.author.title}:{})}
+          :{'@type':'Organization',name:SITE_NAME,url:SITE_URL},
+        publisher:{'@id':`${SITE_URL}/#organization`},
+        mainEntityOfPage:{'@type':'WebPage','@id':pageUrl},
+        url:pageUrl,
+        articleSection:cats[0]?.name,
+        keywords:article.focus_keyword||undefined,
+        inLanguage:'en-NZ',
+        isAccessibleForFree:true,
+        wordCount:bodyText?bodyText.split(/\s+/).filter(Boolean).length:undefined,
+      },
+      {
+        '@type':'BreadcrumbList',
+        itemListElement:[
+          {'@type':'ListItem',position:1,name:'Home',item:absoluteUrl('/')},
+          ...(cats[0]?[{'@type':'ListItem',position:2,name:cats[0].name,item:absoluteUrl(`/category/${cats[0].slug}`)}]:[]),
+          {'@type':'ListItem',position:cats[0]?3:2,name:displayTitle,item:pageUrl},
+        ],
+      },
+    ],
   };
 
   return <>
@@ -103,7 +143,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           {article.subtitle?<p className="standfirst">{article.subtitle}</p>:null}
           <div className="article-meta"><span>By {article.author?.name||'Webfit News'}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
           <ArticleAudioPlayer text={speechText}/>
-          <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(`https://webfitnews.com/${article.slug}/`)}`}>Email</a></div>
+          <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
           {bodyChunks.map((html,index)=><div key={index}>
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
@@ -139,6 +179,6 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
     <EditorialSupportPrompt/>
     <PublicFooter/>
     <AdSlot slotKey="MOBILE_STICKY" variant="sticky"/>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replace(/</g,'\\u003c')}}/>
   </>;
 }

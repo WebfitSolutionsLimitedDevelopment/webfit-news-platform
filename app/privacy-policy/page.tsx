@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 
-export const metadata={title:'Privacy Policy'};
+export const metadata={title:'Privacy Policy',description:'How Webfit News collects, uses and protects personal information.',alternates:{canonical:'https://webfitnews.com/privacy-policy'},robots:{index:true,follow:true}};
 
 export default function PrivacyPolicyPage(){
   return <>

@@ -6,6 +6,12 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 
 export const revalidate = 60;
+
+/** Old WordPress archive pages: crawlable so Google can follow them to older stories, but not shown in results themselves. */
+export async function generateMetadata({ params }: { params: Promise<{ number: string }> }) {
+  const { number } = await params;
+  return { title: `Latest stories, page ${number}`, alternates: { canonical: `https://webfitnews.com/page/${number}` }, robots: { index: false, follow: true } };
+}
 const PAGE_SIZE = 24;
 
 export default async function LegacyPageArchive({ params }: { params: Promise<{ number: string }> }) {

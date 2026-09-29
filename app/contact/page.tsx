@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 
-export const metadata={title:'Contact Webfit News'};
+export const metadata={title:'Contact Webfit News',description:'Contact the Webfit News newsroom with story tips, corrections, advertising or general enquiries.',alternates:{canonical:'https://webfitnews.com/contact'},robots:{index:true,follow:true}};
 
 export default function ContactPage(){
   return <>

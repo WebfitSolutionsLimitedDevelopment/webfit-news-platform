@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 
-export const metadata={title:'Terms of Use'};
+export const metadata={title:'Terms of Use',description:'The terms that apply when using the Webfit News website.',alternates:{canonical:'https://webfitnews.com/terms'},robots:{index:true,follow:true}};
 
 export default function TermsPage(){
   return <>
