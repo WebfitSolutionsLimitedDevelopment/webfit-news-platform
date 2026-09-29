@@ -19,7 +19,7 @@ function cleanExcerpt(value:string|null){
 }
 export function StoryCard({story,lead=false,variant,eyebrowLabel}:{story:Story;lead?:boolean;variant?:Variant;eyebrowLabel?:string}){
   const resolved:Variant=variant||(lead?'lead':'standard');
-  const image=story.media?.public_url||'/webfit-news-logo.png';
+  const image=story.media?.public_url||'/webfit-news-logo-400.webp';
   const excerpt=cleanExcerpt(story.excerpt);
   const displayTitle=getPublicStoryTitle(story.title);
   const displayType=getPublicStoryTypeLabel(story.article_type,story.title,eyebrowLabel);

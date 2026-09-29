@@ -11,7 +11,7 @@ const groups=[
 function AdminMobileNav({active}:{active?:string}){
   return <div className="admin-mobile-bar">
     <Link className="admin-mobile-brand" href="/admin">
-      <img src="/webfit-news-logo.png" alt="Webfit News"/>
+      <img src="/webfit-news-logo-400.webp" alt="Webfit News"/>
       <span>NEWSROOM</span>
     </Link>
     <Link className="admin-mobile-new" href="/admin/articles/new">New story</Link>
@@ -32,7 +32,7 @@ export function AdminShell({children,active}:{children:ReactNode;active?:string}
   return <div className="admin-layout premium-admin">
     <AdminMobileNav active={active}/>
     <aside className="admin-sidebar premium-sidebar">
-      <Link className="admin-brand premium-admin-brand" href="/admin"><img src="/webfit-news-logo.png" alt="Webfit News"/><div><span>WEBFIT</span><strong>NEWSROOM</strong></div></Link>
+      <Link className="admin-brand premium-admin-brand" href="/admin"><img src="/webfit-news-logo-400.webp" alt="Webfit News"/><div><span>WEBFIT</span><strong>NEWSROOM</strong></div></Link>
       <nav className="admin-nav-groups">{groups.map(group=><div className="admin-nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label,href])=><Link key={href} className={active===label?'active':''} href={href}>{label}</Link>)}</div>)}</nav>
       <div className="admin-sidebar-footer"><Link href="/" target="_blank">Open public website</Link><LogoutButton/><span>Webfit News CMS</span></div>
     </aside>

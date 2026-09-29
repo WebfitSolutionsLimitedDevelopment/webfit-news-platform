@@ -46,7 +46,7 @@ export default function Login() {
 
   return <main className="login-page">
     <form onSubmit={submit} className="login-card">
-      <img src="/webfit-news-logo.png" alt="Webfit News"/>
+      <img src="/webfit-news-logo-400.webp" alt="Webfit News"/>
       <div className="admin-kicker">NEWSROOM ACCESS</div>
       <h1>Sign in</h1>
       <p className="admin-note">Use your individual Webfit News newsroom account. Accounts without an active newsroom role cannot enter the CMS.</p>

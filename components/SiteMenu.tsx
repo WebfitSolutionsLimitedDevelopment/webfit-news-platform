@@ -72,7 +72,7 @@ export function SiteMenu({label='Menu',mobile=false}:{label?:string;mobile?:bool
       <aside id={menuId} className={styles.drawer} aria-label="Site navigation">
         <div className={styles.head}>
           <Link href="/" className={styles.brand} onClick={close}>
-            <img src="/webfit-news-logo.png" alt="Webfit News"/>
+            <img src="/webfit-news-logo-400.webp" alt="Webfit News"/>
           </Link>
           <button className={styles.close} type="button" onClick={close} aria-label="Close sections">
             <span aria-hidden="true">×</span>

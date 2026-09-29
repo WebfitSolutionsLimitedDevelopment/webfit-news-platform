@@ -28,7 +28,7 @@ export async function SiteHeader(){
     <header className={`masthead-premium ${styles.desktopHeader}`}>
       <div className="shell masthead-premium-inner">
         <SiteMenu/>
-        <Link href="/" className="brand-premium"><img src="/webfit-news-logo.png" alt={siteName}/></Link>
+        <Link href="/" className="brand-premium"><img src="/webfit-news-logo-400.webp" alt={siteName}/></Link>
         <div className="header-actions-premium"><LanguageSelector/><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
       </div>
     </header>
@@ -36,7 +36,7 @@ export async function SiteHeader(){
     <header className={styles.mobileHeader}>
       <div className={styles.mobileRow}>
         <Link href="/" className={styles.mobileBrand}>
-          <img src="/webfit-news-logo.png" alt={siteName}/>
+          <img src="/webfit-news-logo-400.webp" alt={siteName}/>
         </Link>
         <div className={styles.mobileControls}>
           <LanguageSelector mobile/>

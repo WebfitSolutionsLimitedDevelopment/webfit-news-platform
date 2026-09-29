@@ -24,7 +24,22 @@ export const revalidate=300;
 export async function generateStaticParams(){return [];}
 
 /** Search titles keep the whole headline (Google trims the display itself); cutting at 60 characters dropped the keywords. */
-const SEARCH_TITLE_MAX_LENGTH=110;
+const SEARCH_TITLE_MAX_LENGTH=160;
+
+/** Older stories stored titles that were pre-cut with "..."; those are ignored in favour of the full headline. */
+function uncut(value?:string|null):string|null{
+  const v=value?.trim();
+  return v&&!/(\.\.\.|…)$/.test(v)?v:null;
+}
+
+/** Only very long headlines are shortened, and then at a natural break (comma, colon, dash) rather than mid-phrase. */
+function searchTitle(headline:string):string{
+  if(headline.length<=SEARCH_TITLE_MAX_LENGTH)return headline;
+  const head=headline.slice(0,SEARCH_TITLE_MAX_LENGTH);
+  const clause=Math.max(head.lastIndexOf(', '),head.lastIndexOf(': '),head.lastIndexOf(' - '),head.lastIndexOf('; '));
+  if(clause>=60)return head.slice(0,clause).trim();
+  return truncateSeoText(headline,SEARCH_TITLE_MAX_LENGTH)||headline;
+}
 
 function storyDescription(article:any):string{
   const direct=article.meta_description||article.excerpt||article.subtitle;
@@ -40,10 +55,9 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   const canonical=articleCanonical(article.slug,article.canonical_url);
   const publicTitle=getPublicStoryTitle(article.title);
   // Older stories stored a pre-cut SEO title ending in "..."; use the full headline instead.
-  const storedSeoTitle=article.seo_title&&!/(\.\.\.|…)\s*$/.test(article.seo_title)?article.seo_title:null;
-  const seoTitle=truncateSeoText(storedSeoTitle||publicTitle,SEARCH_TITLE_MAX_LENGTH)||publicTitle;
+  const seoTitle=searchTitle(uncut(article.seo_title)||publicTitle);
   const metaDescription=storyDescription(article);
-  const socialTitle=article.social_title||publicTitle;
+  const socialTitle=uncut(article.social_title)||publicTitle;
   const socialDescription=article.social_description||metaDescription||undefined;
   const socialImage=article.media?.public_url||`${articleUrl(article.slug)}/social-card`;
   const indexable=article.robots_index!==false;

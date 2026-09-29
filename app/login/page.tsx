@@ -61,7 +61,7 @@ export default function ReaderLogin(){
     }
   }
 
-  return <main className="reader-login-page"><div className="reader-login-shell"><Link href="/"><img src="/webfit-news-logo.png" alt="Webfit News"/></Link><span>Reader account</span><h1>Sign in to Webfit News</h1><p>Use one account for reader features and future supporter benefits. Newsroom staff should use the separate newsroom login.</p>
+  return <main className="reader-login-page"><div className="reader-login-shell"><Link href="/"><img src="/webfit-news-logo-400.webp" alt="Webfit News"/></Link><span>Reader account</span><h1>Sign in to Webfit News</h1><p>Use one account for reader features and future supporter benefits. Newsroom staff should use the separate newsroom login.</p>
     {!isNativeApp&&<><div className="reader-oauth"><button type="button" disabled={googleBusy} onClick={googleLogin}>{googleBusy?'Opening Google...':'Continue with Google'}</button></div>
     <div className="reader-or"><span>or use email</span></div></>}
     <form onSubmit={emailLogin}><label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><button type="submit" disabled={busy}>{busy?'Sending sign-in link...':'Email me a sign-in link'}</button></form>

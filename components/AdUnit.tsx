@@ -8,6 +8,31 @@ export type AdVariant = 'banner' | 'inline' | 'rail' | 'sticky';
 
 const MOBILE_QUERY = '(max-width: 720px)';
 
+const STORAGE_OBJECT = '/storage/v1/object/public/';
+
+/**
+ * Posters are served through Supabase's image resizer at the size the slot
+ * actually needs (and as WebP where the browser supports it), instead of the
+ * full upload. Anything that isn't a Supabase image, or is a GIF, is left as is.
+ */
+function resized(url: string, width: number) {
+  if (!url.includes(STORAGE_OBJECT) || /\.gif($|\?)/i.test(url)) return url;
+  return `${url.replace(STORAGE_OBJECT, '/storage/v1/render/image/public/')}?width=${width}&quality=78`;
+}
+
+function srcSet(url: string, widths: number[]) {
+  if (!url.includes(STORAGE_OBJECT) || /\.gif($|\?)/i.test(url)) return undefined;
+  return widths.map(w => `${resized(url, w)} ${w}w`).join(', ');
+}
+
+/** Widths to offer per position, and how wide the slot is on screen. */
+const IMAGE_SIZES: Record<AdVariant, { widths: number[]; sizes: string }> = {
+  banner: { widths: [480, 970, 1400], sizes: '(max-width: 720px) 100vw, 970px' },
+  inline: { widths: [480, 728, 1100], sizes: '(max-width: 720px) 100vw, 728px' },
+  rail: { widths: [300, 600], sizes: '300px' },
+  sticky: { widths: [320, 640], sizes: '100vw' },
+};
+
 function currentDevice(): 'mobile' | 'desktop' {
   if (typeof window === 'undefined') return 'desktop';
   return window.matchMedia(MOBILE_QUERY).matches ? 'mobile' : 'desktop';
@@ -85,7 +110,7 @@ function VideoCreative({ ad, active = true, onEnded }: { ad: LiveAd; active?: bo
       ref={videoRef}
       className={styles.video}
       src={ad.video_url || undefined}
-      poster={ad.poster_image || undefined}
+      poster={ad.poster_image ? resized(ad.poster_image, 1100) : undefined}
       muted
       playsInline
       preload="metadata"
@@ -120,9 +145,12 @@ function Creative({ ad, variant, active, onVideoEnd }: { ad: LiveAd; variant: Ad
         <a href={clickHref(ad)} target="_blank" rel="sponsored noopener" tabIndex={active ? 0 : -1}>{ad.cta_label || 'Learn more'}</a>
       </div> : null}
     </> : hasImage ? (() => {
+      const { widths, sizes } = IMAGE_SIZES[variant];
+      const main = ad.desktop_image || ad.mobile_image || '';
+      const mobile = ad.mobile_image && ad.mobile_image !== main ? ad.mobile_image : null;
       const picture = <picture>
-        {ad.mobile_image ? <source media={MOBILE_QUERY} srcSet={ad.mobile_image}/> : null}
-        <img src={ad.desktop_image || ad.mobile_image || ''} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
+        {mobile ? <source media={MOBILE_QUERY} srcSet={srcSet(mobile, [480, 720, 1080]) || mobile} sizes="100vw"/> : null}
+        <img src={resized(main, widths[1] || widths[0])} srcSet={srcSet(main, widths)} sizes={sizes} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
       </picture>;
       return ad.destination_url
         ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener" tabIndex={active ? 0 : -1}>{picture}</a>
