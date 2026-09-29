@@ -3,27 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveAd } from '@/lib/ads';
 import styles from './AdUnit.module.css';
+import { imageSrcSet, resizedImage } from '@/lib/image-url';
 
 export type AdVariant = 'banner' | 'inline' | 'rail' | 'sticky';
 
 const MOBILE_QUERY = '(max-width: 720px)';
 
-const STORAGE_OBJECT = '/storage/v1/object/public/';
-
-/**
- * Posters are served through Supabase's image resizer at the size the slot
- * actually needs (and as WebP where the browser supports it), instead of the
- * full upload ("contain" keeps the poster's shape; the default "cover" crops it). Anything that isn't a Supabase image, or is a GIF, is left as is.
- */
-function resized(url: string, width: number) {
-  if (!url.includes(STORAGE_OBJECT) || /\.gif($|\?)/i.test(url)) return url;
-  return `${url.replace(STORAGE_OBJECT, '/storage/v1/render/image/public/')}?width=${width}&resize=contain&quality=78`;
-}
-
-function srcSet(url: string, widths: number[]) {
-  if (!url.includes(STORAGE_OBJECT) || /\.gif($|\?)/i.test(url)) return undefined;
-  return widths.map(w => `${resized(url, w)} ${w}w`).join(', ');
-}
+/** Posters use the shared resizer (keeps shape, sends WebP, leaves GIFs alone). */
+const resized = (url: string, width: number) => resizedImage(url, width, 78);
+const srcSet = (url: string, widths: number[]) => imageSrcSet(url, widths, 78);
 
 /** Widths to offer per position, and how wide the slot is on screen. */
 const IMAGE_SIZES: Record<AdVariant, { widths: number[]; sizes: string }> = {

@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import type { Story } from '@/lib/news';
 import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story-display';
+import { responsiveImage } from '@/lib/image-url';
+
+/** How wide each card's photo is on screen, so phones download a small version. */
+const CARD_IMAGE: Record<string, { widths: number[]; sizes: string }> = {
+  lead: { widths: [480, 800, 1200], sizes: '(max-width: 850px) 100vw, 820px' },
+  horizontal: { widths: [400, 640, 960], sizes: '(max-width: 580px) 100vw, (max-width: 1100px) 50vw, 420px' },
+  standard: { widths: [320, 480, 640], sizes: '(max-width: 580px) 50vw, (max-width: 1100px) 33vw, 300px' },
+  compact: { widths: [320, 480, 640], sizes: '(max-width: 580px) 50vw, (max-width: 1100px) 33vw, 240px' },
+};
 
 type Variant='standard'|'lead'|'compact'|'horizontal';
 
@@ -24,7 +33,7 @@ export function StoryCard({story,lead=false,variant,eyebrowLabel}:{story:Story;l
   const displayTitle=getPublicStoryTitle(story.title);
   const displayType=getPublicStoryTypeLabel(story.article_type,story.title,eyebrowLabel);
   return <article className={`story-card story-card-${resolved}`}>
-    <Link href={`/${story.slug}`} className="story-image"><img src={image} alt={story.media?.alt_text||displayTitle} loading={resolved==='lead'?'eager':'lazy'} decoding="async" {...(resolved==='lead'?{fetchPriority:'high' as const}:{})}/></Link>
+    <Link href={`/${story.slug}`} className="story-image"><img {...responsiveImage(image,CARD_IMAGE[resolved].widths,CARD_IMAGE[resolved].sizes)} alt={story.media?.alt_text||displayTitle} loading={resolved==='lead'?'eager':'lazy'} decoding="async" {...(resolved==='lead'?{fetchPriority:'high' as const}:{})}/></Link>
     <div className="story-copy">
       <div className="eyebrow">{displayType}</div>
       <h2><Link href={`/${story.slug}`}>{displayTitle}</Link></h2>
