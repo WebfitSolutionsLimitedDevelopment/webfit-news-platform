@@ -75,6 +75,10 @@ export async function proxy(request: NextRequest) {
       redirectRows?.find((row) => candidates.includes(row.source_path));
     if (redirectRow?.destination_path) {
       const destination = new URL(redirectRow.destination_path, request.nextUrl.origin);
+      // Stored WordPress destinations end in "/", which would trigger a second redirect.
+      if (destination.origin === request.nextUrl.origin && destination.pathname.length > 1) {
+        destination.pathname = destination.pathname.replace(/\/+$/, '') || '/';
+      }
       const status = [301, 302, 307, 308].includes(Number(redirectRow.status_code))
         ? Number(redirectRow.status_code)
         : 301;
