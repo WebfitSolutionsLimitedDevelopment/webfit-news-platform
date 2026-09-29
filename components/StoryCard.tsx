@@ -24,7 +24,7 @@ export function StoryCard({story,lead=false,variant,eyebrowLabel}:{story:Story;l
   const displayTitle=getPublicStoryTitle(story.title);
   const displayType=getPublicStoryTypeLabel(story.article_type,story.title,eyebrowLabel);
   return <article className={`story-card story-card-${resolved}`}>
-    <Link href={`/${story.slug}`} className="story-image"><img src={image} alt={story.media?.alt_text||displayTitle}/></Link>
+    <Link href={`/${story.slug}`} className="story-image"><img src={image} alt={story.media?.alt_text||displayTitle} loading={resolved==='lead'?'eager':'lazy'} decoding="async" {...(resolved==='lead'?{fetchPriority:'high' as const}:{})}/></Link>
     <div className="story-copy">
       <div className="eyebrow">{displayType}</div>
       <h2><Link href={`/${story.slug}`}>{displayTitle}</Link></h2>

@@ -21,6 +21,25 @@ function redirectCandidates(pathname: string, search = '') {
   return [...new Set([exactWithQuery, ...normalizedWithQuery, ...pathCandidates])];
 }
 
+type RedirectRow = { source_path: string; destination_path: string; status_code: number | null };
+
+// The redirect table (about 750 old WordPress URLs) is loaded once and reused
+// for five minutes, instead of a database query on every single page view.
+const REDIRECT_TTL_MS = 5 * 60 * 1000;
+let redirectCache: { rows: RedirectRow[]; loadedAt: number } | null = null;
+
+async function loadRedirects(supabase: any): Promise<RedirectRow[]> {
+  if (redirectCache && Date.now() - redirectCache.loadedAt < REDIRECT_TTL_MS) return redirectCache.rows;
+  const { data, error } = await supabase
+    .from('redirects')
+    .select('source_path,destination_path,status_code')
+    .eq('is_active', true)
+    .limit(10000);
+  if (error || !data) return redirectCache?.rows || [];
+  redirectCache = { rows: data as RedirectRow[], loadedAt: Date.now() };
+  return redirectCache.rows;
+}
+
 export async function proxy(request: NextRequest) {
   const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
 
@@ -62,12 +81,7 @@ export async function proxy(request: NextRequest) {
     const candidates = redirectCandidates(path, search);
     const exactSource = `${path}${search}`;
 
-    const { data: redirectRows } = await supabase
-      .from('redirects')
-      .select('source_path,destination_path,status_code')
-      .eq('is_active', true)
-      .in('source_path', candidates)
-      .limit(candidates.length);
+    const redirectRows = (await loadRedirects(supabase)).filter((row) => candidates.includes(row.source_path));
 
     const redirectRow =
       redirectRows?.find((row) => row.source_path === exactSource) ||

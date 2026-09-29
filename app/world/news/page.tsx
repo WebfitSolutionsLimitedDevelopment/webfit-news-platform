@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase-server';
+import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { StoryCard } from '@/components/StoryCard';
 import WorldNewsRefresh from './WorldNewsRefresh';
 import styles from './news.module.css';

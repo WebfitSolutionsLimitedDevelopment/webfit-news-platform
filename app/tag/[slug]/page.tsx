@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase-server';
+import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 
 export const revalidate = 60;
+
+/** Pages are built on first visit, then cached for a minute (and refreshed when stories are published). */
+export async function generateStaticParams() { return []; }
 
 /** Topic pages with only a story or two are thin; keep them out of search until they grow. */
 const TAG_INDEX_MIN_STORIES = 3;

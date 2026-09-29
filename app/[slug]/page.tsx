@@ -15,7 +15,13 @@ import { AdSlot } from '@/components/AdSlot';
 import { SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
 import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
 
-export const dynamic='force-dynamic';
+/**
+ * Stories are cached at the edge for five minutes and refreshed immediately
+ * when edited in the CMS (revalidateEditorialContent), instead of being rebuilt
+ * from the database on every visit.
+ */
+export const revalidate=300;
+export async function generateStaticParams(){return [];}
 
 /** Search titles keep the whole headline (Google trims the display itself); cutting at 60 characters dropped the keywords. */
 const SEARCH_TITLE_MAX_LENGTH=100;
@@ -144,7 +150,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <div className="article-meta"><span>By {article.author?.name||'Webfit News'}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>
-          {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
+          {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle} fetchPriority="high" decoding="async" {...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{})}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
           {bodyChunks.map((html,index)=><div key={index}>
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}

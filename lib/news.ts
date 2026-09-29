@@ -1,5 +1,5 @@
-import { createClient } from './supabase-server';
-import { unstable_noStore as noStore } from 'next/cache';
+import { cache } from 'react';
+import { createPublicClient as createClient } from './supabase-public';
 
 export type Story = {
   id: string;
@@ -48,12 +48,10 @@ export async function searchStories(query:string,limit=40){
   return (data||[]) as unknown as Story[];
 }
 
-export async function getArticleBySlug(slug: string) {
-  // Direct article URLs must always resolve against the live database. During the
-  // WordPress migration these pages were previously eligible for ISR caching, which
-  // allowed a transient lookup miss to become a cached 404 even though internal
-  // navigation/search could later find the same published record.
-  noStore();
+async function loadArticleBySlug(slug: string) {
+  // Story pages are cached (ISR, 5 minutes) and purged on every CMS edit. A lookup
+  // error throws rather than returning null, so a database hiccup is never cached
+  // as a 404.
   const supabase = await createClient();
   const articleFields = '*,author:author_id(name,slug,bio,title),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit,width,height),article_categories(category:category_id(id,name,slug))';
 
@@ -76,6 +74,9 @@ export async function getArticleBySlug(slug: string) {
   if (legacyError) throw legacyError;
   return legacyData;
 }
+
+/** One database lookup per request, shared by the page and its metadata. */
+export const getArticleBySlug = cache(loadArticleBySlug);
 
 function inlineStoragePathFromUrl(value: string) {
   try {

@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next';
-import { createClient } from '../lib/supabase-server';
+import { createPublicClient as createClient } from '../lib/supabase-public';
 import { NOINDEX_SECTIONS, SITE_URL, articleUrl } from '../lib/site';
+
+/** Rebuilt every 15 minutes so new stories reach Google quickly without querying on every crawl. */
+export const revalidate = 900;
 
 const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge-pdf','split-pdf','compress-pdf','pdf-to-png','rotate-pdf','watermark-pdf','png-to-pdf','pdf-to-text','word-to-jpg','remove-pdf-pages','organize-pdf-pages','add-page-numbers-to-pdf','text-to-pdf'];
 const evergreenPages: MetadataRoute.Sitemap = [

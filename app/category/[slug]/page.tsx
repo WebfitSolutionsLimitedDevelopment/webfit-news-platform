@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase-server';
+import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
@@ -11,6 +11,9 @@ import { NOINDEX_SECTIONS, SITE_NAME, absoluteUrl, articleUrl } from '@/lib/site
 import { getPublicStoryTitle } from '@/lib/public-story-display';
 
 export const revalidate = 60;
+
+/** Pages are built on first visit, then cached for a minute (and refreshed when stories are published). */
+export async function generateStaticParams() { return []; }
 
 const STORY_LIMIT = 60;
 

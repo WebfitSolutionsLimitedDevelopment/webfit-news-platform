@@ -16,6 +16,7 @@ export function refreshAdPages() {
   try {
     revalidatePath('/');
     revalidatePath('/category/[slug]', 'page');
+    revalidatePath('/[slug]', 'page');
   } catch {}
 }
 
