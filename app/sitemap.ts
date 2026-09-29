@@ -57,5 +57,7 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
   const sectionPages=(sections||[])
     .filter((c:any)=>c.slug&&!NOINDEX_SECTIONS.has(c.slug)&&Number(c.article_categories?.[0]?.count||0)>0)
     .map((c:any)=>({url:`${SITE_URL}/category/${c.slug}`,changeFrequency:'hourly' as const,priority:0.7}));
-  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...sectionPages,...articles.map(a=>({url:articleUrl(a.slug),lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
+  const {data:authorRows}=await supabase.from('authors').select('slug,articles(count)').eq('is_active',true);
+  const authorPages=(authorRows||[]).filter((a:any)=>a.slug&&Number(a.articles?.[0]?.count||0)>0).map((a:any)=>({url:`${SITE_URL}/author/${a.slug}`,changeFrequency:'daily' as const,priority:0.5}));
+  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...sectionPages,...authorPages,...articles.map(a=>({url:articleUrl(a.slug),lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
 }

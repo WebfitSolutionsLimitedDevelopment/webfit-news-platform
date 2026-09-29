@@ -113,7 +113,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
         dateModified:article.updated_at||article.published_at,
         image:image?[image]:undefined,
         author:article.author?.name
-          ?{'@type':'Person',name:article.author.name,...(article.author.title?{jobTitle:article.author.title}:{})}
+          ?{'@type':'Person',name:article.author.name,...(article.author.slug?{url:absoluteUrl(`/author/${article.author.slug}`)}:{}),...(article.author.title?{jobTitle:article.author.title}:{})}
           :{'@type':'Organization',name:SITE_NAME,url:SITE_URL},
         publisher:{'@id':`${SITE_URL}/#organization`},
         mainEntityOfPage:{'@type':'WebPage','@id':pageUrl},
@@ -147,7 +147,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <div className="article-kicker">{displayType}</div>
           <h1>{displayTitle}</h1>
           {article.subtitle?<p className="standfirst">{article.subtitle}</p>:null}
-          <div className="article-meta"><span>By {article.author?.name||'Webfit News'}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
+          <div className="article-meta"><span>By {article.author?.slug?<Link href={`/author/${article.author.slug}`} rel="author">{article.author.name}</Link>:<Link href="/about">Webfit News</Link>}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img src={article.media.public_url} alt={article.media.alt_text||displayTitle} fetchPriority="high" decoding="async" {...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{})}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
