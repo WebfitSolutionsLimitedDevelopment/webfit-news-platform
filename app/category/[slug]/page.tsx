@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { createPublicClient as createClient } from '@/lib/supabase-public';
+import { getSectionPage, sectionDescription } from '@/lib/section';
+import { SectionPager } from '@/components/SectionPager';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
@@ -15,29 +15,7 @@ export const revalidate = 60;
 /** Pages are built on first visit, then cached for a minute (and refreshed when stories are published). */
 export async function generateStaticParams() { return []; }
 
-const STORY_LIMIT = 60;
-
-const getSection = cache(async (slug: string) => {
-  const supabase = await createClient();
-  const { data: cat } = await supabase.from('categories').select('id,name,slug,description').eq('slug', slug).eq('is_active', true).maybeSingle();
-  if (!cat) return null;
-  // Newest stories first, straight from the database. The previous version took
-  // 80 arbitrary rows and sorted them afterwards, so big sections could miss
-  // their latest stories.
-  const { data } = await supabase
-    .from('articles')
-    .select('id,title,slug,excerpt,published_at,featured_media_id,article_type,media:media!articles_featured_media_id_fkey(public_url,alt_text),article_categories!inner(category_id)')
-    .eq('article_categories.category_id', cat.id)
-    .eq('status', 'published')
-    .not('published_at', 'is', null)
-    .order('published_at', { ascending: false })
-    .limit(STORY_LIMIT);
-  return { cat, stories: (data || []) as any[] };
-});
-
-function sectionDescription(name: string, description?: string | null) {
-  return description?.trim() || `The latest ${name} news, analysis and community stories from Webfit News, independent New Zealand journalism.`;
-}
+const getSection = (slug: string) => getSectionPage(slug, 1);
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -99,6 +77,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <AdSlot slotKey="CATEGORY_TOP"/>
       <div className="story-grid">{stories.map((s: any) => <StoryCard key={s.id} story={s}/>)}</div>
       {!stories.length ? <div className="admin-empty">No published stories in this section yet.</div> : null}
+      <SectionPager slug={cat.slug} page={1} totalPages={section.totalPages}/>
     </main>
     <PublicFooter/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}/>
