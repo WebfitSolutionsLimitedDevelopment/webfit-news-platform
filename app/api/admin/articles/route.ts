@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../lib/editorial-revalidate';
+import { notifyIndexNow } from '@/lib/indexnow';
+import { after } from 'next/server';
 import { sanitizeArticleHtml } from '../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../lib/env';
@@ -78,6 +80,7 @@ export async function POST(req: Request) {
 
   if (input.status === 'published') {
     revalidateEditorialContent(created.slug);
+    after(() => notifyIndexNow([created.slug]));
     void sendPushToAllDevices(input.title, input.excerpt || 'Read the full story on Webfit News.', `${getSiteUrl()}/${created.slug}`);
   }
 

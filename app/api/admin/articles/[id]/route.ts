@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '../../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
+import { notifyIndexNow } from '@/lib/indexnow';
+import { after } from 'next/server';
 import { sanitizeArticleHtml } from '../../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../../lib/env';
@@ -101,6 +103,9 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   // Purge the public ISR cache immediately so changed featured images and
   // story metadata are visible on every device as soon as the CMS save ends.
   revalidateEditorialContent(before?.slug,data.slug);
+
+  // Tell Bing and other IndexNow engines when a live story is published or edited.
+  if(data.status==='published')after(()=>notifyIndexNow([data.slug]));
 
   // Only notify phones the moment an article newly goes live, not on every
   // later edit to an already-published story.

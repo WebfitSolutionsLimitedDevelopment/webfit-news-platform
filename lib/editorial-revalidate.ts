@@ -12,6 +12,7 @@ export function revalidateEditorialContent(...slugs: Array<string | null | undef
   revalidatePath('/search');
   revalidatePath('/rss.xml');
   revalidatePath('/category/[slug]', 'page');
+  revalidatePath('/category/[slug]/page/[n]', 'page');
 
   for (const raw of slugs) {
     const slug = raw?.trim();
