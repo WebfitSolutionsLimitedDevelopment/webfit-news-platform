@@ -102,7 +102,10 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
 
   // Purge the public ISR cache immediately so changed featured images and
   // story metadata are visible on every device as soon as the CMS save ends.
-  revalidateEditorialContent(before?.slug,data.slug);
+  // Drafts autosave every few seconds and are not on the site, so saves that
+  // neither start nor end in a public state leave the cache alone.
+  const isPublic=(state?:string|null)=>state==='published'||state==='archived';
+  if(isPublic(before?.status)||isPublic(data.status))revalidateEditorialContent(before?.slug,data.slug);
 
   // Tell Bing and other IndexNow engines when a live story is published or edited.
   if(data.status==='published')after(()=>notifyIndexNow([data.slug]));

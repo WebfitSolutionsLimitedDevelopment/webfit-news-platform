@@ -11,7 +11,7 @@
 .quickMedia button{border:0;border-radius:999px;background:#111317;color:#fff;padding:10px 14px;font-size:11px;font-weight:850;cursor:pointer}
 .quickMedia button+button{background:#fff;color:#111317;border:1px solid #cbd1d7}
 .quickMedia button:hover{transform:translateY(-1px)}
-@media(max-width:760px){.toolbar{position:sticky;top:0}.quickMedia{bottom:12px;width:calc(100% - 28px);justify-content:center}.quickMedia button{flex:1}}
+@media(max-width:760px){.toolbar{position:sticky;top:0}.quickMedia{bottom:calc(72px + env(safe-area-inset-bottom,0px));width:calc(100% - 28px);justify-content:center}.quickMedia button{flex:1}}
 
 .editor figure[data-editor-selected="true"]{
   outline:3px solid #111317;

@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
+
+/** The newsroom CMS and sign-in pages never load ads or analytics. */
+const PRIVATE_PATHS = /^\/(admin|login)(\/|$)/;
 
 const GA_MEASUREMENT_ID = 'G-YP1WWRYGHY';
 
@@ -32,10 +36,16 @@ function useAfterFirstInteraction(enabled: boolean) {
 }
 
 export function ThirdPartyScripts() {
+  const pathname = usePathname() || '';
+  const isPrivate = PRIVATE_PATHS.test(pathname);
   const [load, setLoad] = useState(false);
   useEffect(() => {
-    setLoad(!navigator.userAgent.includes('WebfitNewsApp'));
-  }, []);
+    setLoad(!isPrivate && !navigator.userAgent.includes('WebfitNewsApp'));
+    // Arriving in the CMS from a public page (e.g. the Newsroom link) keeps the
+    // AdSense script that page loaded, and its anchor ads cover the editor.
+    // One clean reload drops it; the fresh load never fetches ads.
+    if (isPrivate && document.querySelector('script[src*="adsbygoogle"]')) window.location.reload();
+  }, [isPrivate]);
   const adsReady = useAfterFirstInteraction(load);
   if (!load) return null;
   return <>

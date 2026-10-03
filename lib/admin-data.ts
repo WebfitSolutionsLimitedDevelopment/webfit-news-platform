@@ -60,7 +60,7 @@ export async function getAuthorsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('authors')
-    .select('id,name,slug,email,title,bio,avatar_url,is_active,wp_author_id,created_at,updated_at')
+    .select('id,name,slug,email,title,bio,avatar_url,is_active,wp_author_id,profile_id,created_at,updated_at')
     .order('name');
   if (error) throw error;
   return data ?? [];

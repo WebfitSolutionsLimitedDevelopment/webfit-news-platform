@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './ArticleWorkspace.module.css';
 import { RichArticleEditor } from './RichArticleEditor';
@@ -198,10 +198,12 @@ function deriveSeoTags(html:string,title:string){
 export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
   initialCategoryIds=[],initialPrimaryCategoryId='',
-  initialTags=[],initialMedia=null
+  initialTags=[],initialMedia=null,defaultAuthorId=''
 }:{
   categories:Option[];authors:Option[];article?:any;revisions?:Revision[];
   initialCategoryIds?:string[];initialPrimaryCategoryId?:string;initialTags?:string[];initialMedia?:Media|null;
+  /** The signed-in user's own author profile, used as the byline on new stories. */
+  defaultAuthorId?:string;
 }){
   const router=useRouter();
   const fileRef=useRef<HTMLInputElement>(null);
@@ -240,7 +242,7 @@ export default function ArticleWorkspace({
 
   const [form,setForm]=useState({
     subtitle:article?.subtitle||'',excerpt:article?.excerpt||'',content_html:article?.content_html||'',
-    author_id:article?.author_id||'',primary_category_id:initialPrimaryCategoryId,featured_media_id:article?.featured_media_id||'',
+    author_id:article?.author_id||(article?.id?'':defaultAuthorId),primary_category_id:initialPrimaryCategoryId,featured_media_id:article?.featured_media_id||'',
     seo_title:article?.seo_title||'',meta_description:article?.meta_description||'',social_title:article?.social_title||'',
     social_description:article?.social_description||'',canonical_url:article?.canonical_url||'',
     published_at:article?.published_at?localDate(article.published_at):currentAucklandDate(),scheduled_at:localDate(article?.scheduled_at),
@@ -249,6 +251,142 @@ export default function ArticleWorkspace({
   });
 
   const update=(key:string,value:any)=>setForm(current=>({...current,[key]:value}));
+
+  /* ---------- Never lose work: device backup + server draft autosave ---------- */
+  // The id this editor saves to. A new article gets one the first time it is
+  // autosaved as a draft; the address bar then switches to /admin/articles/<id>
+  // so a refresh reopens the saved draft instead of an empty form.
+  const [articleId,setArticleIdState]=useState<string|null>(article?.id||null);
+  const articleIdRef=useRef<string|null>(article?.id||null);
+  const setArticleId=(id:string|null)=>{articleIdRef.current=id;setArticleIdState(id)};
+  const serverStatusRef=useRef<string|null>(article?.status||null);
+  const [saveState,setSaveState]=useState<'saved'|'dirty'|'saving'|'local'|'error'>('saved');
+  const [saveNote,setSaveNote]=useState('');
+  const [restoreOffer,setRestoreOffer]=useState<null|{savedAt:number;data:any;key?:string}>(null);
+  // Backups follow the article: a new story's copy moves to its id once the
+  // server draft exists, so a refresh at /admin/articles/<id> still finds it.
+  const backupKey=`wf-cms-draft:${articleId||'new'}`;
+
+  const snapshot=useMemo(()=>JSON.stringify({title,slug,slugTouched,status,articleType,tags,categoryIds,form,media}),[title,slug,slugTouched,status,articleType,tags,categoryIds,form,media]);
+  const savedSnapshotRef=useRef(snapshot);
+  const dirty=snapshot!==savedSnapshotRef.current;
+  const savingRef=useRef(false);
+
+  const markSaved=useCallback((snap:string)=>{
+    savedSnapshotRef.current=snap;
+    try{
+      localStorage.removeItem('wf-cms-draft:new');
+      if(articleIdRef.current)localStorage.removeItem(`wf-cms-draft:${articleIdRef.current}`);
+    }catch{}
+  },[]);
+
+  // Offer to restore a device backup that is newer than what the server has.
+  useEffect(()=>{
+    try{
+      let key=backupKey;
+      let raw=localStorage.getItem(key);
+      if(!raw&&article?.id){
+        const fromNew=localStorage.getItem('wf-cms-draft:new');
+        if(fromNew&&JSON.parse(fromNew)?.articleId===article.id){key='wf-cms-draft:new';raw=fromNew}
+      }
+      if(!raw)return;
+      const backup=JSON.parse(raw);
+      backup.key=key;
+      const serverTime=article?.updated_at?Date.parse(article.updated_at):0;
+      if(backup?.data&&JSON.stringify(backup.data)!==savedSnapshotRef.current&&backup.savedAt>serverTime)setRestoreOffer(backup);
+      else localStorage.removeItem(key);
+    }catch{}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  function restoreBackup(){
+    const d=restoreOffer?.data;
+    if(!d)return;
+    setTitle(d.title||'');setSlug(d.slug||'');setSlugTouched(Boolean(d.slugTouched));
+    setStatus(d.status||'draft');setArticleType(d.articleType||'news');setTags(d.tags||'');
+    setCategoryIds(Array.isArray(d.categoryIds)?d.categoryIds:[]);
+    setMedia(d.media||null);
+    setForm(current=>({...current,...(d.form||{})}));
+    for(const key of Object.keys(autoManagedRef.current) as AutoFieldKey[])autoManagedRef.current[key]=false;
+    try{if(restoreOffer?.key&&restoreOffer.key!==backupKey)localStorage.removeItem(restoreOffer.key)}catch{}
+    setRestoreOffer(null);
+    setMessageKind('success');setMessage('Your unsaved changes were restored. They will be saved again automatically.');
+  }
+  function discardBackup(){
+    try{localStorage.removeItem(restoreOffer?.key||backupKey)}catch{}
+    setRestoreOffer(null);
+  }
+
+  // 1. Copy to this device ~1.5s after every change (works with no signal).
+  useEffect(()=>{
+    if(!dirty){if(saveState==='dirty'||saveState==='local')setSaveState('saved');return}
+    if(saveState==='saved')setSaveState('dirty');
+    const t=window.setTimeout(()=>{
+      try{
+        localStorage.setItem(backupKey,JSON.stringify({savedAt:Date.now(),articleId,data:JSON.parse(snapshot)}));
+        setSaveState(state=>state==='saving'?state:'local');
+      }catch{}
+    },1500);
+    return()=>window.clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[snapshot]);
+
+  // 2. Save to the server as a draft ~6s after typing stops, once there is a
+  //    headline and some story. Live and scheduled stories are never autosaved
+  //    to the server: changes to those only go out when you press the button.
+  const canAutosave=(serverStatusRef.current===null||serverStatusRef.current==='draft'||serverStatusRef.current==='in_review');
+  useEffect(()=>{
+    if(!dirty||!canAutosave||busy)return;
+    if(title.trim().length<5||!hasMeaningfulArticleContent(form.content_html))return;
+    const t=window.setTimeout(()=>{void autosaveDraft()},6000);
+    return()=>window.clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[snapshot,busy]);
+
+  async function autosaveDraft(){
+    if(savingRef.current)return;
+    savingRef.current=true;
+    const snap=snapshot;
+    const draftStatus=serverStatusRef.current||'draft';
+    setSaveState('saving');
+    try{
+      const currentId=articleIdRef.current;
+      const r=await fetch(currentId?`/api/admin/articles/${currentId}`:'/api/admin/articles',{
+        method:currentId?'PATCH':'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify(buildPayload(draftStatus))
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:'Server did not accept the draft');
+      if(!currentId&&d.article?.id){
+        setArticleId(d.article.id);
+        serverStatusRef.current=d.article.status||'draft';
+        try{window.history.replaceState(window.history.state,'',`/admin/articles/${d.article.id}`)}catch{}
+        try{const b=localStorage.getItem('wf-cms-draft:new');if(b){localStorage.setItem(`wf-cms-draft:${d.article.id}`,b);localStorage.removeItem('wf-cms-draft:new')}}catch{}
+      }
+      markSaved(snap);
+      setSaveState(snap===snapshotRef.current?'saved':'dirty');
+      setSaveNote(new Intl.DateTimeFormat('en-NZ',{hour:'numeric',minute:'2-digit'}).format(new Date()));
+    }catch(e:any){
+      setSaveState('error');
+      setSaveNote(e.message||'Not saved');
+    }finally{savingRef.current=false}
+  }
+  const snapshotRef=useRef(snapshot);
+  snapshotRef.current=snapshot;
+
+  // 3. Warn before leaving with unsaved changes, and stop pull-to-refresh
+  //    (the usual cause of accidental reloads on phones) while editing.
+  useEffect(()=>{
+    const onLeave=(e:BeforeUnloadEvent)=>{if(snapshotRef.current!==savedSnapshotRef.current){e.preventDefault();e.returnValue=''}};
+    window.addEventListener('beforeunload',onLeave);
+    const root=document.documentElement;const prev=root.style.overscrollBehaviorY;
+    root.style.overscrollBehaviorY='contain';
+    document.body.style.overscrollBehaviorY='contain';
+    return()=>{window.removeEventListener('beforeunload',onLeave);root.style.overscrollBehaviorY=prev;document.body.style.overscrollBehaviorY=''};
+  },[]);
+
+  const saveLabel=saveState==='saving'?'Saving…':saveState==='error'?'Not saved to server · kept on this device':saveState==='local'?(canAutosave?'Saved on this device':'Unsaved changes · kept on this device'):saveState==='dirty'?'Unsaved changes':saveNote?`Saved ${saveNote}`:(articleId?'All changes saved':'Not saved yet');
 
   function setManualField(key:AutoFieldKey,value:string){
     autoManagedRef.current[key]=false;
@@ -433,7 +571,7 @@ export default function ArticleWorkspace({
       subtitle:'',
       excerpt:'',
       content_html:'',
-      author_id:'',
+      author_id:defaultAuthorId,
       primary_category_id:'',
       featured_media_id:'',
       seo_title:'',
@@ -452,6 +590,11 @@ export default function ArticleWorkspace({
     if(fileRef.current)fileRef.current.value='';
     if(sourceFileRef.current)sourceFileRef.current.value='';
 
+    if(!isEdit&&articleIdRef.current){
+      // The earlier autosaved draft stays in Articles; the next one starts fresh.
+      setArticleId(null);serverStatusRef.current=null;
+      try{window.history.replaceState(window.history.state,'','/admin/articles/new')}catch{}
+    }
     setMessageKind('success');
     setMessage(isEdit?'All article fields cleared in the editor. Nothing has been saved yet.':'All new-article fields cleared. You can start again with a fresh source.');
     window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
@@ -547,15 +690,36 @@ export default function ArticleWorkspace({
     };
   }
 
+  /** Things a story should have before it goes live. Publishing is still allowed. */
+  function publishGaps(){
+    const gaps:string[]=[];
+    if(!form.featured_media_id)gaps.push('featured image');
+    if(!form.primary_category_id)gaps.push('primary category');
+    if(!form.author_id)gaps.push('named author (byline shows "Webfit News")');
+    if(!form.excerpt.trim())gaps.push('excerpt');
+    if(articlePlainText(form.content_html).split(/\s+/).filter(Boolean).length<120)gaps.push('a story of at least 120 words');
+    return gaps;
+  }
+
   async function save(finalStatus=status){
     if(title.trim().length<5){setMessageKind('error');setMessage('Add a clear headline before saving.');return}
     if(finalStatus==='scheduled'&&!form.scheduled_at){setMessageKind('error');setMessage('Choose a schedule date and time.');return}
+    if((finalStatus==='published'||finalStatus==='scheduled')&&serverStatusRef.current!=='published'){
+      const gaps=publishGaps();
+      if(gaps.length&&!window.confirm(`Before this goes live, it is missing:\n\n• ${gaps.join('\n• ')}\n\n${finalStatus==='scheduled'?'Schedule':'Publish'} anyway?`))return;
+    }
+    // Let an autosave that is already on its way finish first, so a new
+    // article is never created twice.
+    for(let i=0;i<40&&savingRef.current;i++)await new Promise(r=>setTimeout(r,250));
+    const snap=snapshot;
+    const currentId=articleIdRef.current;
+    savingRef.current=true;
     setBusy(true);
     setMessageKind('info');
     setMessage(finalStatus==='published'?'Publishing article...':finalStatus==='scheduled'?'Scheduling article...':'Saving changes...');
     try{
-      const r=await fetch(isEdit?`/api/admin/articles/${article.id}`:'/api/admin/articles',{
-        method:isEdit?'PATCH':'POST',
+      const r=await fetch(currentId?`/api/admin/articles/${currentId}`:'/api/admin/articles',{
+        method:currentId?'PATCH':'POST',
         headers:{'content-type':'application/json'},
         body:JSON.stringify(buildPayload(finalStatus))
       });
@@ -568,24 +732,32 @@ export default function ArticleWorkspace({
         throw new Error(`Publish request completed but the database returned status "${d.article.status}". The article was not published.`);
       }
       setStatus(finalStatus);
+      serverStatusRef.current=finalStatus;
+      const savedId=currentId||d.article?.id||null;
+      if(savedId)setArticleId(savedId);
+      markSaved(snap);
+      setSaveState('saved');
+      setSaveNote(new Intl.DateTimeFormat('en-NZ',{hour:'numeric',minute:'2-digit'}).format(new Date()));
       setMessageKind('success');
       setMessage(finalStatus==='published'?(isEdit?'Published article updated successfully.':'Article published successfully.'):finalStatus==='scheduled'?'Article scheduled successfully.':'Changes saved.');
-      if(!isEdit&&d.article?.id)router.push(`/admin/articles/${d.article.id}`);
+      if(!isEdit&&savedId)router.push(`/admin/articles/${savedId}`);
       router.refresh();
     }catch(e:any){
       setMessageKind('error');
       setMessage(e.message||'Could not save article');
       window.setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),0);
-    }finally{setBusy(false)}
+    }finally{setBusy(false);savingRef.current=false}
   }
 
   const selectedCategories=categories.filter(c=>categoryIds.includes(c.id)||c.id===form.primary_category_id);
 
   return <div className={styles.page}>
     <header className={styles.top}>
-      <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
+      <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1><span className={`${styles.saveStatus} ${saveState==='error'?styles.saveError:saveState==='saved'?styles.saveOk:''}`} role="status" aria-live="polite">{saveLabel}</span>{isEdit&&<div className={styles.state}><span>{status.replaceAll('_',' ')}</span><small>Full editing remains available after publication.</small></div>}</div>
       <div className={styles.actions}><button type="button" className={styles.clearAllButton} disabled={busy||converterBusy} onClick={clearAllFields}>Clear all fields</button>{isEdit?<a href="/admin/articles/new">+ New Article</a>:null}{isEdit&&article.slug?<a href={`/${article.slug}`} target="_blank">View live</a>:null}<button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'Working...':isEdit?'Save changes':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working...':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update published':'Publish'}</button>{isEdit?<button type="button" className={styles.deleteButton} disabled={busy||converterBusy} onClick={deleteArticle}>Delete article</button>:null}</div>
     </header>
+
+    {restoreOffer&&<div className={styles.restore} role="alert"><div><strong>Unsaved work found on this device</strong><span>From {new Intl.DateTimeFormat('en-NZ',{weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(restoreOffer.savedAt))}. {restoreOffer.data?.title?`“${String(restoreOffer.data.title).slice(0,80)}”`:''}</span></div><button type="button" onClick={restoreBackup}>Restore it</button><button type="button" onClick={discardBackup}>Discard</button></div>}
 
     {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
 
@@ -645,7 +817,7 @@ export default function ArticleWorkspace({
         <section className={styles.card}><header className={styles.cardHead}><div><span>PUBLISHING</span><h2>Publish settings</h2></div></header>
           <label className={styles.field}>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="draft">Draft</option><option value="in_review">In review</option><option value="scheduled">Scheduled</option><option value="published">Published</option>{isEdit&&<option value="archived">Archived</option>}</select></label>
           <label className={styles.field}>Article type<select value={articleType} onChange={e=>setArticleType(e.target.value)}>{types.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-          <label className={styles.field}>Author<select value={form.author_id} onChange={e=>update('author_id',e.target.value)}><option value="">Webfit News</option>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+          <label className={styles.field}>Author<select value={form.author_id} onChange={e=>update('author_id',e.target.value)}><option value="">Webfit News</option>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>{!form.author_id&&<small>Stories credited to “Webfit News” carry no reporter byline. {defaultAuthorId?'':<>Link your login to your profile in <a href="/admin/authors">Authors</a> to fill this in automatically.</>}</small>}</label>
           <label className={styles.field}>Publish date<input type="datetime-local" value={form.published_at} onChange={e=>update('published_at',e.target.value)}/></label>
           {status==='scheduled'&&<label className={styles.field}>Schedule for<input type="datetime-local" value={form.scheduled_at} onChange={e=>update('scheduled_at',e.target.value)}/></label>}
         </section>
@@ -663,6 +835,12 @@ export default function ArticleWorkspace({
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>PLACEMENT</span><h2>Homepage options</h2></div></header><div className={styles.toggles}>{[['is_breaking','Breaking News'],['is_featured','Featured'],['is_editor_pick',"Editor's Pick"],['is_homepage_hero','Homepage Hero']].map(([k,l])=><label key={k}><input type="checkbox" checked={(form as any)[k]} onChange={e=>update(k,e.target.checked)}/><span>{l}</span></label>)}</div></section>
       </aside>
+    </div>
+
+    <div className={styles.mobileBar} aria-label="Save and publish">
+      <span className={`${styles.mobileStatus} ${saveState==='error'?styles.saveError:saveState==='saved'?styles.saveOk:''}`}>{saveLabel}</span>
+      <button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':'draft')}>{busy?'…':isEdit&&status==='published'?'Save':'Save draft'}</button>
+      <button type="button" className={styles.mobilePublish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working…':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update':'Publish'}</button>
     </div>
 
     {mediaOpen&&<div className={styles.modal}>
