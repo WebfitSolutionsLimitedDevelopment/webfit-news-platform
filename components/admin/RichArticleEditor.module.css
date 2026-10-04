@@ -197,3 +197,17 @@
   .quickMedia{left:7px;right:7px}
   .quickMedia button{font-size:9px}
 }
+
+/* v6.1 phones: keep the editor inside the screen and the image shortcuts
+   above the Save / Publish bar (this rule must stay last in the file). */
+.wrapper{min-width:0;max-width:100%}
+.toolbar{max-width:100%;min-width:0}
+.editor{overflow-wrap:anywhere;word-break:normal;min-width:0}
+.editor *{max-width:100%}
+.editor pre{white-space:pre-wrap}
+.editor table{display:block;overflow-x:auto}
+@media(max-width:760px){
+  .editor{padding:18px 16px}
+  .quickMedia{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  :global(html[data-keyboard="open"]) .quickMedia{bottom:10px}
+}

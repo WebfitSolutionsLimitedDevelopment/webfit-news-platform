@@ -130,3 +130,15 @@
   .mobileBar .mobilePublish{background:#111317;border-color:#111317;color:#fff;padding:12px 18px}
   .mobileBar button:disabled{opacity:.55}
 }
+
+/* v6.1 phones: nothing may be wider than the screen.
+   Grid tracks default to the width of their widest content; the editor's
+   one-line, side-scrolling toolbar was stretching every card past the
+   screen edge. Pin every column to the available width instead. */
+.main,.side,.field{grid-template-columns:minmax(0,1fr)}
+.field>*{min-width:0;max-width:100%}
+/* While the phone keyboard is open the bar would sit on top of the text
+   being typed; autosave keeps running, so it can step aside. */
+@media(max-width:760px){
+  :global(html[data-keyboard="open"]) .mobileBar{display:none}
+}

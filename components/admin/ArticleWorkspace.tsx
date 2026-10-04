@@ -386,6 +386,17 @@ export default function ArticleWorkspace({
     return()=>{window.removeEventListener('beforeunload',onLeave);root.style.overscrollBehaviorY=prev;document.body.style.overscrollBehaviorY=''};
   },[]);
 
+  // Phones: note when the on-screen keyboard is open (the visible area shrinks
+  // well below the window height) so the bottom bar can step aside.
+  useEffect(()=>{
+    const vv=window.visualViewport;
+    if(!vv)return;
+    const root=document.documentElement;
+    const check=()=>{root.dataset.keyboard=window.innerHeight-vv.height>150?'open':'closed'};
+    vv.addEventListener('resize',check);check();
+    return()=>{vv.removeEventListener('resize',check);delete root.dataset.keyboard};
+  },[]);
+
   const saveLabel=saveState==='saving'?'Saving…':saveState==='error'?'Not saved to server · kept on this device':saveState==='local'?(canAutosave?'Saved on this device':'Unsaved changes · kept on this device'):saveState==='dirty'?'Unsaved changes':saveNote?`Saved ${saveNote}`:(articleId?'All changes saved':'Not saved yet');
 
   function setManualField(key:AutoFieldKey,value:string){
