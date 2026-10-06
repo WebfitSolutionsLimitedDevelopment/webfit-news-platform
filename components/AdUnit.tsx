@@ -119,7 +119,7 @@ function VideoCreative({ ad, active = true, onEnded }: { ad: LiveAd; active?: bo
 }
 
 /** How long each poster stays up before the next one slides in. */
-const ROTATE_MS = 8000;
+const ROTATE_MS = 5000;
 
 function Creative({ ad, variant, active, onVideoEnd }: { ad: LiveAd; variant: AdVariant; active: boolean; onVideoEnd: () => void }) {
   const altText = ad.alt_text || ad.headline || (ad.advertiser ? `Advertisement from ${ad.advertiser}` : 'Advertisement');
@@ -170,13 +170,18 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
 
   useEffect(() => {
     const device = currentDevice();
-    setList(rotationOrder(ads.filter(ad => ad.device === 'all' || ad.device === device)));
+    const eligible = ads.filter(ad => ad.device === 'all' || ad.device === device);
+    // Start from the ad the server already painted, so nothing swaps on load (no flicker).
+    // Readers still see every ad because the position keeps rotating.
+    const painted = eligible.findIndex(ad => ad.assignment_id === ads[0]?.assignment_id);
+    setList(painted >= 0 ? [...eligible.slice(painted), ...eligible.slice(0, painted)] : rotationOrder(eligible));
     setIndex(0);
   }, [ads]);
 
   const ad = list[index] ?? null;
   const many = list.length > 1;
   const next = useCallback(() => setIndex(i => (list.length ? (i + 1) % list.length : 0)), [list.length]);
+  const prev = useCallback(() => setIndex(i => (list.length ? (i - 1 + list.length) % list.length : 0)), [list.length]);
 
   // Is the ad position on screen? Rotation and view counting only happen while it is.
   useEffect(() => {
@@ -243,7 +248,8 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
     onBlur={() => setPaused(false)}
   >
     <span className={styles.label}>{label}{many ? <span className={styles.count}> {index + 1} of {list.length}</span> : null}</span>
-    {many ? <div className={styles.stack}>
+    {/* Always the same wrapper, so the first ad is not re-mounted (and does not blink) when rotation starts. */}
+    <div className={styles.stack}>
       {list.map((item, i) => <div
         key={item.assignment_id}
         className={`${styles.slide} ${i === index ? styles.slideOn : ''}`}
@@ -254,8 +260,9 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
       >
         <Creative ad={item} variant={variant} active={i === index} onVideoEnd={next}/>
       </div>)}
-    </div> : <Creative ad={ad} variant={variant} active onVideoEnd={() => {}}/>}
+    </div>
     {many && variant !== 'sticky' ? <div className={styles.dots}>
+      <button type="button" className={styles.arrow} onClick={prev} aria-label="Previous advertisement">‹</button>
       {list.map((item, i) => <button
         key={item.assignment_id}
         type="button"
@@ -264,6 +271,7 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
         aria-current={i === index}
         onClick={() => setIndex(i)}
       />)}
+      <button type="button" className={styles.arrow} onClick={next} aria-label="Next advertisement">›</button>
     </div> : null}
     {variant === 'sticky' ? <button type="button" className={styles.close} onClick={close} aria-label="Close advertisement">×</button> : null}
   </aside>;
