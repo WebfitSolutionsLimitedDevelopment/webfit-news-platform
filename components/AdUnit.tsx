@@ -26,7 +26,7 @@ function currentDevice(): 'mobile' | 'desktop' {
   return window.matchMedia(MOBILE_QUERY).matches ? 'mobile' : 'desktop';
 }
 
-function sendEvent(ad: LiveAd, event: 'impression' | 'video_start' | 'video_complete') {
+export function sendEvent(ad: LiveAd, event: 'impression' | 'video_start' | 'video_complete') {
   try {
     const body = JSON.stringify({ a: ad.assignment_id, e: event, d: currentDevice() });
     if (navigator.sendBeacon) {
@@ -50,7 +50,7 @@ function pickAd(ads: LiveAd[], device: 'mobile' | 'desktop'): LiveAd | null {
   return eligible[0];
 }
 
-function clickHref(ad: LiveAd) {
+export function clickHref(ad: LiveAd) {
   return `/api/ads/click?a=${encodeURIComponent(ad.assignment_id)}`;
 }
 

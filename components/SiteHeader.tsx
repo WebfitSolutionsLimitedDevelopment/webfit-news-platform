@@ -5,6 +5,7 @@ import { SiteMenu } from './SiteMenu';
 import { LanguageSelector } from './LanguageSelector';
 import styles from './SiteHeader.module.css';
 import { ElectionPollStrip } from './ElectionPollPromo';
+import { AdSlot } from './AdSlot';
 
 const links=[['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
 
@@ -55,5 +56,6 @@ export async function SiteHeader(){
     </div>
 
     <ElectionPollStrip/>
+    <AdSlot slotKey="SPOTLIGHT" variant="spotlight"/>
   </div>;
 }
