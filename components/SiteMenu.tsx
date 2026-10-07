@@ -5,6 +5,7 @@ import { useEffect, useId, useState } from 'react';
 import styles from './SiteMenu.module.css';
 
 const sections=[
+  ['E-Paper','/epaper'],
   ['New Zealand','/category/new-zealand'],
   ['Auckland','/category/auckland'],
   ['Politics','/category/politics'],

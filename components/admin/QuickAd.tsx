@@ -17,6 +17,8 @@ const PLACE_OPTIONS: { key: string; label: string }[] = [
   { key: 'HOME_MIDDLE', label: 'Homepage: middle' },
   { key: 'HOME_SIDEBAR_1', label: 'Homepage: further down (phones)' },
   { key: 'CATEGORY_TOP', label: 'Top of section pages' },
+  { key: 'EPAPER_FULL_PAGE', label: 'E-paper: full page' },
+  { key: 'EPAPER_HALF_PAGE', label: 'E-paper: half page' },
 ];
 
 const DEVICE_LABEL = { all: 'Desktop + phone', desktop: 'Desktop only', mobile: 'Phone only' } as const;
