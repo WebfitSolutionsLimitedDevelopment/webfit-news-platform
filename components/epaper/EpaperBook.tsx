@@ -44,8 +44,10 @@ function el(tag: string, cls: string, text?: string) {
   return node;
 }
 
-function img(src: string, alt: string, width: number) {
+function img(src: string, alt: string, width: number, ratio?: [number, number]) {
   const node = document.createElement('img');
+  // Intrinsic size up front so the space is reserved before the photo loads (older Safari ignores aspect-ratio).
+  if (ratio) { node.width = ratio[0]; node.height = ratio[1]; }
   node.src = resizedImage(src, width, 72);
   node.alt = alt;
   node.loading = 'lazy';
@@ -68,7 +70,7 @@ function build(item: Item): HTMLElement {
     }
     case 'photo': {
       const fig = el('figure', `${styles.it} ${item.wide ? styles.photoWide : styles.photo}`);
-      fig.append(img(item.story.image!, item.story.imageAlt, item.wide ? 1100 : 520));
+      fig.append(img(item.story.image!, item.story.imageAlt, item.wide ? 1100 : 520, item.wide ? [1200, 500] : [400, 300]));
       return fig;
     }
     case 'text': {
@@ -103,7 +105,18 @@ function build(item: Item): HTMLElement {
   }
 }
 
-/* --------------------------------------------------------------- pagination */
+/* --------------------------------------------------------------- pagination
+ *
+ * Each page is a vertical stack of:
+ *   - full-width pieces (headline, wide photo, half-page ad), and
+ *   - "bands" of three fixed-height columns holding a story's text.
+ * Every column is its own box with a fixed height, and we check it with
+ * scrollHeight — no CSS multi-column, which Safari measures and draws
+ * differently (that is what cropped text at the foot of columns).
+ */
+
+const COLS = 3;
+const MIN_TEXT_AFTER_HEAD = 50;
 
 function storyItems(story: EpaperFullStory, isSectionLead: boolean, isFront: boolean): Item[] {
   const items: Item[] = [{ t: 'head', story, lead: isSectionLead }];
@@ -111,6 +124,57 @@ function storyItems(story: EpaperFullStory, isSectionLead: boolean, isFront: boo
   const blocks = story.blocks.length ? story.blocks : [{ k: 'p', t: 'Read this story at webfitnews.com.' }];
   blocks.forEach((b, i) => items.push({ t: 'text', story, k: b.k, text: b.t, first: i === 0, last: i === blocks.length - 1, cont: false }));
   return items;
+}
+
+const isSpan = (it: Item) => it.t === 'head' || it.t === 'half' || (it.t === 'photo' && it.wide);
+const overflows = (node: HTMLElement) => node.scrollHeight > node.clientHeight + 1;
+
+type Flowed = { band: HTMLElement; rest: Item[]; endsStory: boolean };
+
+/** Pour column items into three columns of height h. Splits paragraphs between columns. */
+function flowColumns(items: Item[], h: number, parent: HTMLElement): Flowed {
+  const band = el('div', styles.band);
+  band.style.height = `${h}px`;
+  parent.append(band); // must be in the document to be measured
+  const cols = Array.from({ length: COLS }, () => { const c = el('div', styles.col); c.style.height = `${h}px`; band.append(c); return c; });
+  const queue = [...items];
+  let ci = 0;
+  let lastPlaced: Item | null = null;
+  while (queue.length && ci < COLS) {
+    const col = cols[ci];
+    const item = queue[0];
+    const node = build(item);
+    col.append(node);
+    if (!overflows(col)) { queue.shift(); lastPlaced = item; continue; }
+    node.remove();
+    if (item.t === 'text') {
+      const words = item.text.split(' ');
+      let lo = 1, hi = words.length - 1, best = 0;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        const trial = build({ ...item, text: words.slice(0, mid).join(' '), last: false });
+        col.append(trial);
+        const ok = !overflows(col);
+        trial.remove();
+        if (ok) { best = mid; lo = mid + 1; } else hi = mid - 1;
+      }
+      if (best >= 3 && words.length - best >= 2) {
+        col.append(build({ ...item, text: words.slice(0, best).join(' '), last: false }));
+        queue[0] = { ...item, text: words.slice(best).join(' '), first: false, cont: true };
+        lastPlaced = null;
+      }
+    } else if (!col.children.length && ci === COLS - 1 && h >= 300) {
+      // A photo taller than a whole column: shrink it into the column rather than loop.
+      node.style.maxHeight = `${h}px`;
+      node.style.marginBottom = '0';
+      col.append(node);
+      queue.shift();
+      lastPlaced = item;
+    }
+    ci += 1;
+  }
+  band.remove();
+  return { band, rest: queue, endsStory: !queue.length && Boolean(lastPlaced && lastPlaced.t === 'text' && lastPlaced.last) };
 }
 
 function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
@@ -124,101 +188,96 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
     section.stories.forEach((story, i) => queue.push(...storyItems(story, i === 0, isFront)));
 
     let frontUsed = !isFront;
-    let box!: HTMLElement;
+    let flow!: HTMLElement;
+    let H = PAGE_FLOW_H;
     let startsWithContinuation = false;
+    let lastStoryId: string | null = null;
 
-    const open = () => {
+    const open = (continuation: boolean) => {
       const front = !frontUsed;
       frontUsed = true;
-      box = el('div', `${styles.flow}`);
-      box.style.height = `${front ? FRONT_FLOW_H : PAGE_FLOW_H}px`;
-      box.dataset.front = front ? '1' : '';
-      host.replaceChildren(box);
+      H = front ? FRONT_FLOW_H : PAGE_FLOW_H;
+      flow = el('div', styles.flow);
+      flow.style.height = `${H}px`;
+      flow.dataset.front = front ? '1' : '';
+      host.replaceChildren(flow);
+      startsWithContinuation = continuation;
     };
-    const fits = () => box.scrollHeight <= box.clientHeight + 1 && box.scrollWidth <= box.clientWidth + 1;
-    const close = () => {
-      // Never leave a headline (or headline + photo) stranded at the foot of a page.
-      const carried: Item[] = [];
-      const kids = Array.from(box.children) as HTMLElement[];
-      while (kids.length > 1) {
-        const last = kids[kids.length - 1];
-        const kind = last.dataset.kind;
-        if (kind === 'head' || kind === 'photo') {
-          carried.unshift(JSON.parse(last.dataset.item!));
-          last.remove();
-          kids.pop();
-        } else break;
-      }
-      const children = Array.from(box.children) as HTMLElement[];
-      const lastStory = [...children].reverse().find(c => c.dataset.story)?.dataset.story || null;
-      // Strip measuring-only attributes from the stored HTML.
-      for (const c of children) { delete c.dataset.item; delete c.dataset.kind; delete c.dataset.story; }
-      pages.push({ kind: 'flow', front: box.dataset.front === '1', section, html: box.innerHTML, lastStoryId: lastStory, startsWithContinuation, endsMidStory: false });
-      return carried;
+    const used = () => Array.from(flow.children).reduce((sum, c) => {
+      const cs = getComputedStyle(c as HTMLElement);
+      return sum + (c as HTMLElement).offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+    }, 0);
+    const close = (endsMidStory: boolean) => {
+      if (!flow.children.length) return;
+      pages.push({ kind: 'flow', front: flow.dataset.front === '1', section, html: flow.innerHTML, lastStoryId, startsWithContinuation, endsMidStory });
     };
 
-    const stories = new Map(section.stories.map(s => [s.id, s]));
-    const revive = (raw: any): Item => ({ ...raw, story: stories.get(raw.storyId)! });
-    const place = (item: Item) => {
-      const node = build(item);
-      if (item.t !== 'half') {
-        node.dataset.story = item.story.id;
-        node.dataset.kind = item.t;
-        if (item.t !== 'text') node.dataset.item = JSON.stringify({ ...item, story: undefined, storyId: item.story.id });
-      }
-      box.append(node);
-      return node;
-    };
-
-    open();
-    let i = 0;
+    open(false);
     let guard = 0;
-    while (i < queue.length && guard++ < 20000) {
-      const item = queue[i];
-      const node = place(item);
-      if (fits()) { i += 1; continue; }
-      node.remove();
-      const onlyItem = box.children.length === 0;
+    while (queue.length && guard++ < 5000) {
+      const item = queue[0];
 
-      if (item.t === 'text') {
-        const words = item.text.split(' ');
-        let lo = 0, hi = words.length - 1, best = 0;
-        while (lo <= hi) {
-          const mid = (lo + hi) >> 1;
-          const trial = place({ ...item, text: words.slice(0, mid).join(' '), last: false });
-          const ok = mid > 0 && fits();
-          trial.remove();
-          if (ok) { best = mid; lo = mid + 1; } else hi = mid - 1;
-        }
-        if (best >= 4 && words.length - best >= 3) {
-          place({ ...item, text: words.slice(0, best).join(' '), last: false });
-          const carried = close().map(revive);
-          queue.splice(i, 1, ...carried, { ...item, text: words.slice(best).join(' '), first: false, cont: true });
-          startsWithContinuation = true;
-          open();
+      if (isSpan(item)) {
+        // Headline (with its wide photo) must have room for some text under it.
+        const group: Item[] = [item];
+        if (item.t === 'head' && queue[1]?.t === 'photo' && (queue[1] as any).wide) group.push(queue[1]);
+        const nodes = group.map(g => { const n = build(g); flow.append(n); return n; });
+        const needsText = item.t === 'head';
+        // A narrow photo follows in the first column: keep room for it plus a few lines.
+        const narrowPhotoNext = queue[group.length]?.t === 'photo';
+        const minAfter = narrowPhotoNext ? 175 : MIN_TEXT_AFTER_HEAD;
+        const fits = !overflows(flow) && (!needsText || H - used() >= minAfter);
+        if (fits || flow.children.length === nodes.length) {
+          if (!fits) nodes.forEach(n => { n.style.maxHeight = `${Math.max(60, H - 120)}px`; n.style.overflow = 'hidden'; });
+          queue.splice(0, group.length);
+          if (item.t !== 'half') lastStoryId = item.story.id;
           continue;
         }
+        nodes.forEach(n => n.remove());
+        close(false);
+        open(false);
+        continue;
       }
-      if (onlyItem) { place(item); i += 1; continue; } // too big for any page: let it clip rather than loop
-      const midStory = item.t === 'text' && !item.first;
-      const carried = close().map(revive);
-      if (carried.length) queue.splice(i, 0, ...carried);
-      startsWithContinuation = midStory;
-      open();
+
+      // A run of column items: one story's body (and its narrow photo).
+      let n = 0;
+      while (n < queue.length && !isSpan(queue[n])) n += 1;
+      const run = queue.slice(0, n);
+      const R = Math.floor(H - used()) - 2;
+      if (R < 40) { close(true); open(true); continue; }
+
+      const full = flowColumns(run, R, flow);
+      if (full.rest.length) {
+        flow.append(full.band);
+        lastStoryId = run[0].t === 'half' ? lastStoryId : (run[0] as any).story.id;
+        queue.splice(0, n, ...full.rest);
+        close(true);
+        open(true);
+        continue;
+      }
+      // It all fits: find the shortest column height that still holds it (balanced columns).
+      let lo = 20, hi = R, best = full;
+      while (hi - lo > 3) {
+        const mid = Math.floor((lo + hi) / 2);
+        const trial = flowColumns(run, mid, flow);
+        if (trial.rest.length) lo = mid + 1; else { hi = mid; best = trial; }
+      }
+      best.band.classList.add(styles.bandEnd);
+      flow.append(best.band);
+      lastStoryId = (run[0] as any).story?.id || lastStoryId;
+      queue.splice(0, n);
     }
 
     // Fill the space after the section's last story with a half-page ad, if it fits.
     const ad = edition.halfPageAds.length ? edition.halfPageAds[halfIndex % edition.halfPageAds.length] : null;
     if (ad || houseHalves < HOUSE_HALF_LIMIT) {
-      const node = place({ t: 'half', ad });
-      if (fits()) { if (ad) halfIndex += 1; else houseHalves += 1; }
+      const node = build({ t: 'half', ad });
+      flow.append(node);
+      if (!overflows(flow)) { if (ad) halfIndex += 1; else houseHalves += 1; }
       else node.remove();
     }
-    close();
-    startsWithContinuation = false;
+    close(false);
   });
-  // A page ends mid-story when the next page of the same section picks the story up.
-  pages.forEach((p, i) => { const next = pages[i + 1]; p.endsMidStory = Boolean(next && next.section === p.section && next.startsWithContinuation); });
   return pages;
 }
 
