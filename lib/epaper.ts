@@ -401,7 +401,8 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
     storyCount: stories.length,
     moreStories,
     coverImage: lead?.image || stories.find(s => s.image)?.image || null,
-    fullPageAds: rotate((ads[EPAPER_FULL_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.key + info.lastDay),
+    // Highest priority first: it gets page 2, the next one page 6.
+    fullPageAds: [...(ads[EPAPER_FULL_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
   };
 });

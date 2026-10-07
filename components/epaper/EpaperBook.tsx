@@ -21,9 +21,6 @@ import styles from './Epaper.module.css';
 
 const FRONT_FLOW_H = 560;
 const PAGE_FLOW_H = 668;
-const FULL_PAGE_AD_EVERY = 4;
-/** Story pages per edition (plus front, one ad page and the back page = about 9). */
-const STORY_PAGES = 6;
 const HOUSE_HALF_LIMIT = 2;
 
 type Item =
@@ -186,6 +183,8 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
   const placed = new Set<string>();
   const shortTries = new Map<string, number>();
 
+  // 9 pages in all: front, desk pages, full-page ads, back.
+  const STORY_PAGES = 9 - 2 - adPlan(edition).length;
   // Page quota per desk: STORY_PAGES shared out in proportion to each desk's stories (at least one each).
   const deskSizes = edition.sections.map((sec, i) => (i === 0 ? 0 : sec.stories.length));
   const totalStories = deskSizes.reduce((a, b) => a + b, 0) || 1;
@@ -349,17 +348,21 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
   return { pages, dropped };
 }
 
+/**
+ * Full-page ads sit at fixed page numbers: the highest-priority booking on page 2,
+ * the next on page 6. With no bookings, one "advertise here" page goes on page 6.
+ */
+const AD_PAGE_NUMBERS = [2, 6];
+
+function adPlan(edition: Edition): Array<{ at: number; ad: EpaperAd | null }> {
+  const booked = edition.fullPageAds.slice(0, AD_PAGE_NUMBERS.length);
+  if (!booked.length) return [{ at: AD_PAGE_NUMBERS[AD_PAGE_NUMBERS.length - 1], ad: null }];
+  return booked.map((ad, i) => ({ at: AD_PAGE_NUMBERS[i], ad }));
+}
+
 function assemble(edition: Edition, flow: FlowPage[]): BookPage[] {
-  const out: BookPage[] = [];
-  let fullIndex = 0;
-  let houseUsed = false;
-  flow.forEach((page, i) => {
-    out.push(page);
-    if (i === 0 || i === flow.length - 1) return;
-    if (i % FULL_PAGE_AD_EVERY !== 0) return;
-    if (fullIndex < edition.fullPageAds.length) out.push({ kind: 'ad', ad: edition.fullPageAds[fullIndex++] });
-    else if (!houseUsed) { houseUsed = true; out.push({ kind: 'ad', ad: null }); }
-  });
+  const out: BookPage[] = [...flow];
+  for (const { at, ad } of adPlan(edition)) out.splice(Math.min(at - 1, out.length), 0, { kind: 'ad', ad });
   out.push({ kind: 'back' });
   return out;
 }

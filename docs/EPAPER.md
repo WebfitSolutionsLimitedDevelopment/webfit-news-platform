@@ -17,7 +17,7 @@ Two new positions, booked like any other in Newsroom → Advertisements:
 
 | Key | Where | Artwork |
 | --- | --- | --- |
-| `EPAPER_FULL_PAGE` | A full page after every 4th story page | 1240 × 1754 portrait (A4) |
+| `EPAPER_FULL_PAGE` | Page 2 (highest priority booking) and page 6 (next). No booking: one house page on page 6. Editions stay 9 pages; desk pages shrink to fit | 1240 × 1754 portrait (A4); square or 4:5 artwork is centred |
 | `EPAPER_HALF_PAGE` | In the space left at the end of a section, when 250px or more is free | 1240 × 860 landscape |
 
 With nothing booked, each edition shows one "Advertise in the e-paper" house page and up to two house half pages linking to `/advertise-media-kit`. Impressions are counted the first time an ad page is on screen; clicks go through `/api/ads/click` as usual.
