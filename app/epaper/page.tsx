@@ -12,7 +12,7 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const edition = await getEdition();
   const title = `E-paper | ${SITE_NAME}`;
-  const description = 'Read Webfit News as a weekly newspaper: the last seven days of New Zealand, politics, immigration, India & community, business, lifestyle and sport stories, printed in full and laid out page by page.';
+  const description = 'Read Webfit News as a newspaper, twice a week: New Zealand, politics, immigration, India & community, business, lifestyle and sport, printed in full and laid out page by page.';
   const url = absoluteUrl('/epaper');
   return {
     title: { absolute: title },

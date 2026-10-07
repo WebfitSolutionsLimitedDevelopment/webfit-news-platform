@@ -86,7 +86,7 @@ function build(item: Item): HTMLElement {
         const box = el('div', `${styles.it} ${styles.halfSlot} ${styles.houseHalfIn}`);
         box.append(el('span', styles.houseKicker, 'Advertise in the e-paper'));
         box.append(el('strong', styles.houseTitleSm, 'Your business could be on this page'));
-        box.append(el('span', styles.houseTextSm, 'Full and half pages in every weekly edition, next to the stories Kiwi-Indian families read.'));
+        box.append(el('span', styles.houseTextSm, 'Full and half pages in every edition, next to the stories Kiwi-Indian families read.'));
         const a = el('a', styles.houseButton, 'Book a page') as HTMLAnchorElement;
         a.href = '/advertise-media-kit';
         box.append(a);
@@ -315,12 +315,12 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
     return <div className={`${styles.page} ${styles.front}`}>
       <header className={styles.masthead}>
         <div className={styles.mastheadTop}>
-          <span>{edition.dateline} · Weekly</span>
+          <span>{edition.dateline} · Twice weekly</span>
           <span>{edition.isLive ? 'Live edition · updating as we publish' : edition.title}</span>
           <span>Vol. 1 · No. {edition.number} · Free</span>
         </div>
         <img className={styles.logo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
-        <div className={styles.tagline}>Independent New Zealand journalism · {edition.storyCount} stories this week</div>
+        <div className={styles.tagline}>Independent New Zealand journalism · {edition.storyCount} stories in this edition</div>
         <div className={styles.contentsBar}>
           <strong>Inside</strong>
           {contents.slice(1, 9).map(c => <span key={c.title}>{c.title} <b>{c.page}</b></span>)}
@@ -357,7 +357,7 @@ function AdPageView({ ad, n, edition }: { ad: EpaperAd | null; n: number; editio
     </div> : <div className={styles.houseFull}>
       <span className={styles.houseKicker}>Advertise in the e-paper</span>
       <strong className={styles.houseTitle}>Your business could own this page</strong>
-      <p className={styles.houseText}>A full page in the Webfit News weekly e-paper, read by Kiwi-Indian and wider New Zealand communities. Full pages, half pages, section sponsorship and community notices.</p>
+      <p className={styles.houseText}>A full page in the Webfit News e-paper, read twice a week by Kiwi-Indian and wider New Zealand communities. Full pages, half pages, section sponsorship and community notices.</p>
       <a href="/advertise-media-kit" className={styles.houseButton}>Book a page</a>
     </div>}
     <Folio n={n} label="Advertisement" edition={edition}/>
@@ -369,7 +369,7 @@ function BackPageView({ n, edition, shelf }: { n: number; edition: Edition; shel
   return <div className={`${styles.page} ${styles.backPage}`}>
     <img className={styles.backLogo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
     <h2 className={styles.backTitle}>Every story, every day, on webfitnews.com</h2>
-    <p className={styles.backText}>This e-paper is built from our live newsroom. The current edition always holds the last seven days of reporting and keeps updating as we publish.</p>
+    <p className={styles.backText}>This e-paper is built from our live newsroom. New editions arrive every Monday and Thursday, and the current one keeps updating as we publish.</p>
     {others.length ? <div className={styles.backEditions}>
       <strong>Other editions</strong>
       <ul>{others.map(e => <li key={e.key}><a href={e.href}>{e.title}</a><span>{e.storyCount} stories</span></li>)}</ul>

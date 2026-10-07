@@ -8,9 +8,14 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  *
  * Built automatically from published stories, with every story printed in full.
  *
- *   This week   always the last 7 days (New Zealand time), updated as we publish.
- *   Past weeks  one edition per Monday–Sunday week, kept while it falls inside the
- *               last EPAPER_WINDOW_DAYS days.
+ *   Midweek edition   Monday–Wednesday (New Zealand time)
+ *   Weekend edition   Thursday–Sunday
+ *
+ * The current edition fills up as we publish. /epaper opens it once it has
+ * MIN_LIVE_STORIES stories; until then it opens the previous (complete) edition.
+ * Editions are kept while they fall inside the last EPAPER_WINDOW_DAYS days.
+ * Two editions a week keeps each one around 20–25 pages; PAGE_WORD_BUDGET is a
+ * safety net for unusually busy weeks.
  *
  * The server sends the stories (text, photo, section) and the booked ads. The reader's
  * browser lays the text out into fixed-size newspaper pages (see EpaperBook), because
@@ -19,8 +24,12 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
 
 export const EPAPER_TIMEZONE = 'Pacific/Auckland';
 export const EPAPER_WINDOW_DAYS = 15;
-export const EDITION_DAYS = 7;
-/** Monday of week No. 1. Used for the "No." printed on the masthead. */
+/** Open the in-progress edition by default once it has this many stories. */
+const MIN_LIVE_STORIES = 10;
+/** About 17–18 pages of columns (~25 pages with front, ads and back). Beyond it, the lowest-ranked long stories are shortened, with a link to the full story. */
+const PAGE_WORD_BUDGET = 8_500;
+const SHORTENED_WORDS = 200;
+/** Monday of edition No. 1. Used for the "No." printed on the masthead. */
 const EPAPER_LAUNCH = '2026-09-21';
 
 export const EPAPER_FULL_PAGE_SLOT = 'EPAPER_FULL_PAGE';
@@ -92,9 +101,19 @@ function mondayOf(ymd: string): string {
   return addDays(ymd, -((weekday(ymd) + 6) % 7));
 }
 
-function weekNumber(ymd: string): number {
-  const days = Math.round((Date.parse(`${mondayOf(ymd)}T00:00:00Z`) - Date.parse(`${EPAPER_LAUNCH}T00:00:00Z`)) / 86_400_000);
-  return Math.max(1, Math.floor(days / 7) + 1);
+/** Monday for Mon–Wed, Thursday for Thu–Sun. */
+function editionStart(ymd: string): string {
+  const monday = mondayOf(ymd);
+  return (weekday(ymd) + 6) % 7 <= 2 ? monday : addDays(monday, 3);
+}
+
+function editionEnd(start: string): string {
+  return addDays(start, weekday(start) === 1 ? 2 : 3);
+}
+
+function editionNumber(start: string): number {
+  const days = Math.round((Date.parse(`${start}T00:00:00Z`) - Date.parse(`${EPAPER_LAUNCH}T00:00:00Z`)) / 86_400_000);
+  return Math.max(1, Math.floor(days / 7) * 2 + (weekday(start) === 4 ? 1 : 0) + 1);
 }
 
 const fmt = (opts: Intl.DateTimeFormatOptions) => (ymd: string) =>
@@ -103,7 +122,7 @@ const longDate = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'nu
 const shortDate = fmt({ day: 'numeric', month: 'short' });
 
 export type EditionInfo = {
-  /** "latest" for this week's live edition, otherwise the Monday it starts (URL: /epaper/<key>). */
+  /** The Monday or Thursday it starts (URL: /epaper/<key>). */
   key: string;
   href: string;
   title: string;
@@ -117,15 +136,16 @@ export type EditionInfo = {
   toIso: string;
 };
 
-function makeEdition(firstDay: string, lastDay: string, isLive: boolean): EditionInfo {
+function makeEdition(firstDay: string, isLive: boolean, today: string): EditionInfo {
+  const lastDay = editionEnd(firstDay);
   const coverage = `${shortDate(firstDay)} – ${shortDate(lastDay)}`;
   return {
-    key: isLive ? 'latest' : firstDay,
-    href: isLive ? '/epaper' : `/epaper/${firstDay}`,
-    title: isLive ? 'This week’s edition' : `Week of ${coverage}`,
-    dateline: longDate(lastDay),
+    key: firstDay,
+    href: `/epaper/${firstDay}`,
+    title: `${weekday(firstDay) === 1 ? 'Midweek' : 'Weekend'} edition`,
+    dateline: longDate(isLive ? today : lastDay),
     coverage,
-    number: weekNumber(lastDay),
+    number: editionNumber(firstDay),
     isLive,
     firstDay,
     lastDay,
@@ -134,21 +154,21 @@ function makeEdition(firstDay: string, lastDay: string, isLive: boolean): Editio
   };
 }
 
-/** The live edition first, then past Monday–Sunday weeks inside the window (newest first). */
+/** The current (live) edition first, then earlier editions inside the window, newest first. */
 export function listEditions(now = new Date()): EditionInfo[] {
   const today = nzDate(now);
   const oldestDay = addDays(today, -(EPAPER_WINDOW_DAYS - 1));
-  const out = [makeEdition(addDays(today, -(EDITION_DAYS - 1)), today, true)];
-  let monday = addDays(mondayOf(today), -7);
-  while (addDays(monday, 6) >= oldestDay) {
-    out.push(makeEdition(monday, addDays(monday, 6), false));
-    monday = addDays(monday, -7);
+  const out: EditionInfo[] = [];
+  let start = editionStart(today);
+  while (editionEnd(start) >= oldestDay) {
+    out.push(makeEdition(start, out.length === 0, today));
+    start = editionStart(addDays(start, -1));
   }
   return out;
 }
 
 export function isEditionKey(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && weekday(value) === 1;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && [1, 4].includes(weekday(value));
 }
 
 /* ---------------------------------------------------------------- stories */
@@ -281,13 +301,16 @@ function inEdition(info: EditionInfo) {
 }
 
 /** One edition with every story's full text, or null if it is outside the window. */
-export const getEdition = cache(async (key = 'latest'): Promise<Edition | null> => {
+export const getEdition = cache(async (key?: string): Promise<Edition | null> => {
   const editions = listEditions();
-  const info = editions.find(e => e.key === key);
-  if (!info) return null;
+  const windowFrom = editions[editions.length - 1].fromIso;
+  const [inWindow, ads] = await Promise.all([getWindowStories(windowFrom, editions[0].toIso), getLiveAds()]);
 
-  const [headlines, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
-  const stories = headlines.filter(inEdition(info));
+  // No key: the live edition once it has enough stories, otherwise the previous one.
+  let info = key ? editions.find(e => e.key === key) : editions[0];
+  if (!key && editions[1] && inWindow.filter(inEdition(editions[0])).length < MIN_LIVE_STORIES) info = editions[1];
+  if (!info) return null;
+  const stories = inWindow.filter(inEdition(info));
 
   // Full text for this edition's stories only.
   const bodies = new Map<string, { html: string | null; author: string | null }>();
@@ -301,11 +324,29 @@ export const getEdition = cache(async (key = 'latest'): Promise<Edition | null> 
 
   const ranked = [...stories].sort(byImportance);
   const lead = ranked[0];
+
+  // Page budget: in an unusually busy edition, shorten the lowest-ranked long stories.
+  const printed = new Map(ranked.map(s => [s.id, full(s)]));
+  const words = (s: EpaperFullStory) => s.blocks.reduce((n, b) => n + b.t.split(' ').length, 0);
+  let total = [...printed.values()].reduce((n, s) => n + words(s), 0);
+  for (const s of [...ranked].reverse()) {
+    if (total <= PAGE_WORD_BUDGET || s.id === lead?.id) continue;
+    const story = printed.get(s.id)!;
+    const before = words(story);
+    if (before <= SHORTENED_WORDS * 1.5) continue;
+    const kept: TextBlock[] = [];
+    let count = 0;
+    for (const b of story.blocks) { if (count >= SHORTENED_WORDS) break; kept.push(b); count += b.t.split(' ').length; }
+    kept.push({ k: 'p', t: `Full story: webfitnews.com/${s.slug}` });
+    story.blocks = kept;
+    total -= before - words(story);
+  }
+  const print = (s: EpaperStory) => printed.get(s.id)!;
   const sections: EditionSection[] = [];
-  if (lead) sections.push({ key: lead.section, title: 'Top Story', kicker: 'Front page', stories: [full(lead)] });
+  if (lead) sections.push({ key: lead.section, title: 'Top Story', kicker: 'Front page', stories: [print(lead)] });
   for (const def of EPAPER_SECTIONS) {
     const list = ranked.filter(s => s.section === def.key && s.id !== lead?.id);
-    if (list.length) sections.push({ key: def.key, title: def.title, kicker: def.kicker, stories: list.map(full) });
+    if (list.length) sections.push({ key: def.key, title: def.title, kicker: def.kicker, stories: list.map(print) });
   }
 
   return {

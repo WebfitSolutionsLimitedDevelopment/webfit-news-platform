@@ -10,21 +10,21 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
     <nav className="article-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><Link href="/epaper">E-paper</Link><span>/</span><span>{edition.coverage}</span></nav>
     <div className={styles.hubHead}>
       <div>
-        <span className={styles.hubKicker}>Webfit News weekly e-paper · No. {edition.number}</span>
+        <span className={styles.hubKicker}>Webfit News e-paper · No. {edition.number}</span>
         <h1 className={styles.hubTitle}>{edition.title}</h1>
-        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, printed in full and laid out as a newspaper.</p>
+        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, laid out as a newspaper. New editions every Monday and Thursday.</p>
       </div>
-      {edition.isLive ? <span className={styles.liveBadge}>Live · last 7 days, updating as we publish</span> : null}
+      {edition.isLive ? <span className={styles.liveBadge}>Live · updating as we publish</span> : null}
     </div>
 
     <EpaperBook edition={edition} shelf={shelf}/>
 
     <section className={styles.shelf} aria-labelledby="epaper-shelf">
-      <h2 id="epaper-shelf" className={styles.shelfTitle}>Editions from the last 15 days</h2>
+      <h2 id="epaper-shelf" className={styles.shelfTitle}>Recent editions</h2>
       <div className={styles.shelfGrid}>
         {shelf.map(e => <Link key={e.key} href={e.href} className={`${styles.cover} ${e.key === edition.key ? styles.coverCurrent : ''}`} aria-current={e.key === edition.key ? 'page' : undefined}>
           <div className={styles.coverThumb}>
-            {e.isLive ? <span className={styles.coverLive}>Live</span> : null}
+            {e.isLive ? <span className={styles.coverLive}>{e.storyCount < 10 ? 'Filling up' : 'Live'}</span> : null}
             <img className={styles.coverLogo} src="/webfit-news-logo-400.webp" alt=""/>
             <div className={styles.coverRule}/>
             {e.coverImage ? <img className={styles.coverImg} src={resizedImage(e.coverImage, 320, 70)} alt="" loading="lazy"/> : <div className={styles.coverImg}/>}
@@ -36,7 +36,7 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
     </section>
 
     <div className={styles.advertiseStrip}>
-      <div><strong>Put your business in the e-paper</strong><p>Full pages and half pages in every weekly edition.</p></div>
+      <div><strong>Put your business in the e-paper</strong><p>Full pages and half pages in every edition, twice a week.</p></div>
       <Link href="/advertise-media-kit">See the media kit</Link>
     </div>
 

@@ -2,10 +2,10 @@
 
 ## E-paper (`/epaper`)
 
-- Weekly, with every story printed in full (no "read more"). `/epaper` is always the **last 7 days** (New Zealand time) and updates as stories publish. Past Monday–Sunday weeks inside the last 15 days are kept at `/epaper/<Monday YYYY-MM-DD>`; older or invalid dates return 404.
+- Two editions a week (New Zealand time): **Midweek** (Mon–Wed, out Monday) and **Weekend** (Thu–Sun, out Thursday), at `/epaper/<start date>`. `/epaper` opens the current edition once it has 10 stories, otherwise the previous one. Editions inside the last 15 days stay on the shelf. Fully automatic.
+- Stories are printed in full. Page budget: if an edition has more than ~8,500 words, the lowest-ranked long stories are shortened to ~200 words with a link to the full story (the front-page story is never shortened). That keeps editions at roughly 20–25 pages.
 - Order: front page (the week's strongest story: hero, breaking, featured, editor's pick, then views) → Aotearoa Today (NZ) → Power & Politics → Visa Desk → Desi Diaries (India & community) → Money Matters → World Window → Style & Living (lifestyle, beauty, health) → Sports Arena → Point of View → Community Board → back page. Empty sections are skipped. Category → section map: `EPAPER_SECTIONS` in `lib/epaper.ts`.
 - The server sends the stories as plain text blocks (`lib/epaper-text.ts`: paragraphs, subheadings, lists, quotes, table rows; images and embeds dropped). The reader’s browser lays them out (`components/epaper/EpaperBook.tsx`) into 560 × 792 pages: full-width headlines and lead photos, then three fixed-height columns per story (each column is measured on its own — no CSS multi-column, which Safari clipped), balanced to the shortest height that holds the text, splitting text across pages mid-paragraph and printing "continued on / from page N". Each section starts on a new page.
-- About 40 stories a week makes roughly 45 pages.
 - Only `/epaper` is indexed. Edition pages are `noindex, follow` because every story already has its own page.
 
 ## E-paper advertising
