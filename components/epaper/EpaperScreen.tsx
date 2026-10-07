@@ -12,7 +12,7 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
       <div>
         <span className={styles.hubKicker}>Webfit News e-paper · No. {edition.number}</span>
         <h1 className={styles.hubTitle}>{edition.title}</h1>
-        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, laid out as a newspaper. New editions every Monday and Thursday.</p>
+        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, the best of them laid out as an 8–9 page newspaper. New editions every Monday and Thursday.</p>
       </div>
       {edition.isLive ? <span className={styles.liveBadge}>Live · updating as we publish</span> : null}
     </div>
@@ -46,6 +46,10 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
         <h3>{section.title}</h3>
         <ul>{section.stories.map(s => <li key={s.id}><Link href={`/${s.slug}`}>{s.title}</Link></li>)}</ul>
       </section>)}
+      {edition.moreStories.length ? <section>
+        <h3>Also this edition</h3>
+        <ul>{edition.moreStories.map(s => <li key={s.slug}><Link href={`/${s.slug}`}>{s.title}</Link></li>)}</ul>
+      </section> : null}
     </section> : null}
   </main>;
 }

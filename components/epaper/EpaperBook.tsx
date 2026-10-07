@@ -22,6 +22,8 @@ import styles from './Epaper.module.css';
 const FRONT_FLOW_H = 560;
 const PAGE_FLOW_H = 668;
 const FULL_PAGE_AD_EVERY = 4;
+/** Story pages per edition (plus front, one ad page and the back page = about 9). */
+const STORY_PAGES = 6;
 const HOUSE_HALF_LIMIT = 2;
 
 type Item =
@@ -177,12 +179,31 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement): Flowed {
   return { band, rest: queue, endsStory: !queue.length && Boolean(lastPlaced && lastPlaced.t === 'text' && lastPlaced.last) };
 }
 
-function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
+function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dropped: Array<{ title: string; slug: string }> } {
   const pages: FlowPage[] = [];
   let halfIndex = 0;
   let houseHalves = 0;
+  const placed = new Set<string>();
+  const shortTries = new Map<string, number>();
+
+  // Page quota per desk: STORY_PAGES shared out in proportion to each desk's stories (at least one each).
+  const deskSizes = edition.sections.map((sec, i) => (i === 0 ? 0 : sec.stories.length));
+  const totalStories = deskSizes.reduce((a, b) => a + b, 0) || 1;
+  const quotas = edition.sections.map((_, i) => (i === 0 ? 1 : 1));
+  let left = STORY_PAGES - (edition.sections.length - 1);
+  const want = deskSizes.map(n => (STORY_PAGES * n) / totalStories - 1);
+  while (left > 0) {
+    let best = -1;
+    want.forEach((w, i) => { if (i > 0 && (best < 0 || w - quotas[i] > want[best] - quotas[best])) best = i; });
+    if (best < 0) break;
+    quotas[best] += 1;
+    left -= 1;
+  }
 
   edition.sections.forEach((section, sIndex) => {
+    const quota = quotas[sIndex];
+    let pageNo = 0;
+    let snap: { children: number; page: number; storyId: string } | null = null;
     const isFront = sIndex === 0;
     const queue: Item[] = [];
     section.stories.forEach((story, i) => queue.push(...storyItems(story, i === 0, isFront)));
@@ -212,10 +233,47 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
       pages.push({ kind: 'flow', front: flow.dataset.front === '1', section, html: flow.innerHTML, lastStoryId, startsWithContinuation, endsMidStory });
     };
 
+    // Move to the next page of this desk. On the desk's last page, a story that
+    // started on this page is taken out again (it goes to the back-page list).
+    const nextPage = (midStory: boolean) => {
+      if (pageNo + 1 >= quota) {
+        if (snap && snap.page === pageNo && snap.children > 0) {
+          while (flow.children.length > snap.children) flow.lastElementChild!.remove();
+          placed.delete(snap.storyId);
+          const id = snap.storyId;
+          const story = section.stories.find(st => st.id === id)!;
+          let firstIdx = queue.findIndex(q => (q as any).story?.id === id);
+          for (let i = queue.length - 1; i >= 0; i -= 1) if ((queue[i] as any).story?.id === id) queue.splice(i, 1);
+          if (firstIdx < 0) firstIdx = 0;
+          snap = null;
+          // Room left on the page: print a shorter version of the story there instead of leaving it blank.
+          const tries = (shortTries.get(id) || 0) + 1;
+          shortTries.set(id, tries);
+          const textBlocks = story.blocks.filter(bk => !/^Read the full story at /.test(bk.t));
+          const keep = Math.max(1, Math.floor(textBlocks.length / (2 ** tries)));
+          if (H - used() >= 150 && tries <= 4) {
+            const short: EpaperFullStory = { ...story, image: tries > 1 ? null : story.image, blocks: [...textBlocks.slice(0, keep), { k: 'p' as const, t: `Read the full story at webfitnews.com/${story.slug}` }] };
+            queue.splice(firstIdx, 0, ...storyItems(short, false, false));
+          }
+          return 'skip' as const;
+        }
+        if (pageNo + 1 >= quota + 1) { queue.length = 0; return false; }
+      }
+      close(midStory);
+      pageNo += 1;
+      open(midStory);
+      return true;
+    };
+
     open(false);
     let guard = 0;
     while (queue.length && guard++ < 5000) {
       const item = queue[0];
+      if (item.t === 'head') {
+        if (pageNo >= quota) break; // spilled past the quota finishing a story: start nothing new
+        snap = { children: flow.children.length, page: pageNo, storyId: item.story.id };
+        placed.add(item.story.id);
+      }
 
       if (isSpan(item)) {
         // Headline (with its wide photo) must have room for some text under it.
@@ -226,7 +284,16 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
         // A narrow photo follows in the first column: keep room for it plus a few lines.
         const narrowPhotoNext = queue[group.length]?.t === 'photo';
         const minAfter = narrowPhotoNext ? 175 : MIN_TEXT_AFTER_HEAD;
-        const fits = !overflows(flow) && (!needsText || H - used() >= minAfter);
+        let fits = !overflows(flow) && (!needsText || H - used() >= minAfter);
+        if (!fits && narrowPhotoNext && !overflows(flow) && H - used() >= MIN_TEXT_AFTER_HEAD + 30) {
+          // Not enough room for the photo up top: start the text here and run the photo further down.
+          const photoAt = group.length;
+          const [photo] = queue.splice(photoAt, 1);
+          let at = photoAt, paras = 0;
+          while (at < queue.length && queue[at].t === 'text' && paras < 2) { at += 1; paras += 1; }
+          queue.splice(at, 0, photo);
+          fits = true;
+        }
         if (fits || flow.children.length === nodes.length) {
           if (!fits) nodes.forEach(n => { n.style.maxHeight = `${Math.max(60, H - 120)}px`; n.style.overflow = 'hidden'; });
           queue.splice(0, group.length);
@@ -234,8 +301,8 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
           continue;
         }
         nodes.forEach(n => n.remove());
-        close(false);
-        open(false);
+        const r1 = nextPage(false);
+        if (!r1) break;
         continue;
       }
 
@@ -244,15 +311,15 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
       while (n < queue.length && !isSpan(queue[n])) n += 1;
       const run = queue.slice(0, n);
       const R = Math.floor(H - used()) - 2;
-      if (R < 40) { close(true); open(true); continue; }
+      if (R < 40) { const r2 = nextPage(true); if (!r2) break; continue; }
 
       const full = flowColumns(run, R, flow);
       if (full.rest.length) {
         flow.append(full.band);
         lastStoryId = run[0].t === 'half' ? lastStoryId : (run[0] as any).story.id;
         queue.splice(0, n, ...full.rest);
-        close(true);
-        open(true);
+        const r3 = nextPage(true);
+        if (!r3) break;
         continue;
       }
       // It all fits: find the shortest column height that still holds it (balanced columns).
@@ -278,7 +345,8 @@ function paginate(edition: Edition, host: HTMLElement): FlowPage[] {
     }
     close(false);
   });
-  return pages;
+  const dropped = edition.sections.flatMap(sec => sec.stories).filter(st => !placed.has(st.id)).map(st => ({ title: st.title, slug: st.slug }));
+  return { pages, dropped };
 }
 
 function assemble(edition: Edition, flow: FlowPage[]): BookPage[] {
@@ -364,15 +432,23 @@ function AdPageView({ ad, n, edition }: { ad: EpaperAd | null; n: number; editio
   </div>;
 }
 
-function BackPageView({ n, edition, shelf }: { n: number; edition: Edition; shelf: EditionSummary[] }) {
+function BackPageView({ n, edition, shelf, extra }: { n: number; edition: Edition; shelf: EditionSummary[]; extra: Array<{ title: string; slug: string }> }) {
   const others = shelf.filter(e => e.key !== edition.key);
-  return <div className={`${styles.page} ${styles.backPage}`}>
+  const all = [...extra, ...edition.moreStories];
+  const more = all.slice(0, 14);
+  return <div className={`${styles.page} ${styles.backPage} ${more.length ? styles.backPageList : ''}`}>
     <img className={styles.backLogo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
-    <h2 className={styles.backTitle}>Every story, every day, on webfitnews.com</h2>
-    <p className={styles.backText}>This e-paper is built from our live newsroom. New editions arrive every Monday and Thursday, and the current one keeps updating as we publish.</p>
+    {more.length ? <div className={styles.backMore}>
+      <strong>Also this edition on webfitnews.com</strong>
+      <ul>{more.map(s => <li key={s.slug}><a href={`/${s.slug}`}>{s.title}</a></li>)}</ul>
+      {all.length > more.length ? <span>…and {all.length - more.length} more at webfitnews.com</span> : null}
+    </div> : <>
+      <h2 className={styles.backTitle}>Every story, every day, on webfitnews.com</h2>
+      <p className={styles.backText}>New editions arrive every Monday and Thursday, and the current one keeps updating as we publish.</p>
+    </>}
     {others.length ? <div className={styles.backEditions}>
       <strong>Other editions</strong>
-      <ul>{others.map(e => <li key={e.key}><a href={e.href}>{e.title}</a><span>{e.storyCount} stories</span></li>)}</ul>
+      <ul>{others.slice(0, 3).map(e => <li key={e.key}><a href={e.href}>{e.title} · {e.coverage}</a><span>{e.storyCount} stories</span></li>)}</ul>
     </div> : null}
     <div className={styles.backActions}>
       <a href="/support-us" className={styles.houseButton}>Support independent journalism</a>
@@ -394,7 +470,7 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       try { await document.fonts?.ready; } catch {}
       const host = hostRef.current;
       if (!host || cancelled) return;
-      const flow = paginate(edition, host);
+      const { pages: flow, dropped } = paginate(edition, host);
       host.replaceChildren();
       const book = assemble(edition, flow);
 
@@ -413,7 +489,7 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
           return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1}/> };
         }
         if (p.kind === 'ad') return { key: `p${n}`, label: 'Advertisement', node: <AdPageView ad={p.ad} n={n} edition={edition}/> };
-        return { key: `p${n}`, label: 'Back page', node: <BackPageView n={n} edition={edition} shelf={shelf}/> };
+        return { key: `p${n}`, label: 'Back page', node: <BackPageView n={n} edition={edition} shelf={shelf} extra={dropped}/> };
       });
       if (!cancelled) setPages(rendered);
     };

@@ -14,8 +14,10 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  * The current edition fills up as we publish. /epaper opens it once it has
  * MIN_LIVE_STORIES stories; until then it opens the previous (complete) edition.
  * Editions are kept while they fall inside the last EPAPER_WINDOW_DAYS days.
- * Two editions a week keeps each one around 20–25 pages; PAGE_WORD_BUDGET is a
- * safety net for unusually busy weeks.
+ * Each edition is a compact 8–9 page paper: the front-page story, then one page
+ * per desk (DESKS) carrying that desk's strongest stories, trimmed to fit, each
+ * ending with a link to the full story. Stories that don't make the paper are
+ * listed on the back page.
  *
  * The server sends the stories (text, photo, section) and the booked ads. The reader's
  * browser lays the text out into fixed-size newspaper pages (see EpaperBook), because
@@ -26,9 +28,25 @@ export const EPAPER_TIMEZONE = 'Pacific/Auckland';
 export const EPAPER_WINDOW_DAYS = 15;
 /** Open the in-progress edition by default once it has this many stories. */
 const MIN_LIVE_STORIES = 10;
-/** About 17–18 pages of columns (~25 pages with front, ads and back). Beyond it, the lowest-ranked long stories are shortened, with a link to the full story. */
-const PAGE_WORD_BUDGET = 8_500;
-const SHORTENED_WORDS = 200;
+/** Words printed per desk page, and per story. Tuned so each desk fills about one page. */
+const PAGE_WORDS = 400;
+/** Story pages to aim for (front, one ad page and the back page make it 8–9). */
+const STORY_PAGES = 6;
+const LEAD_WORDS = 260;
+const STORY_WORDS = 130;
+const MIN_STORY_WORDS = 60;
+/** The front-page story is printed up to this length, so it fits on the front page. */
+const FRONT_WORDS = 280;
+
+/** The paper's pages: each desk gathers several sections and gets one page. */
+export const DESKS: Array<{ title: string; kicker: string; keys: SectionKey[] }> = [
+  { title: 'Aotearoa Today', kicker: 'New Zealand news', keys: ['nz'] },
+  { title: 'Power & Politics', kicker: 'Election 2026 & opinion', keys: ['politics', 'opinion'] },
+  { title: 'Desi Diaries', kicker: 'India, community & visas', keys: ['community', 'immigration', 'notices'] },
+  { title: 'Money & World', kicker: 'Business, world & Australia', keys: ['business', 'world'] },
+  { title: 'Style & Sports', kicker: 'Lifestyle, beauty, health & sport', keys: ['lifestyle', 'sports'] },
+];
+
 /** Monday of edition No. 1. Used for the "No." printed on the masthead. */
 const EPAPER_LAUNCH = '2026-09-21';
 
@@ -266,6 +284,8 @@ export type Edition = EditionInfo & {
   /** Front page lead first, then each section in reading order. */
   sections: EditionSection[];
   storyCount: number;
+  /** Stories in this edition's dates that didn't fit the paper (listed on the back page). */
+  moreStories: Array<{ title: string; slug: string }>;
   coverImage: string | null;
   fullPageAds: EpaperAd[];
   halfPageAds: EpaperAd[];
@@ -325,34 +345,61 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
   const ranked = [...stories].sort(byImportance);
   const lead = ranked[0];
 
-  // Page budget: in an unusually busy edition, shorten the lowest-ranked long stories.
-  const printed = new Map(ranked.map(s => [s.id, full(s)]));
-  const words = (s: EpaperFullStory) => s.blocks.reduce((n, b) => n + b.t.split(' ').length, 0);
-  let total = [...printed.values()].reduce((n, s) => n + words(s), 0);
-  for (const s of [...ranked].reverse()) {
-    if (total <= PAGE_WORD_BUDGET || s.id === lead?.id) continue;
-    const story = printed.get(s.id)!;
-    const before = words(story);
-    if (before <= SHORTENED_WORDS * 1.5) continue;
+  // Trim a story to a word limit, ending on a whole paragraph where possible, plus a link.
+  const words = (t: string) => t.split(' ').filter(Boolean).length;
+  const trim = (s: EpaperStory, limit: number): EpaperFullStory => {
+    const story = full(s);
+    const total = story.blocks.reduce((n, b) => n + words(b.t), 0);
+    if (total <= limit * 1.15) return story;
     const kept: TextBlock[] = [];
     let count = 0;
-    for (const b of story.blocks) { if (count >= SHORTENED_WORDS) break; kept.push(b); count += b.t.split(' ').length; }
-    kept.push({ k: 'p', t: `Full story: webfitnews.com/${s.slug}` });
-    story.blocks = kept;
-    total -= before - words(story);
-  }
-  const print = (s: EpaperStory) => printed.get(s.id)!;
+    for (const b of story.blocks) {
+      if (count >= limit) break;
+      if (b.k === 'h' && count > limit * 0.6) break; // don't end on a subheading
+      const room = limit - count;
+      if (words(b.t) > room + 25 && b.k === 'p') {
+        const cut = b.t.split(' ').slice(0, Math.max(room, 25)).join(' ');
+        const sentence = cut.match(/^[\s\S]*[.!?]["”’]?(?=\s|$)/)?.[0];
+        kept.push({ ...b, t: sentence && words(sentence) > 15 ? sentence : `${cut}…` });
+        count = limit;
+        break;
+      }
+      kept.push(b);
+      count += words(b.t);
+    }
+    kept.push({ k: 'p', t: `Read the full story at webfitnews.com/${s.slug}` });
+    return { ...story, blocks: kept };
+  };
+
   const sections: EditionSection[] = [];
-  if (lead) sections.push({ key: lead.section, title: 'Top Story', kicker: 'Front page', stories: [print(lead)] });
-  for (const def of EPAPER_SECTIONS) {
-    const list = ranked.filter(s => s.section === def.key && s.id !== lead?.id);
-    if (list.length) sections.push({ key: def.key, title: def.title, kicker: def.kicker, stories: list.map(print) });
+  const printedIds = new Set<string>();
+  if (lead) { sections.push({ key: lead.section, title: 'Top Story', kicker: 'Front page', stories: [trim(lead, FRONT_WORDS)] }); printedIds.add(lead.id); }
+  // Share the story pages between the desks that have stories (one to two pages each).
+  const activeDesks = DESKS.filter(d => ranked.some(s => d.keys.includes(s.section) && s.id !== lead?.id));
+  // Generous: the browser fills each desk's page quota and drops what doesn't fit.
+  const candidates = ranked.length - 1 || 1;
+  const deskWordsFor = (n: number) => Math.max(PAGE_WORDS * 2, Math.round((STORY_PAGES * PAGE_WORDS * 1.6 * n) / candidates));
+  for (const desk of activeDesks) {
+    const list = ranked.filter(s => desk.keys.includes(s.section) && s.id !== lead?.id);
+    const chosen: EpaperFullStory[] = [];
+    let budget = deskWordsFor(list.length);
+    for (const s of list) {
+      const limit = Math.min(chosen.length ? STORY_WORDS : LEAD_WORDS, budget);
+      if (limit < MIN_STORY_WORDS) break;
+      const story = trim(s, limit);
+      chosen.push(story);
+      printedIds.add(s.id);
+      budget -= story.blocks.reduce((n, b) => n + words(b.t), 0) + 60; // headline, byline, photo
+    }
+    sections.push({ key: desk.keys[0], title: desk.title, kicker: desk.kicker, stories: chosen });
   }
+  const moreStories = ranked.filter(s => !printedIds.has(s.id)).map(s => ({ title: s.title, slug: s.slug }));
 
   return {
     ...info,
     sections,
     storyCount: stories.length,
+    moreStories,
     coverImage: lead?.image || stories.find(s => s.image)?.image || null,
     fullPageAds: rotate((ads[EPAPER_FULL_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.key + info.lastDay),
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),

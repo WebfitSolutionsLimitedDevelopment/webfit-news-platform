@@ -101,6 +101,14 @@
 .photo img,.photoWide img{display:block;width:100%;height:auto;object-fit:cover;background:#ece7db}
 .photo img{aspect-ratio:4/3}
 .photoWide img{aspect-ratio:2.4/1}
+.headLead+.photoWide img{aspect-ratio:3/1}
+.backPageList{justify-content:flex-start;gap:12px;padding-top:30px}
+.backPageList .backLogo{height:54px}
+.backMore{width:100%;text-align:left;border-top:3px double #151515;padding-top:10px}
+.backMore strong{font:700 9px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#c8232c}
+.backMore ul{list-style:none;margin:8px 0 0;padding:0;columns:2;column-gap:18px}
+.backMore li{break-inside:avoid;padding:5px 0;border-bottom:1px dotted #c9c1b0;font:700 11.5px/1.25 Georgia,'Times New Roman',serif}
+.backMore span{display:block;margin-top:6px;font:11px Arial,Helvetica,sans-serif;color:#6b665c}
 
 .tx_p{text-indent:1.1em}
 .tx_p.cont,.tx_p.dropcap{text-indent:0}
