@@ -500,6 +500,6 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
   return <>
     {/* Off-screen measuring room: same width and styles as a real page. */}
     <div aria-hidden="true" className={styles.measure} style={{ width: PAGE_W, height: PAGE_H }}><div className={styles.page}><div ref={hostRef}/></div></div>
-    {pages ? <EpaperViewer pages={pages} title={edition.title}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
+    {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} fileName={`webfit-news-epaper-${edition.key}.pdf`}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
   </>;
 }

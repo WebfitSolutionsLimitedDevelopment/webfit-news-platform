@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './Epaper.module.css';
+import { playFlipSound, saveSoundPreference, soundPreference, unlockFlipSound } from './flipSound';
 
 /** Pages are laid out at this size, then scaled to fit the screen like a printed page. */
 export const PAGE_W = 560;
@@ -34,7 +35,7 @@ function sendImpression(assignmentId: string) {
   } catch {}
 }
 
-export function EpaperViewer({ pages, title }: { pages: Page[]; title: string }) {
+export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title: string; fileName: string }) {
   const count = pages.length;
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -132,6 +133,13 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
     return () => stage.removeEventListener('wheel', onWheel);
   }, [setZoom]);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [exporting, setExporting] = useState<null | { done: number; total: number }>(null);
+  const [exportNote, setExportNote] = useState<string | null>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { setSound(soundPreference()); }, []);
+  const soundRef = useRef(true);
+  soundRef.current = sound;
 
   // Start on the page in the address bar (#page-4), if any.
   useEffect(() => {
@@ -171,14 +179,16 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
     if (turn) return;
     const to = dir === 'next' ? lastShown + 1 : firstShown - 1;
     if (to < 0 || to >= count) return;
+    if (soundRef.current) playFlipSound(reduceMotion || zoom > 1 ? 450 : TURN_MS);
     if (reduceMotion || zoom > 1) { setIndex(to); return; }
     setTurn({ dir, to });
   }, [turn, lastShown, firstShown, count, reduceMotion, zoom]);
 
   const jump = useCallback((to: number) => {
     if (turn) return;
+    if (soundRef.current && to !== index) playFlipSound(450);
     setIndex(Math.min(count - 1, Math.max(0, to)));
-  }, [turn, count]);
+  }, [turn, count, index]);
 
   useEffect(() => {
     if (!turn) return;
@@ -222,6 +232,37 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
       if (id && !seenAds.current.has(id)) { seenAds.current.add(id); sendImpression(id); }
     });
   }, [index, turn, spreadMode]);
+
+  const toggleSound = () => {
+    const next = !sound;
+    setSound(next);
+    saveSoundPreference(next);
+    if (next) { unlockFlipSound(); playFlipSound(450); }
+  };
+
+  // PDF: render every page once, off screen, at full size, then draw them into a PDF.
+  const downloadPdf = async () => {
+    if (exporting) return;
+    unlockFlipSound();
+    setExportNote(null);
+    setExporting({ done: 0, total: count });
+    try {
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const root = exportRef.current;
+      if (!root) throw new Error('not ready');
+      const imgs = Array.from(root.querySelectorAll('img'));
+      imgs.forEach(img => { img.loading = 'eager'; });
+      await Promise.all(imgs.map(img => (img.complete ? null : new Promise(r => { img.onload = img.onerror = () => r(null); setTimeout(r, 8000); }))));
+      const pageEls = Array.from(root.querySelectorAll<HTMLElement>('[data-export-page] > *'));
+      const { downloadEpaperPdf } = await import('./epaperPdf');
+      const size = await downloadEpaperPdf(pageEls, fileName, title, (done, total) => setExporting({ done, total }));
+      setExportNote(`Downloaded ${fileName} (${(size / 1_048_576).toFixed(1)} MB). Share it on WhatsApp, email or print it.`);
+    } catch {
+      setExportNote('Sorry, the PDF could not be made on this device. Please try again, or use a laptop.');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const toggleFullscreen = () => {
     const el = wrapRef.current;
@@ -302,6 +343,8 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
         <button type="button" onClick={() => setZoom(zoom + ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in">+</button>
       </div>
       <button type="button" onClick={toggleFullscreen} className={styles.hideSmall}>Full screen</button>
+      <button type="button" className={styles.soundButton} onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Turn page sound off' : 'Turn page sound on'} title={sound ? 'Page sound on' : 'Page sound off'}>{sound ? '🔊' : '🔇'}</button>
+      <button type="button" className={styles.pdfButton} onClick={downloadPdf} disabled={!!exporting}>{exporting ? `PDF ${exporting.done}/${exporting.total}` : '⬇ PDF'}</button>
       <button type="button" onClick={() => go('next')} disabled={!canNext || !!turn} aria-label="Next page"><span>Next</span> ›</button>
     </div>
     <div
@@ -321,6 +364,10 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
       {stageContent}
       {canNext && zoom === 1 ? <button type="button" className={`${styles.edge} ${styles.edgeRight}`} onClick={() => go('next')} aria-label="Next page" tabIndex={-1}/> : null}
     </div>
+    {exportNote ? <p className={styles.exportNote} role="status">{exportNote}</p> : null}
+    {exporting ? <div ref={exportRef} className={styles.exportStack} aria-hidden="true">
+      {pages.map(p => <div key={p.key} data-export-page style={{ width: PAGE_W, height: PAGE_H }}>{p.node}</div>)}
+    </div> : null}
     <p className={styles.hint}>{zoom > 1
       ? 'Drag to move around the page. Pinch, double-tap or press Fit to see the whole page again.'
       : 'Swipe to turn pages. Pinch or double-tap to zoom. Tap a headline to read the full story.'}</p>
