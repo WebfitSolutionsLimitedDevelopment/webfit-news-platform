@@ -61,93 +61,83 @@
 
 /* ------------------------------------------------------------------ pages (designed at 560 × 792) */
 
-.page{position:relative;width:560px;height:792px;padding:22px 24px 34px;display:flex;flex-direction:column;gap:12px;background:#fff;color:#151515;font-family:Georgia,'Times New Roman',serif;overflow:hidden}
+.page{position:relative;width:560px;height:792px;padding:20px 22px 0;display:flex;flex-direction:column;background:#fff;color:#151515;font-family:Georgia,'Times New Roman',serif;overflow:hidden}
 .page a{color:inherit;text-decoration:none}
 .page a:hover{text-decoration:underline}
 
-.folio{position:absolute;left:24px;right:24px;bottom:11px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid #d9d3c5;padding-top:6px;font:600 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#6b665c}
-.folio span:first-child{color:#151515;font-size:10px}
+/* off-screen room where pages are measured */
+.measure{position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;overflow:hidden}
+.setting{display:flex;align-items:center;justify-content:center;min-height:420px;background:#e9e6df;border-radius:14px;color:#4b4740;font:600 15px/1.4 Arial,Helvetica,sans-serif}
 
-/* stories */
-.story{display:flex;flex-direction:column;gap:6px;min-width:0}
-.photoLink{display:block}
-.photoLink:empty{display:none}
-.photo{display:block;width:100%;object-fit:cover;background:#ece7db}
-.storyCopy{display:flex;flex-direction:column;gap:4px;min-width:0}
-.storyKicker{font:700 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#c8232c}
-.storyTitle{margin:0;font-weight:700;letter-spacing:-.01em;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-.storyExcerpt{margin:0;color:#2d2b27;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-.storyMeta{font:9px/1.3 Arial,Helvetica,sans-serif;color:#7a7468}
-.storyMeta a{color:#c8232c;font-weight:700}
+/* running head */
+.pageHead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;height:62px;border-bottom:2px dotted #c8232c;margin-bottom:12px;flex:none}
+.pageNo{font:300 34px/1 Arial,Helvetica,sans-serif;color:#9a958b;border-right:1px solid #d9d3c5;padding-right:12px}
+.pageSection{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pageSection strong{font:italic 700 26px/1 Georgia,'Times New Roman',serif;color:#c8232c;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pageSection span{font:700 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#1f2a6b}
+.pageBrand{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pageBrand img{height:40px;width:auto;margin:-6px -4px -4px 0}
+.pageBrand span{font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4b4740}
 
-.story_lead .photo{aspect-ratio:12/5}
-.story_lead .storyTitle{font-size:25px;line-height:1.08;-webkit-line-clamp:3}
-.story_lead .storyExcerpt{font-size:11.5px;line-height:1.45;-webkit-line-clamp:2}
+.folio{position:absolute;left:22px;right:22px;bottom:10px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid #d9d3c5;padding-top:6px;font:600 8px/1 Arial,Helvetica,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#6b665c}
+.folio span:first-child{color:#151515;font-size:9.5px}
+.folio span:nth-child(2){flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.story_feature .photo{aspect-ratio:2/1}
-.story_feature .storyTitle{font-size:14.5px;line-height:1.18;-webkit-line-clamp:3}
-.story_feature .storyExcerpt{font-size:10.5px;line-height:1.42;-webkit-line-clamp:2}
+/* the text flow: three balanced columns */
+.flow{width:516px;column-count:3;column-gap:14px;column-rule:1px solid #e3ded3;column-fill:balance;overflow:hidden;flex:none;font-size:9.6px;line-height:1.42;text-align:justify;hyphens:auto;-webkit-hyphens:auto;orphans:2;widows:2}
+.it{margin:0}
+.head{column-span:all;break-inside:avoid;padding:9px 0 7px;border-top:2px solid #151515;margin-top:6px;text-align:left}
+.head:first-child{border-top:0;margin-top:0;padding-top:0}
+.kick{display:block;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#c8232c;margin-bottom:4px}
+.headTitle{margin:0;font:700 19px/1.08 Georgia,'Times New Roman',serif;letter-spacing:-.015em;color:#111;hyphens:manual}
+.headLead .headTitle{font-size:26px;line-height:1.04}
+.by{display:block;margin-top:5px;font:600 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#7a7468}
+.photo,.photoWide{break-inside:avoid;margin:0 0 7px}
+.photoWide{column-span:all;margin-bottom:9px}
+.photo img,.photoWide img{display:block;width:100%;object-fit:cover;background:#ece7db}
+.photo img{aspect-ratio:4/3}
+.photoWide img{aspect-ratio:2.4/1}
 
-.story_brief{grid-column:1/-1;border-top:1px solid #d9d3c5;padding-top:8px}
-.story_brief .storyTitle{font-size:15px;line-height:1.18;-webkit-line-clamp:2}
-.story_brief .storyExcerpt{font-size:10.5px;line-height:1.42;-webkit-line-clamp:2}
+.tx_p{text-indent:1.1em}
+.tx_p.cont,.tx_p.dropcap{text-indent:0}
+.tx_h{font:700 10.5px/1.25 Arial,Helvetica,sans-serif;color:#c8232c;margin:6px 0 2px;text-align:left;break-after:avoid}
+.tx_li{padding-left:.7em;text-indent:-.7em}
+.tx_quote{margin:4px 0;padding:4px 0 4px 8px;border-left:2px solid #c8232c;font-style:italic;color:#2d2b27;text-align:left}
+.tx_row{font:9px/1.35 Arial,Helvetica,sans-serif;border-bottom:1px dotted #d0c9ba;padding:2px 0;text-align:left}
+.dropcap::first-letter{float:left;font:700 31px/.86 Georgia,'Times New Roman',serif;margin:2px 4px 0 0;color:#151515}
+.end::after{content:" ■";color:#c8232c;font-size:8px}
 
-.story_compact{flex-direction:row;align-items:flex-start;gap:10px;border-top:1px solid #d9d3c5;padding-top:9px}
-.story_compact .photoLink{flex:0 0 92px}
-.story_compact .photo{aspect-ratio:4/3}
-.story_compact .storyTitle{font-size:13px;line-height:1.2;-webkit-line-clamp:3}
-.story_compact .storyExcerpt{display:none}
+/* half-page ad at the end of a section */
+.halfSlot{column-span:all;break-inside:avoid;height:250px;margin-top:10px;border-top:1px solid #d9d3c5;padding-top:6px;display:flex;flex-direction:column}
+.houseHalfIn{background:#151515;color:#fff;border-top:0;padding:20px 22px;gap:8px;justify-content:center;align-items:flex-start;text-align:left}
+.houseTitleSm{font:700 22px/1.1 Georgia,'Times New Roman',serif}
+.houseTextSm{font:11.5px/1.5 Arial,Helvetica,sans-serif;color:#e0dcd2;max-width:400px}
 
 /* front page */
-.masthead{text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px}
-.mastheadTop{width:100%;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #151515;padding-bottom:5px;font:700 8px/1 Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#4b4740}
+.front .masthead{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px}
+.mastheadTop{width:100%;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #151515;padding-bottom:5px;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#4b4740}
 .mastheadTop span:nth-child(2){color:#c8232c}
-.logo{height:54px;width:auto;display:block}
-.mastheadDate{width:100%;border-top:3px double #151515;border-bottom:1px solid #151515;padding:5px 0;font:700 9.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase}
-.frontGrid{display:grid;grid-template-columns:1fr 132px;gap:14px;min-height:0}
-.frontGrid .story_lead .photo{aspect-ratio:16/10}
-.frontGrid .story_lead .storyTitle{font-size:27px;-webkit-line-clamp:4}
-.frontGrid .story_lead .storyExcerpt{-webkit-line-clamp:4}
-.contents{border-left:1px solid #d9d3c5;padding-left:12px;font:11px/1.3 Arial,Helvetica,sans-serif}
-.contents strong{display:block;font:700 9px/1.2 Arial,Helvetica,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#c8232c;margin-bottom:8px}
-.contents ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
-.contents li{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dotted #c9c1b0;padding-bottom:5px}
-.contents li span:last-child{font-weight:700}
-.frontRow{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;min-height:0}
-.emptyEdition{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:10px;padding:40px;border:1px dashed #c9c1b0}
-.emptyEdition strong{font-size:22px}
-.emptyEdition p{margin:0;font:13px/1.5 Arial,Helvetica,sans-serif;color:#4b4740}
-
-/* section pages */
-.sectionHead{border-bottom:3px solid #151515;padding-bottom:6px}
-.sectionKicker{font:700 9px/1 Arial,Helvetica,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c8232c}
-.sectionTitle{margin:4px 0 0;font-size:28px;line-height:1;letter-spacing:-.02em}
-.sectionTitle small{font-size:13px;font-weight:400;font-style:italic;color:#6b665c;margin-left:6px}
-.sectionBody{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.sectionGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;align-content:start}
-.withHalf .story_lead .photo{aspect-ratio:3/1}
-.withHalf{flex:0 1 auto}
+.logo{height:96px;width:auto;display:block;margin:-14px 0 -12px}
+.tagline{font:italic 10.5px/1 Georgia,'Times New Roman',serif;color:#1f2a6b}
+.contentsBar{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;border-top:3px double #151515;border-bottom:1px solid #151515;padding:5px 0;font:600 8px/1.2 Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#3a3732}
+.contentsBar strong{color:#c8232c}
+.contentsBar b{color:#c8232c}
 
 /* ads */
 .adPage{padding:22px 24px 34px;justify-content:center}
-.adLabel{display:block;font:700 8px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8a8478;margin-bottom:5px;text-align:center}
+.adLabel{display:block;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8a8478;margin-bottom:5px;text-align:center}
 .adLink{display:flex;align-items:center;justify-content:center;flex:1;min-height:0}
 .adLink img{display:block;max-width:100%;max-height:100%;object-fit:contain}
 .fullAd{display:flex;flex-direction:column;flex:1;min-height:0}
-.halfAd{display:flex;flex-direction:column;height:258px;flex:none;border-top:1px solid #d9d3c5;padding-top:8px;margin-top:auto}
-.promoter{display:block;margin-top:4px;font:9px/1.3 Arial,Helvetica,sans-serif;color:#4b4740;text-align:center}
-
-.houseFull,.houseHalf{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;background:#151515;color:#fff;padding:36px 34px}
-.houseFull{flex:1;background:radial-gradient(circle at 85% 15%,rgba(200,35,44,.55),transparent 45%),#151515}
-.houseHalf{height:250px;flex:none;margin-top:auto;padding:24px 26px}
+.promoter{display:block;margin-top:4px;font:8.5px/1.3 Arial,Helvetica,sans-serif;color:#4b4740;text-align:center}
+.houseFull{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;color:#fff;padding:36px 34px;background:radial-gradient(circle at 85% 15%,rgba(200,35,44,.55),transparent 45%),#151515}
 .houseKicker{font:700 9px/1 Arial,Helvetica,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#f1d77b}
 .houseTitle{font-size:34px;line-height:1.05;letter-spacing:-.02em}
-.houseHalf .houseTitle{font-size:24px}
 .houseText{margin:0;font:12.5px/1.55 Arial,Helvetica,sans-serif;color:#e9e6df;max-width:420px}
-.page .houseButton{display:inline-block;background:#c8232c;color:#fff;border-radius:999px;padding:10px 18px;font:700 12px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+.page .houseButton{display:inline-block;background:#c8232c;color:#fff;border-radius:999px;padding:10px 18px;font:700 12px/1 Arial,Helvetica,sans-serif;text-decoration:none;text-indent:0}
 
 /* back page */
-.backPage{align-items:center;text-align:center;justify-content:center;gap:16px}
+.backPage{align-items:center;text-align:center;justify-content:center;gap:16px;padding-bottom:34px}
 .backLogo{height:70px;width:auto}
 .backTitle{margin:0;font-size:28px;line-height:1.1;max-width:420px}
 .backText{margin:0;font:12.5px/1.6 Arial,Helvetica,sans-serif;color:#3a3732;max-width:420px}

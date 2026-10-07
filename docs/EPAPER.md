@@ -2,11 +2,10 @@
 
 ## E-paper (`/epaper`)
 
-- Built from published stories every time it is requested (cached 5 minutes, refreshed straight away when a story is published or edited). Nothing is uploaded by hand.
-- Three editions a week, New Zealand time: **Monday** (Mon–Tue), **Wednesday** (Wed–Thu), **Friday** (Fri–Sun). The current edition is marked **Live** and fills up as stories publish.
-- Only the last 15 days are kept, newest first. `/epaper` opens the newest edition; `/epaper/YYYY-MM-DD` opens one by its start date. Older or invalid dates return 404.
-- Page order: front page (5 strongest stories: hero, breaking, featured, editor's pick, then views) → New Zealand → Politics & Election → Immigration → India & Community → Business & Money → World & Australia → Lifestyle & Beauty → Sports → Opinion → Notices & Classifieds → back page. Empty sections are skipped; long sections continue onto another page (4 stories a page).
-- The category → section map is `EPAPER_SECTIONS` in `lib/epaper.ts`.
+- Weekly, with every story printed in full (no "read more"). `/epaper` is always the **last 7 days** (New Zealand time) and updates as stories publish. Past Monday–Sunday weeks inside the last 15 days are kept at `/epaper/<Monday YYYY-MM-DD>`; older or invalid dates return 404.
+- Order: front page (the week's strongest story: hero, breaking, featured, editor's pick, then views) → Aotearoa Today (NZ) → Power & Politics → Visa Desk → Desi Diaries (India & community) → Money Matters → World Window → Style & Living (lifestyle, beauty, health) → Sports Arena → Point of View → Community Board → back page. Empty sections are skipped. Category → section map: `EPAPER_SECTIONS` in `lib/epaper.ts`.
+- The server sends the stories as plain text blocks (`lib/epaper-text.ts`: paragraphs, subheadings, lists, quotes, table rows; images and embeds dropped). The reader's browser lays them out (`components/epaper/EpaperBook.tsx`) into 560 × 792 pages with three balanced columns, splitting text across pages mid-paragraph and printing "continued on / from page N". Each section starts on a new page.
+- About 40 stories a week makes roughly 45 pages.
 - Only `/epaper` is indexed. Edition pages are `noindex, follow` because every story already has its own page.
 
 ## E-paper advertising
@@ -15,10 +14,10 @@ Two new positions, booked like any other in Newsroom → Advertisements:
 
 | Key | Where | Artwork |
 | --- | --- | --- |
-| `EPAPER_FULL_PAGE` | A full page after story pages 2, 6, 10 … | 1240 × 1754 portrait (A4) |
-| `EPAPER_HALF_PAGE` | Bottom half of a section page with 1–2 stories (never two pages in a row) | 1240 × 860 landscape |
+| `EPAPER_FULL_PAGE` | A full page after every 4th story page | 1240 × 1754 portrait (A4) |
+| `EPAPER_HALF_PAGE` | In the space left at the end of a section, when 250px or more is free | 1240 × 860 landscape |
 
-With nothing booked, each edition shows one "Advertise in the e-paper" house page and one house half page linking to `/advertise-media-kit`. Impressions are counted the first time an ad page is on screen; clicks go through `/api/ads/click` as usual.
+With nothing booked, each edition shows one "Advertise in the e-paper" house page and up to two house half pages linking to `/advertise-media-kit`. Impressions are counted the first time an ad page is on screen; clicks go through `/api/ads/click` as usual.
 
 ## Automatic categories
 

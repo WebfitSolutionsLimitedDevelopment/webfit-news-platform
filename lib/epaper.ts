@@ -1,36 +1,30 @@
 import { cache } from 'react';
 import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { getLiveAds, type LiveAd } from '@/lib/ads';
+import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
 
 /**
  * Webfit News e-paper.
  *
- * Editions are built automatically from published stories. There are three a week,
- * each covering two or three days of reporting (New Zealand time):
+ * Built automatically from published stories, with every story printed in full.
  *
- *   Monday edition     Mon + Tue
- *   Wednesday edition  Wed + Thu
- *   Friday edition     Fri + Sat + Sun
+ *   This week   always the last 7 days (New Zealand time), updated as we publish.
+ *   Past weeks  one edition per Monday–Sunday week, kept while it falls inside the
+ *               last EPAPER_WINDOW_DAYS days.
  *
- * The newest edition is "live": a story published today appears in it within a few
- * minutes. Editions older than EPAPER_WINDOW_DAYS drop off. Nothing is uploaded by
- * hand: the pages, sections and ad pages are laid out from the database every time.
+ * The server sends the stories (text, photo, section) and the booked ads. The reader's
+ * browser lays the text out into fixed-size newspaper pages (see EpaperBook), because
+ * only the browser can measure exactly how much text fits on a page.
  */
 
 export const EPAPER_TIMEZONE = 'Pacific/Auckland';
 export const EPAPER_WINDOW_DAYS = 15;
-/** Edition No. 1 (a Monday). Used for the "No." printed on the masthead. */
+export const EDITION_DAYS = 7;
+/** Monday of week No. 1. Used for the "No." printed on the masthead. */
 const EPAPER_LAUNCH = '2026-09-21';
 
 export const EPAPER_FULL_PAGE_SLOT = 'EPAPER_FULL_PAGE';
 export const EPAPER_HALF_PAGE_SLOT = 'EPAPER_HALF_PAGE';
-
-/** Stories on a section page before it continues onto another page. */
-const STORIES_PER_PAGE = 4;
-/** Stories on the front page. */
-const FRONT_PAGE_STORIES = 5;
-/** A full-page ad after every N story pages. */
-const FULL_PAGE_AD_EVERY = 4;
 
 /* ---------------------------------------------------------------- sections */
 
@@ -38,20 +32,20 @@ export type SectionKey =
   | 'nz' | 'politics' | 'immigration' | 'community' | 'business'
   | 'world' | 'lifestyle' | 'sports' | 'opinion' | 'notices';
 
-type SectionDef = { key: SectionKey; title: string; kicker: string; slugs: string[] };
+export type SectionDef = { key: SectionKey; title: string; kicker: string; slugs: string[] };
 
 /** Reading order of the paper. "nz" also catches anything not mapped elsewhere. */
 export const EPAPER_SECTIONS: SectionDef[] = [
-  { key: 'nz', title: 'New Zealand', kicker: 'Aotearoa', slugs: ['new-zealand', 'auckland', 'south-insland', 'weather', 'games', 'crime-courts', 'news', 'uncategorized'] },
-  { key: 'politics', title: 'Politics & Election', kicker: 'Decision 2026', slugs: ['politics', 'election', 'election-2026'] },
-  { key: 'immigration', title: 'Immigration', kicker: 'Visas & residency', slugs: ['immigration'] },
-  { key: 'community', title: 'India & Community', kicker: 'Our people', slugs: ['india', 'india-hi', 'news-hi', 'kiwi-indian', 'communities', 'diwali', 'people-profiles', 'personality', 'student-life', 'faith-temples', 'pacific', 'associations-clubs'] },
-  { key: 'business', title: 'Business & Money', kicker: 'Economy', slugs: ['business', 'local-business', 'economy', 'startups-tech', 'money-jobs', 'property'] },
-  { key: 'world', title: 'World & Australia', kicker: 'Beyond our shores', slugs: ['world', 'australia', 'sydney', 'melbourne', 'perth', 'adelaide', 'brisbane'] },
-  { key: 'lifestyle', title: 'Lifestyle & Beauty', kicker: 'Living well', slugs: ['fashion', 'lifestyle', 'lifestyle-culture', 'health', 'travel', 'food-recipes', 'arts-culture', 'entertainment', 'customs', 'photo-stories', 'videos', 'motivation', 'stories', 'features'] },
-  { key: 'sports', title: 'Sports', kicker: 'Game day', slugs: ['sports', 'cricket', 'football', 'community-sports'] },
-  { key: 'opinion', title: 'Opinion', kicker: 'Views', slugs: ['editorials', 'editorial', 'opinion', 'letters'] },
-  { key: 'notices', title: 'Notices & Classifieds', kicker: 'Community board', slugs: ['advertisement', 'community-notices', 'events-offers', 'business-ads', 'jobs-services', 'presenting'] },
+  { key: 'nz', title: 'Aotearoa Today', kicker: 'New Zealand news', slugs: ['new-zealand', 'auckland', 'south-insland', 'weather', 'games', 'crime-courts', 'news', 'uncategorized'] },
+  { key: 'politics', title: 'Power & Politics', kicker: 'Election 2026', slugs: ['politics', 'election', 'election-2026'] },
+  { key: 'immigration', title: 'Visa Desk', kicker: 'Immigration & residency', slugs: ['immigration'] },
+  { key: 'community', title: 'Desi Diaries', kicker: 'India & our community', slugs: ['india', 'india-hi', 'news-hi', 'kiwi-indian', 'communities', 'diwali', 'people-profiles', 'personality', 'student-life', 'faith-temples', 'pacific', 'associations-clubs'] },
+  { key: 'business', title: 'Money Matters', kicker: 'Business & economy', slugs: ['business', 'local-business', 'economy', 'startups-tech', 'money-jobs', 'property'] },
+  { key: 'world', title: 'World Window', kicker: 'World & Australia', slugs: ['world', 'australia', 'sydney', 'melbourne', 'perth', 'adelaide', 'brisbane'] },
+  { key: 'lifestyle', title: 'Style & Living', kicker: 'Lifestyle, beauty & health', slugs: ['fashion', 'lifestyle', 'lifestyle-culture', 'health', 'travel', 'food-recipes', 'arts-culture', 'entertainment', 'customs', 'photo-stories', 'videos', 'motivation', 'stories', 'features'] },
+  { key: 'sports', title: 'Sports Arena', kicker: 'Cricket, rugby & more', slugs: ['sports', 'cricket', 'football', 'community-sports'] },
+  { key: 'opinion', title: 'Point of View', kicker: 'Opinion & editorials', slugs: ['editorials', 'editorial', 'opinion', 'letters'] },
+  { key: 'notices', title: 'Community Board', kicker: 'Notices & classifieds', slugs: ['advertisement', 'community-notices', 'events-offers', 'business-ads', 'jobs-services', 'presenting'] },
 ];
 
 const SECTION_BY_SLUG = new Map<string, SectionKey>();
@@ -66,8 +60,7 @@ export function nzDate(instant: Date): string {
 
 function addDays(ymd: string, days: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
-  const t = new Date(Date.UTC(y, m - 1, d + days));
-  return t.toISOString().slice(0, 10);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 /** 0 = Sunday … 6 = Saturday, for a calendar date. */
@@ -95,80 +88,67 @@ export function nzMidnight(ymd: string): Date {
   return new Date(t);
 }
 
-/** Start date of the edition a calendar date belongs to (a Monday, Wednesday or Friday). */
-export function editionStartFor(ymd: string): string {
-  const back: Record<number, number> = { 1: 0, 2: 1, 3: 0, 4: 1, 5: 0, 6: 1, 0: 2 };
-  return addDays(ymd, -back[weekday(ymd)]);
+function mondayOf(ymd: string): string {
+  return addDays(ymd, -((weekday(ymd) + 6) % 7));
 }
 
-/** The edition after the one starting on `start`. */
-function nextEditionStart(start: string): string {
-  const day = weekday(start);
-  return addDays(start, day === 5 ? 3 : 2);
+function weekNumber(ymd: string): number {
+  const days = Math.round((Date.parse(`${mondayOf(ymd)}T00:00:00Z`) - Date.parse(`${EPAPER_LAUNCH}T00:00:00Z`)) / 86_400_000);
+  return Math.max(1, Math.floor(days / 7) + 1);
 }
 
-function previousEditionStart(start: string): string {
-  return editionStartFor(addDays(start, -1));
-}
-
-function editionNumber(start: string): number {
-  let n = 1;
-  let cursor = EPAPER_LAUNCH;
-  if (start < cursor) return 0;
-  while (cursor < start && n < 10_000) { cursor = nextEditionStart(cursor); n += 1; }
-  return n;
-}
-
-const longDate = (ymd: string) => new Intl.DateTimeFormat('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-  .format(new Date(`${ymd}T00:00:00Z`));
-const shortDate = (ymd: string) => new Intl.DateTimeFormat('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
-  .format(new Date(`${ymd}T00:00:00Z`));
+const fmt = (opts: Intl.DateTimeFormatOptions) => (ymd: string) =>
+  new Intl.DateTimeFormat('en-NZ', { ...opts, timeZone: 'UTC' }).format(new Date(`${ymd}T00:00:00Z`));
+const longDate = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const shortDate = fmt({ day: 'numeric', month: 'short' });
 
 export type EditionInfo = {
-  /** Start date, YYYY-MM-DD. Also the URL: /epaper/<key>. */
+  /** "latest" for this week's live edition, otherwise the Monday it starts (URL: /epaper/<key>). */
   key: string;
-  /** Last calendar day covered (inclusive). */
-  lastDay: string;
+  href: string;
   title: string;
+  dateline: string;
   coverage: string;
   number: number;
   isLive: boolean;
-  from: Date;
-  to: Date;
+  firstDay: string;
+  lastDay: string;
+  fromIso: string;
+  toIso: string;
 };
 
-function editionInfo(start: string, today: string): EditionInfo {
-  const next = nextEditionStart(start);
-  const lastDay = addDays(next, -1);
+function makeEdition(firstDay: string, lastDay: string, isLive: boolean): EditionInfo {
+  const coverage = `${shortDate(firstDay)} – ${shortDate(lastDay)}`;
   return {
-    key: start,
+    key: isLive ? 'latest' : firstDay,
+    href: isLive ? '/epaper' : `/epaper/${firstDay}`,
+    title: isLive ? 'This week’s edition' : `Week of ${coverage}`,
+    dateline: longDate(lastDay),
+    coverage,
+    number: weekNumber(lastDay),
+    isLive,
+    firstDay,
     lastDay,
-    title: `${longDate(start)} edition`,
-    coverage: `${shortDate(start)} – ${shortDate(lastDay)}`,
-    number: editionNumber(start),
-    isLive: start <= today && today < next,
-    from: nzMidnight(start),
-    to: nzMidnight(next),
+    fromIso: nzMidnight(firstDay).toISOString(),
+    toIso: nzMidnight(addDays(lastDay, 1)).toISOString(),
   };
 }
 
-/** Every edition in the reading window, newest first (LIFO). */
+/** The live edition first, then past Monday–Sunday weeks inside the window (newest first). */
 export function listEditions(now = new Date()): EditionInfo[] {
   const today = nzDate(now);
   const oldestDay = addDays(today, -(EPAPER_WINDOW_DAYS - 1));
-  const out: EditionInfo[] = [];
-  let start = editionStartFor(today);
-  while (true) {
-    const info = editionInfo(start, today);
-    if (info.lastDay < oldestDay) break;
-    out.push(info);
-    start = previousEditionStart(start);
+  const out = [makeEdition(addDays(today, -(EDITION_DAYS - 1)), today, true)];
+  let monday = addDays(mondayOf(today), -7);
+  while (addDays(monday, 6) >= oldestDay) {
+    out.push(makeEdition(monday, addDays(monday, 6), false));
+    monday = addDays(monday, -7);
   }
   return out;
 }
 
 export function isEditionKey(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && editionStartFor(value) === value;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && weekday(value) === 1;
 }
 
 /* ---------------------------------------------------------------- stories */
@@ -177,7 +157,6 @@ export type EpaperStory = {
   id: string;
   title: string;
   slug: string;
-  excerpt: string;
   published_at: string;
   image: string | null;
   imageAlt: string;
@@ -185,6 +164,8 @@ export type EpaperStory = {
   categoryName: string | null;
   score: number;
 };
+
+export type EpaperFullStory = EpaperStory & { author: string | null; blocks: TextBlock[] };
 
 type CategoryRow = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -194,21 +175,12 @@ function cleanText(value: string | null | undefined) {
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
     .replace(/&#0?39;|&apos;|&#8217;|&rsquo;/gi, '’').replace(/&hellip;|&#8230;/gi, '…')
-    .replace(/\[(?:…|\s*\.\.\.\s*)\]\s*$/, '')
-    .replace(/^(?:by webfit news\s*\|\s*)?(?:updated\s+)?\d{1,2}\s+\w+\s+\d{4}\s*/i, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-/** Some imported excerpts repeat the headline word for word; drop that part. */
-function dedupeExcerpt(title: string, excerpt: string) {
-  if (title && excerpt.toLowerCase().startsWith(title.toLowerCase())) return excerpt.slice(title.length).replace(/^[\s.:–—-]+/, '');
-  return excerpt;
-}
-
 function sectionFor(cats: Array<{ category_id: string; is_primary: boolean }>, byId: Map<string, CategoryRow>): { key: SectionKey; name: string | null } {
   const ordered = [...cats].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
-  // The story's own categories first (primary before others), then their parents.
   for (const pass of [0, 1, 2]) {
     for (const c of ordered) {
       let cat = byId.get(c.category_id);
@@ -221,18 +193,20 @@ function sectionFor(cats: Array<{ category_id: string; is_primary: boolean }>, b
   return { key: 'nz', name: ordered[0] ? byId.get(ordered[0].category_id)?.name || null : null };
 }
 
-/** Every published story in the reading window, newest first. One query, cached per request. */
+const byImportance = (a: EpaperStory, b: EpaperStory) => b.score - a.score || b.published_at.localeCompare(a.published_at);
+
+/** Every published story in the window (headline data only), newest first. */
 const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<EpaperStory[]> => {
   const supabase = await createClient();
   const [{ data: cats }, { data, error }] = await Promise.all([
     supabase.from('categories').select('id,slug,name,parent_id'),
     supabase.from('articles')
-      .select('id,title,slug,excerpt,published_at,view_count,is_homepage_hero,is_featured,is_editor_pick,is_breaking,media:media!articles_featured_media_id_fkey(public_url,alt_text),article_categories(category_id,is_primary)')
+      .select('id,title,slug,published_at,view_count,is_homepage_hero,is_featured,is_editor_pick,is_breaking,media:media!articles_featured_media_id_fkey(public_url,alt_text),article_categories(category_id,is_primary)')
       .eq('status', 'published')
       .gte('published_at', fromIso)
       .lt('published_at', toIso)
       .order('published_at', { ascending: false })
-      .limit(400),
+      .limit(500),
   ]);
   if (error) throw error;
   const byId = new Map<string, CategoryRow>((cats || []).map((c: any) => [c.id, c as CategoryRow]));
@@ -244,7 +218,6 @@ const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<E
       id: row.id,
       title: cleanText(row.title),
       slug: row.slug,
-      excerpt: dedupeExcerpt(cleanText(row.title), cleanText(row.excerpt)),
       published_at: row.published_at,
       image: row.media?.public_url || null,
       imageAlt: row.media?.alt_text || cleanText(row.title),
@@ -255,7 +228,7 @@ const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<E
   });
 });
 
-/* ---------------------------------------------------------------- pages */
+/* ---------------------------------------------------------------- editions */
 
 export type EpaperAd = {
   assignmentId: string;
@@ -267,21 +240,20 @@ export type EpaperAd = {
   promoterStatement: string | null;
 };
 
-export type EpaperPage =
-  | { kind: 'front'; label: string; lead: EpaperStory | null; stories: EpaperStory[]; contents: Array<{ title: string; page: number }> }
-  | { kind: 'section'; label: string; section: SectionDef; continued: boolean; stories: EpaperStory[]; halfAd: EpaperAd | null; houseHalf: boolean }
-  | { kind: 'ad'; label: string; ad: EpaperAd | null }
-  | { kind: 'back'; label: string; latest: EditionInfo[] };
+export type EditionSection = { key: SectionKey; title: string; kicker: string; stories: EpaperFullStory[] };
 
 export type Edition = EditionInfo & {
-  pages: EpaperPage[];
-  stories: EpaperStory[];
+  /** Front page lead first, then each section in reading order. */
+  sections: EditionSection[];
+  storyCount: number;
   coverImage: string | null;
+  fullPageAds: EpaperAd[];
+  halfPageAds: EpaperAd[];
 };
 
 function toEpaperAd(ad: LiveAd): EpaperAd | null {
   const image = ad.desktop_image || ad.poster_image || ad.mobile_image;
-  if (!image || ad.format === 'video' && !ad.poster_image && !ad.desktop_image) return null;
+  if (!image) return null;
   return {
     assignmentId: ad.assignment_id,
     href: `/api/ads/click?a=${encodeURIComponent(ad.assignment_id)}`,
@@ -302,86 +274,48 @@ function rotate<T>(items: T[], seed: string): T[] {
   return [...items.slice(k), ...items.slice(0, k)];
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
+function inEdition(info: EditionInfo) {
+  const from = Date.parse(info.fromIso);
+  const to = Date.parse(info.toIso);
+  return (s: EpaperStory) => { const t = Date.parse(s.published_at); return t >= from && t < to; };
 }
 
-function layoutEdition(info: EditionInfo, stories: EpaperStory[], ads: Record<string, LiveAd[]>, all: EditionInfo[]): EpaperPage[] {
-  const fullAds = rotate((ads[EPAPER_FULL_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.key);
-  const halfAds = rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.key);
+/** One edition with every story's full text, or null if it is outside the window. */
+export const getEdition = cache(async (key = 'latest'): Promise<Edition | null> => {
+  const editions = listEditions();
+  const info = editions.find(e => e.key === key);
+  if (!info) return null;
 
-  // Front page: the most important stories, newest first among equals.
-  const ranked = [...stories].sort((a, b) => b.score - a.score || b.published_at.localeCompare(a.published_at));
-  const front = ranked.slice(0, FRONT_PAGE_STORIES);
-  const frontIds = new Set(front.map(s => s.id));
-  const rest = stories.filter(s => !frontIds.has(s.id));
+  const [headlines, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
+  const stories = headlines.filter(inEdition(info));
 
-  const storyPages: EpaperPage[] = [];
-  let halfIndex = 0;
-  let houseHalfUsed = false;
-  for (const section of EPAPER_SECTIONS) {
-    const inSection = rest.filter(s => s.section === section.key);
-    if (!inSection.length) continue;
-    // Lead of each section page: its strongest story, rest newest first.
-    const ordered = [...inSection].sort((a, b) => b.score - a.score || b.published_at.localeCompare(a.published_at));
-    chunk(ordered, STORIES_PER_PAGE).forEach((group, i) => {
-      const previous = storyPages[storyPages.length - 1];
-      const previousHadHalf = previous?.kind === 'section' && Boolean(previous.halfAd || previous.houseHalf);
-      const roomForAd = group.length <= 2 && !previousHadHalf;
-      const halfAd = roomForAd && halfAds.length ? halfAds[halfIndex++ % halfAds.length] : null;
-      const houseHalf = roomForAd && !halfAd && !houseHalfUsed;
-      if (houseHalf) houseHalfUsed = true;
-      storyPages.push({ kind: 'section', label: i ? `${section.title} (cont.)` : section.title, section, continued: i > 0, stories: group, halfAd, houseHalf });
-    });
+  // Full text for this edition's stories only.
+  const bodies = new Map<string, { html: string | null; author: string | null }>();
+  if (stories.length) {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from('articles').select('id,content_html,author:author_id(name)').in('id', stories.map(s => s.id));
+    if (error) throw error;
+    for (const row of data || []) bodies.set((row as any).id, { html: (row as any).content_html, author: (row as any).author?.name || null });
+  }
+  const full = (s: EpaperStory): EpaperFullStory => ({ ...s, author: bodies.get(s.id)?.author || null, blocks: htmlToBlocks(bodies.get(s.id)?.html, s.title) });
+
+  const ranked = [...stories].sort(byImportance);
+  const lead = ranked[0];
+  const sections: EditionSection[] = [];
+  if (lead) sections.push({ key: lead.section, title: 'Top Story', kicker: 'Front page', stories: [full(lead)] });
+  for (const def of EPAPER_SECTIONS) {
+    const list = ranked.filter(s => s.section === def.key && s.id !== lead?.id);
+    if (list.length) sections.push({ key: def.key, title: def.title, kicker: def.kicker, stories: list.map(full) });
   }
 
-  // Full-page ads between story pages. Without bookings, one "advertise here" page.
-  const pages: EpaperPage[] = [];
-  let fullIndex = 0;
-  let housePageUsed = false;
-  storyPages.forEach((page, i) => {
-    pages.push(page);
-    const isBreak = (i + 1) % FULL_PAGE_AD_EVERY === 2 && i < storyPages.length - 1;
-    if (!isBreak) return;
-    if (fullAds.length && fullIndex < fullAds.length) {
-      pages.push({ kind: 'ad', label: 'Advertisement', ad: fullAds[fullIndex++] });
-    } else if (!housePageUsed) {
-      housePageUsed = true;
-      pages.push({ kind: 'ad', label: 'Advertise with us', ad: null });
-    }
-  });
-
-  // Front page contents: which page each section starts on (front page is 1).
-  const contents: Array<{ title: string; page: number }> = [];
-  pages.forEach((p, i) => {
-    if (p.kind === 'section' && !p.continued) contents.push({ title: p.section.title, page: i + 2 });
-  });
-
-  return [
-    { kind: 'front', label: 'Front page', lead: front[0] || null, stories: front.slice(1), contents },
-    ...pages,
-    { kind: 'back', label: 'Back page', latest: all.filter(e => e.key !== info.key).slice(0, 4) },
-  ];
-}
-
-/** One edition with its pages, or null if it is outside the reading window. */
-export const getEdition = cache(async (key?: string): Promise<Edition | null> => {
-  const editions = listEditions();
-  if (!editions.length) return null;
-  const info = key ? editions.find(e => e.key === key) : editions[0];
-  if (!info) return null;
-  const windowFrom = editions[editions.length - 1].from.toISOString();
-  const windowTo = editions[0].to.toISOString();
-  const [all, ads] = await Promise.all([getWindowStories(windowFrom, windowTo), getLiveAds()]);
-  const stories = all.filter(s => {
-    const t = new Date(s.published_at).getTime();
-    return t >= info.from.getTime() && t < info.to.getTime();
-  });
-  const pages = layoutEdition(info, stories, ads, editions);
-  const front = pages[0].kind === 'front' ? pages[0] : null;
-  return { ...info, pages, stories, coverImage: front?.lead?.image || stories.find(s => s.image)?.image || null };
+  return {
+    ...info,
+    sections,
+    storyCount: stories.length,
+    coverImage: lead?.image || stories.find(s => s.image)?.image || null,
+    fullPageAds: rotate((ads[EPAPER_FULL_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.key + info.lastDay),
+    halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
+  };
 });
 
 export type EditionSummary = EditionInfo & { storyCount: number; coverImage: string | null; headline: string | null };
@@ -389,14 +323,11 @@ export type EditionSummary = EditionInfo & { storyCount: number; coverImage: str
 /** Shelf of editions in the window, newest first, with a cover photo and headline each. */
 export const getEditionShelf = cache(async (): Promise<EditionSummary[]> => {
   const editions = listEditions();
-  if (!editions.length) return [];
-  const all = await getWindowStories(editions[editions.length - 1].from.toISOString(), editions[0].to.toISOString());
+  const from = editions.reduce((min, e) => (e.fromIso < min ? e.fromIso : min), editions[0].fromIso);
+  const all = await getWindowStories(from, editions[0].toIso);
   return editions.map(info => {
-    const stories = all.filter(s => {
-      const t = new Date(s.published_at).getTime();
-      return t >= info.from.getTime() && t < info.to.getTime();
-    });
-    const top = [...stories].sort((a, b) => b.score - a.score || b.published_at.localeCompare(a.published_at))[0];
+    const stories = all.filter(inEdition(info));
+    const top = [...stories].sort(byImportance)[0];
     return { ...info, storyCount: stories.length, coverImage: top?.image || null, headline: top?.title || null };
   });
 });

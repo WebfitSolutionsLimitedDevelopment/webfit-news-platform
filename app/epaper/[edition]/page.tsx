@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ edition: 
   const edition = await getEdition(key);
   if (!edition) return {};
   const title = `${edition.title} | E-paper | ${SITE_NAME}`;
-  const description = `Webfit News e-paper No. ${edition.number}: ${edition.stories.length} stories from ${edition.coverage}.`;
+  const description = `Webfit News weekly e-paper No. ${edition.number}: ${edition.storyCount} stories from ${edition.coverage}, in full.`;
   return {
     title: { absolute: title },
     description,
