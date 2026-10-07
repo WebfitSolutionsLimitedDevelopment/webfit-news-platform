@@ -14,7 +14,7 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  * The current edition fills up as we publish. /epaper opens it once it has
  * MIN_LIVE_STORIES stories; until then it opens the previous (complete) edition.
  * Editions are kept while they fall inside the last EPAPER_WINDOW_DAYS days.
- * Each edition is a compact 8–9 page paper: the front-page story, then one page
+ * Each edition is a 12-page paper: the front-page story, then desk pages
  * per desk (DESKS) carrying that desk's strongest stories, trimmed to fit, each
  * ending with a link to the full story. Stories that don't make the paper are
  * listed on the back page.
@@ -30,8 +30,8 @@ export const EPAPER_WINDOW_DAYS = 15;
 const MIN_LIVE_STORIES = 10;
 /** Words printed per desk page, and per story. Tuned so each desk fills about one page. */
 const PAGE_WORDS = 400;
-/** Story pages to aim for (front, one ad page and the back page make it 8–9). */
-const STORY_PAGES = 6;
+/** Story pages to aim for (with the front, ad and back pages: 12). */
+const STORY_PAGES = 9;
 const LEAD_WORDS = 260;
 const STORY_WORDS = 130;
 const MIN_STORY_WORDS = 60;

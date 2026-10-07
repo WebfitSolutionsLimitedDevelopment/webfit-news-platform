@@ -183,8 +183,8 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
   const placed = new Set<string>();
   const shortTries = new Map<string, number>();
 
-  // 9 pages in all: front, desk pages, full-page ads, back.
-  const STORY_PAGES = 9 - 2 - adPlan(edition).length;
+  // 12 pages in all: front, desk pages, full-page ads, back.
+  const STORY_PAGES = EDITION_PAGES - 2 - adPlan(edition).length;
   // Page quota per desk: STORY_PAGES shared out in proportion to each desk's stories (at least one each).
   const deskSizes = edition.sections.map((sec, i) => (i === 0 ? 0 : sec.stories.length));
   const totalStories = deskSizes.reduce((a, b) => a + b, 0) || 1;
@@ -353,6 +353,8 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
  * the next on page 6. With no bookings, one "advertise here" page goes on page 6.
  */
 const AD_PAGE_NUMBERS = [2, 6];
+/** Pages in every edition, counting the front page, ad pages and back page. */
+const EDITION_PAGES = 12;
 
 function adPlan(edition: Edition): Array<{ at: number; ad: EpaperAd | null }> {
   const booked = edition.fullPageAds.slice(0, AD_PAGE_NUMBERS.length);
@@ -503,6 +505,6 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
   return <>
     {/* Off-screen measuring room: same width and styles as a real page. */}
     <div aria-hidden="true" className={styles.measure} style={{ width: PAGE_W, height: PAGE_H }}><div className={styles.page}><div ref={hostRef}/></div></div>
-    {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} fileName={`webfit-news-epaper-${edition.key}.pdf`}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
+    {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} shareHref={edition.href}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
   </>;
 }

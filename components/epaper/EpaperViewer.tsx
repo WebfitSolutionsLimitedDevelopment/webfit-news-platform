@@ -35,7 +35,7 @@ function sendImpression(assignmentId: string) {
   } catch {}
 }
 
-export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title: string; fileName: string }) {
+export function EpaperViewer({ pages, title, shareHref }: { pages: Page[]; title: string; shareHref?: string }) {
   const count = pages.length;
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -134,9 +134,8 @@ export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title:
   }, [setZoom]);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [sound, setSound] = useState(true);
-  const [exporting, setExporting] = useState<null | { done: number; total: number }>(null);
-  const [exportNote, setExportNote] = useState<string | null>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
   useEffect(() => { setSound(soundPreference()); }, []);
   const soundRef = useRef(true);
   soundRef.current = sound;
@@ -240,28 +239,31 @@ export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title:
     if (next) { unlockFlipSound(); playFlipSound(450); }
   };
 
-  // PDF: render every page once, off screen, at full size, then draw them into a PDF.
-  const downloadPdf = async () => {
-    if (exporting) return;
-    unlockFlipSound();
-    setExportNote(null);
-    setExporting({ done: 0, total: count });
-    try {
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const root = exportRef.current;
-      if (!root) throw new Error('not ready');
-      const imgs = Array.from(root.querySelectorAll('img'));
-      imgs.forEach(img => { img.loading = 'eager'; });
-      await Promise.all(imgs.map(img => (img.complete ? null : new Promise(r => { img.onload = img.onerror = () => r(null); setTimeout(r, 8000); }))));
-      const pageEls = Array.from(root.querySelectorAll<HTMLElement>('[data-export-page] > *'));
-      const { downloadEpaperPdf } = await import('./epaperPdf');
-      const size = await downloadEpaperPdf(pageEls, fileName, title, (done, total) => setExporting({ done, total }));
-      setExportNote(`Downloaded ${fileName} (${(size / 1_048_576).toFixed(1)} MB). Share it on WhatsApp, email or print it.`);
-    } catch {
-      setExportNote('Sorry, the PDF could not be made on this device. Please try again, or use a laptop.');
-    } finally {
-      setExporting(null);
+  // Share: a link that opens this edition (at the page being read) as the flipbook.
+  const shareUrl = () => {
+    const base = shareHref || window.location.pathname;
+    const url = new URL(base, window.location.origin);
+    if (index > 0) url.hash = `page-${index + 1}`;
+    return url.toString();
+  };
+  const shareText = `${title} — read it as a newspaper on Webfit News`;
+  useEffect(() => {
+    if (!shareOpen) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest?.('[data-share]')) setShareOpen(false); };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [shareOpen]);
+  const share = async () => {
+    const url = shareUrl();
+    if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ title, text: shareText, url }); return; } catch (e) { if ((e as Error)?.name === 'AbortError') return; }
     }
+    setShareOpen(o => !o);
+  };
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(shareUrl()); setShareNote('Link copied'); }
+    catch { setShareNote('Copy this link: ' + shareUrl()); }
+    setTimeout(() => setShareNote(null), 2500);
   };
 
   const toggleFullscreen = () => {
@@ -344,7 +346,16 @@ export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title:
       </div>
       <button type="button" onClick={toggleFullscreen} className={styles.hideSmall}>Full screen</button>
       <button type="button" className={styles.soundButton} onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Turn page sound off' : 'Turn page sound on'} title={sound ? 'Page sound on' : 'Page sound off'}>{sound ? '🔊' : '🔇'}</button>
-      <button type="button" className={styles.pdfButton} onClick={downloadPdf} disabled={!!exporting}>{exporting ? `PDF ${exporting.done}/${exporting.total}` : '⬇ PDF'}</button>
+      <span className={styles.shareWrap} data-share>
+        <button type="button" className={styles.shareButton} onClick={share} aria-expanded={shareOpen} aria-haspopup="true">Share ↗</button>
+        {shareOpen ? <span className={styles.shareMenu} role="menu">
+          <a role="menuitem" href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl()}`)}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>WhatsApp</a>
+          <a role="menuitem" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl())}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>Facebook</a>
+          <a role="menuitem" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl())}&text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>X</a>
+          <a role="menuitem" href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl()}`)}`} onClick={() => setShareOpen(false)}>Email</a>
+          <button type="button" role="menuitem" onClick={() => { copyLink(); setShareOpen(false); }}>Copy link</button>
+        </span> : null}
+      </span>
       <button type="button" onClick={() => go('next')} disabled={!canNext || !!turn} aria-label="Next page"><span>Next</span> ›</button>
     </div>
     <div
@@ -364,10 +375,7 @@ export function EpaperViewer({ pages, title, fileName }: { pages: Page[]; title:
       {stageContent}
       {canNext && zoom === 1 ? <button type="button" className={`${styles.edge} ${styles.edgeRight}`} onClick={() => go('next')} aria-label="Next page" tabIndex={-1}/> : null}
     </div>
-    {exportNote ? <p className={styles.exportNote} role="status">{exportNote}</p> : null}
-    {exporting ? <div ref={exportRef} className={styles.exportStack} aria-hidden="true">
-      {pages.map(p => <div key={p.key} data-export-page style={{ width: PAGE_W, height: PAGE_H }}>{p.node}</div>)}
-    </div> : null}
+    {shareNote ? <p className={styles.exportNote} role="status">{shareNote}</p> : null}
     <p className={styles.hint}>{zoom > 1
       ? 'Drag to move around the page. Pinch, double-tap or press Fit to see the whole page again.'
       : 'Swipe to turn pages. Pinch or double-tap to zoom. Tap a headline to read the full story.'}</p>

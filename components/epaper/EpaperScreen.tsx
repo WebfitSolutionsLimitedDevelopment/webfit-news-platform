@@ -12,7 +12,7 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
       <div>
         <span className={styles.hubKicker}>Webfit News e-paper · No. {edition.number}</span>
         <h1 className={styles.hubTitle}>{edition.title}</h1>
-        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, the best of them laid out as an 8–9 page newspaper. New editions every Monday and Thursday.</p>
+        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, the best of them laid out as a 12-page newspaper. New editions every Monday and Thursday.</p>
       </div>
       {edition.isLive ? <span className={styles.liveBadge}>Live · updating as we publish</span> : null}
     </div>
