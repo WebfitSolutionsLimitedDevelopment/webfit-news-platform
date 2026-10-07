@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './Epaper.module.css';
 
 /** Pages are laid out at this size, then scaled to fit the screen like a printed page. */
@@ -8,6 +8,10 @@ export const PAGE_W = 560;
 export const PAGE_H = 792;
 const TURN_MS = 650;
 const SPREAD_MIN_WIDTH = 900;
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.5;
+const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100));
 
 type Page = { key: string; label: string; node: ReactNode };
 type Spread = { left?: number; right?: number };
@@ -41,7 +45,92 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
   const [turn, setTurn] = useState<Turn | null>(null);
   const [spreadMode, setSpreadMode] = useState(false);
   const [scale, setScale] = useState(0.6);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoomState] = useState(1);
+  const zoomRef = useRef(1);
+  /** Point (in stage coordinates) that should stay still while zooming. */
+  const focal = useRef<{ x: number; y: number; from: number } | null>(null);
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+
+  const setZoom = useCallback((next: number, at?: { x: number; y: number }) => {
+    const stage = stageRef.current;
+    const z = clampZoom(next);
+    if (z === zoomRef.current) return;
+    const point = at || (stage ? { x: stage.clientWidth / 2, y: Math.min(stage.clientHeight, window.innerHeight) / 2 } : { x: 0, y: 0 });
+    focal.current = { ...point, from: zoomRef.current };
+    zoomRef.current = z;
+    setZoomState(z);
+  }, []);
+
+  // Keep the point under the fingers (or the centre) in place after a zoom.
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const f = focal.current;
+    focal.current = null;
+    if (!stage || !f) return;
+    if (zoom <= 1) { stage.scrollLeft = 0; stage.scrollTop = 0; return; }
+    const ratio = zoom / f.from;
+    stage.scrollLeft = (stage.scrollLeft + f.x) * ratio - f.x;
+    stage.scrollTop = (stage.scrollTop + f.y) * ratio - f.y;
+  }, [zoom]);
+
+  // Pinch to zoom and double-tap to zoom, on the paper itself. Native listeners so
+  // we can stop the browser zooming the whole website instead.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const local = (x: number, y: number) => { const r = stage.getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; };
+    const dist = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinch.current = { dist: dist(e.touches), zoom: zoomRef.current };
+        touchX.current = null;
+        e.preventDefault();
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || !pinch.current) return;
+      e.preventDefault();
+      const mid = local((e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
+      setZoom(pinch.current.zoom * (dist(e.touches) / pinch.current.dist), mid);
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (pinch.current) { if (e.touches.length < 2) pinch.current = null; lastTap.current = null; return; }
+      if (e.changedTouches.length !== 1 || e.touches.length) return;
+      const t = e.changedTouches[0];
+      const now = Date.now();
+      const prev = lastTap.current;
+      if (prev && now - prev.t < 300 && Math.hypot(t.clientX - prev.x, t.clientY - prev.y) < 30) {
+        e.preventDefault();
+        lastTap.current = null;
+        setZoom(zoomRef.current > 1 ? 1 : 2.5, local(t.clientX, t.clientY));
+        return;
+      }
+      lastTap.current = { t: now, x: t.clientX, y: t.clientY };
+    };
+    stage.addEventListener('touchstart', onStart, { passive: false });
+    stage.addEventListener('touchmove', onMove, { passive: false });
+    stage.addEventListener('touchend', onEnd, { passive: false });
+    return () => {
+      stage.removeEventListener('touchstart', onStart);
+      stage.removeEventListener('touchmove', onMove);
+      stage.removeEventListener('touchend', onEnd);
+    };
+  }, [setZoom]);
+
+  // Ctrl/⌘ + scroll wheel (and trackpad pinch on laptops) zooms the paper.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      setZoom(zoomRef.current * Math.exp(-e.deltaY / 300), { x: e.clientX - r.left, y: e.clientY - r.top });
+    };
+    stage.addEventListener('wheel', onWheel, { passive: false });
+    return () => stage.removeEventListener('wheel', onWheel);
+  }, [setZoom]);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   // Start on the page in the address bar (#page-4), if any.
@@ -97,6 +186,12 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
     return () => window.clearTimeout(t);
   }, [turn]);
 
+  // A new page starts at its top-left corner when zoomed in.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (stage && zoomRef.current > 1) { stage.scrollLeft = 0; stage.scrollTop = 0; }
+  }, [index]);
+
   // Keep the address bar in step, so a page can be shared or reloaded.
   useEffect(() => {
     const hash = index > 0 ? `#page-${index + 1}` : ' ';
@@ -109,10 +204,13 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
       if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go('next'); }
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go('prev'); }
+      if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(zoomRef.current + ZOOM_STEP); }
+      if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(zoomRef.current - ZOOM_STEP); }
+      if (e.key === '0') { e.preventDefault(); setZoom(1); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go]);
+  }, [go, setZoom]);
 
   // Count an ad impression the first time its page is on screen.
   useEffect(() => {
@@ -198,16 +296,21 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
         </select>
       </label>
       <span className={styles.counter} aria-live="polite">{pageLabel}</span>
-      <button type="button" onClick={() => setZoom(z => (z > 1 ? 1 : 1.8))} aria-pressed={zoom > 1}>{zoom > 1 ? 'Fit page' : 'Zoom'}</button>
+      <div className={styles.zoomGroup} role="group" aria-label="Zoom">
+        <button type="button" onClick={() => setZoom(zoom - ZOOM_STEP)} disabled={zoom <= ZOOM_MIN} aria-label="Zoom out">−</button>
+        <button type="button" className={styles.zoomLevel} onClick={() => setZoom(zoom > 1 ? 1 : 2)} aria-label={zoom > 1 ? 'Fit page to screen' : 'Zoom in to 200%'}>{zoom > 1 ? `${Math.round(zoom * 100)}%` : 'Fit'}</button>
+        <button type="button" onClick={() => setZoom(zoom + ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in">+</button>
+      </div>
       <button type="button" onClick={toggleFullscreen} className={styles.hideSmall}>Full screen</button>
       <button type="button" onClick={() => go('next')} disabled={!canNext || !!turn} aria-label="Next page"><span>Next</span> ›</button>
     </div>
     <div
       ref={stageRef}
       className={`${styles.stage} ${zoom > 1 ? styles.stageZoomed : ''}`}
-      onTouchStart={e => { touchX.current = zoom > 1 ? null : e.touches[0]?.clientX ?? null; }}
+      onTouchStart={e => { touchX.current = zoom > 1 || e.touches.length > 1 ? null : e.touches[0]?.clientX ?? null; }}
       onTouchEnd={e => {
         const start = touchX.current; touchX.current = null;
+        if (pinch.current || e.touches.length) return;
         const end = e.changedTouches[0]?.clientX;
         if (start == null || end == null) return;
         const dx = end - start;
@@ -218,6 +321,8 @@ export function EpaperViewer({ pages, title }: { pages: Page[]; title: string })
       {stageContent}
       {canNext && zoom === 1 ? <button type="button" className={`${styles.edge} ${styles.edgeRight}`} onClick={() => go('next')} aria-label="Next page" tabIndex={-1}/> : null}
     </div>
-    <p className={styles.hint}>Swipe or use the arrow keys to turn pages. Tap a headline to read the full story.</p>
+    <p className={styles.hint}>{zoom > 1
+      ? 'Drag to move around the page. Pinch, double-tap or press Fit to see the whole page again.'
+      : 'Swipe to turn pages. Pinch or double-tap to zoom. Tap a headline to read the full story.'}</p>
   </div>;
 }

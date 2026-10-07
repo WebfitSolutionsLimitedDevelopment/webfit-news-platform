@@ -14,7 +14,11 @@
 .srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 .stage{position:relative;display:flex;justify-content:center;align-items:flex-start;perspective:2600px;min-height:300px;touch-action:pan-y}
-.stageZoomed{overflow:auto;justify-content:flex-start;max-height:calc(100vh - 140px);touch-action:auto}
+.stageZoomed{overflow:auto;justify-content:flex-start;align-items:flex-start;height:calc(100vh - 140px);height:calc(100dvh - 140px);touch-action:pan-x pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:8px}
+.stageZoomed>.spread,.stageZoomed>.single{margin:0 auto;flex:none}
+.zoomGroup{display:inline-flex;align-items:center;border:1px solid #c9c4b8;border-radius:999px;background:#fff;overflow:hidden}
+.toolbar .zoomGroup button{border:0;border-radius:0;min-width:40px;padding:9px 10px;font-size:16px;line-height:1}
+.toolbar .zoomGroup .zoomLevel{min-width:58px;font-size:13px;border-left:1px solid #e3ded3;border-right:1px solid #e3ded3}
 .viewer:fullscreen .stageZoomed{max-height:calc(100vh - 90px)}
 
 .spread,.single{position:relative;display:flex;transform-style:preserve-3d}
