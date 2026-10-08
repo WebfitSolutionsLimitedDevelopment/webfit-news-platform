@@ -1,0 +1,14 @@
+.form{display:grid;gap:14px;max-width:460px;margin:24px 0}
+.field{display:grid;gap:6px;font-weight:700}
+.field em{font-weight:400;color:#6b6b6b;font-style:normal}
+.field input{min-height:48px;padding:0 14px;border:1px solid #cfc9bd;border-radius:10px;font:inherit;font-weight:400;background:#fff}
+.field input:focus{outline:2px solid #151515;outline-offset:1px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.submit{min-height:50px;border:0;border-radius:999px;background:#151515;color:#fff;font-weight:900;font-size:1rem;cursor:pointer}
+.submit:hover{background:#c8232c}
+.submit:disabled{opacity:.6;cursor:wait}
+.error{margin:0;color:#c8232c;font-weight:700}
+.small{margin:0;font-size:.9rem;color:#6b6b6b}
+.notice{margin:24px 0;padding:18px 20px;border-radius:12px;background:#f4f1ea;border:1px solid #e2ddd2;max-width:560px;line-height:1.5}
+.ok{background:#eef7ee;border-color:#cfe6cf}
+.bad{background:#fbeeee;border-color:#efcfcf}

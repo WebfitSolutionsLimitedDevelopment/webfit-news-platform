@@ -19,6 +19,8 @@
 .actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .primary{display:inline-flex;align-items:center;min-height:48px;padding:0 24px;border-radius:999px;background:#151515;color:#fff;font-weight:900;text-decoration:none}
 .primary:hover{background:#c8232c}
+.email{display:inline-flex;align-items:center;min-height:48px;padding:0 20px;border-radius:999px;border:2px solid #151515;color:#151515;font-weight:900;text-decoration:none}
+.email:hover{border-color:#c8232c;color:#c8232c}
 .live{font:700 12px/1 Arial,Helvetica,sans-serif;color:#c8232c;display:inline-flex;align-items:center;gap:7px}
 .live::before{content:'';width:8px;height:8px;border-radius:50%;background:#c8232c;animation:pulse 1.6s infinite}
 @keyframes pulse{50%{opacity:.25}}
