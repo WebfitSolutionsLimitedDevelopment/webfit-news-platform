@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { topicForStory } from '@/lib/topics';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -108,6 +109,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const breakSlots=['ARTICLE_INLINE_1','ARTICLE_INLINE_2'];
   const cats=(article.article_categories||[]).map((x:any)=>x.category).filter(Boolean);
   const related=await getRelatedStories(article.id,cats.map((c:any)=>c.id),4);
+  const topic=topicForStory({title:article.title,published_at:article.published_at,categorySlugs:cats.map((c:any)=>c.slug)});
 
   let latest:any[]=[];
   try{latest=await getLatestStories(24)}catch{latest=[]}
@@ -166,6 +168,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <h1>{displayTitle}</h1>
           {article.subtitle?<p className="standfirst">{article.subtitle}</p>:null}
           <div className="article-meta"><span>By {article.author?.slug?<Link href={`/author/${article.author.slug}`} rel="author">{article.author.name}</Link>:<Link href="/about">Webfit News</Link>}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
+          {topic?<Link className="article-topic" href={`/topics/${topic.slug}`}><span>Part of our coverage</span><strong>{topic.name}</strong><small>{topic.articleNote} →</small></Link>:null}
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img {...responsiveImage(article.media.public_url,[480,800,1200,1600],'(max-width: 880px) 100vw, 850px')} alt={article.media.alt_text||displayTitle} fetchPriority="high" decoding="async" {...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{})}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
