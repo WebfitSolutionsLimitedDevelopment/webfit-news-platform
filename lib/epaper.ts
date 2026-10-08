@@ -420,6 +420,12 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
 
 export type EditionSummary = EditionInfo & { storyCount: number; coverImage: string | null; headline: string | null };
 
+/** The edition /epaper opens: the current one once it has enough stories, otherwise the previous one. */
+export function featuredEdition(shelf: EditionSummary[]): EditionSummary | null {
+  if (!shelf.length) return null;
+  return shelf[0].storyCount >= MIN_LIVE_STORIES || !shelf[1] ? shelf[0] : shelf[1];
+}
+
 /** Shelf of editions in the window, newest first, with a cover photo and headline each. */
 export const getEditionShelf = cache(async (): Promise<EditionSummary[]> => {
   const editions = listEditions();
