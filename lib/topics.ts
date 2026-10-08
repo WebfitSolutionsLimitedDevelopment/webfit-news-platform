@@ -41,7 +41,7 @@ export const TOPICS: Topic[] = [
       'Make sure you are enrolled before election day. Official information on enrolling, advance voting and where to vote is on vote.nz.',
     ],
     match: /\b(election|elections|polls?|voters?|voting|vote|candidates?|electorates?|party vote|ballot|enrolment|electoral)\b/i,
-    exclude: /\b(bihar|tamil nadu|west bengal|kanak|paris|india fta|kiwibank|local board|local elections?|mayor|australia'?s compulsory|by-election|mata)\b/i,
+    exclude: /\b(bihar|tamil nadu|west bengal|kanak|paris|india fta|kiwibank|local board|local elections?|mayor|australia'?s compulsory|by-election|mata|papatoetoe|council|stolen votes)\b/i,
     categories: ['election', 'election-2026'],
     since: '2026-01-01',
     sections: [
