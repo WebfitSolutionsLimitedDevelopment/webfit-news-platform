@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { createPublicClient as createClient } from '../lib/supabase-public';
 import { NOINDEX_SECTIONS, SITE_URL, articleUrl } from '../lib/site';
+import { TOPICS } from '../lib/topics';
 
 /** Rebuilt every 15 minutes so new stories reach Google quickly without querying on every crawl. */
 export const revalidate = 900;
@@ -9,6 +10,8 @@ const pdfToolSlugs=['pdf-to-jpg','jpg-to-pdf','pdf-to-word','word-to-pdf','merge
 const evergreenPages: MetadataRoute.Sitemap = [
   {url:`${SITE_URL}/ilikemypdf`,changeFrequency:'monthly',priority:0.95},
   ...pdfToolSlugs.map(slug=>({url:`${SITE_URL}/ilikemypdf/${slug}`,changeFrequency:'monthly' as const,priority:0.9})),
+  {url:`${SITE_URL}/topics`,changeFrequency:'daily',priority:0.8},
+  ...TOPICS.map(t=>({url:`${SITE_URL}/topics/${t.slug}`,changeFrequency:'hourly' as const,priority:0.9})),
   {url:`${SITE_URL}/world`,changeFrequency:'daily',priority:0.95},
   {url:`${SITE_URL}/world/weather`,changeFrequency:'hourly',priority:0.95},
   {url:`${SITE_URL}/world/public-holidays`,changeFrequency:'daily',priority:0.95},
