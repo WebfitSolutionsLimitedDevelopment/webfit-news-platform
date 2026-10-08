@@ -20,7 +20,10 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
     <EpaperBook edition={edition} shelf={shelf}/>
 
     <section className={styles.shelf} aria-labelledby="epaper-shelf">
-      <h2 id="epaper-shelf" className={styles.shelfTitle}>Recent editions</h2>
+      <div className={styles.shelfHead}>
+        <h2 id="epaper-shelf" className={styles.shelfTitle}>Recent editions</h2>
+        <Link href="/epaper/archive" className={styles.shelfAll}>All editions →</Link>
+      </div>
       <div className={styles.shelfGrid}>
         {shelf.map(e => <Link key={e.key} href={e.href} className={`${styles.cover} ${e.key === edition.key ? styles.coverCurrent : ''}`} aria-current={e.key === edition.key ? 'page' : undefined}>
           <div className={styles.coverThumb}>

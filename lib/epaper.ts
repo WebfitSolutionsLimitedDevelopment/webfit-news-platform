@@ -13,7 +13,7 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  *
  * The current edition fills up as we publish. /epaper opens it once it has
  * MIN_LIVE_STORIES stories; until then it opens the previous (complete) edition.
- * Editions are kept while they fall inside the last EPAPER_WINDOW_DAYS days.
+ * The shelf shows editions from the last EPAPER_WINDOW_DAYS days; every edition since launch stays readable at /epaper/<date> and is listed at /epaper/archive.
  * Each edition is a 12-page paper: the front-page story, then desk pages
  * per desk (DESKS) carrying that desk's strongest stories, trimmed to fit, each
  * ending with a link to the full story. Stories that don't make the paper are
@@ -187,6 +187,27 @@ export function listEditions(now = new Date()): EditionInfo[] {
   return out;
 }
 
+/** Every edition since the e-paper started, newest first (the archive). Editions never expire. */
+export function listAllEditions(now = new Date()): EditionInfo[] {
+  const today = nzDate(now);
+  const out: EditionInfo[] = [];
+  let start = editionStart(today);
+  while (start >= EPAPER_LAUNCH) {
+    out.push(makeEdition(start, out.length === 0, today));
+    start = editionStart(addDays(start, -1));
+  }
+  return out;
+}
+
+/** Any edition by its key, however old, or null if it isn't one (or hasn't started yet). */
+export function editionInfo(key: string, now = new Date()): EditionInfo | null {
+  if (!isEditionKey(key) || key < EPAPER_LAUNCH) return null;
+  const today = nzDate(now);
+  const current = editionStart(today);
+  if (key > current) return null;
+  return makeEdition(key, key === current, today);
+}
+
 export function isEditionKey(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && [1, 4].includes(weekday(value));
 }
@@ -330,16 +351,19 @@ function inEdition(info: EditionInfo) {
   return (s: EpaperStory) => { const t = Date.parse(s.published_at); return t >= from && t < to; };
 }
 
-/** One edition with every story's full text, or null if it is outside the window. */
+/** One edition with every story's full text (any edition since launch), or null if the key isn't one. */
 export const getEdition = cache(async (key?: string): Promise<Edition | null> => {
   const editions = listEditions();
-  const windowFrom = editions[editions.length - 1].fromIso;
-  const [inWindow, ads] = await Promise.all([getWindowStories(windowFrom, editions[0].toIso), getLiveAds()]);
-
-  // No key: the live edition once it has enough stories, otherwise the previous one.
-  let info = key ? editions.find(e => e.key === key) : editions[0];
-  if (!key && editions[1] && inWindow.filter(inEdition(editions[0])).length < MIN_LIVE_STORIES) info = editions[1];
+  // A key can be any edition since launch (the archive); no key means the one /epaper opens.
+  let info: EditionInfo | null = key ? editionInfo(key) : editions[0];
   if (!info) return null;
+  const [fetched, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
+  let inWindow = fetched;
+  // No key: the live edition once it has enough stories, otherwise the previous one.
+  if (!key && editions[1] && inWindow.filter(inEdition(info)).length < MIN_LIVE_STORIES) {
+    info = editions[1];
+    inWindow = await getWindowStories(info.fromIso, info.toIso);
+  }
   const stories = inWindow.filter(inEdition(info));
 
   // Full text for this edition's stories only.

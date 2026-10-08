@@ -17,7 +17,14 @@ export function refreshAdPages() {
     revalidatePath('/');
     revalidatePath('/category/[slug]', 'page');
     revalidatePath('/[slug]', 'page');
+    revalidatePath('/epaper');
+    revalidatePath('/epaper/[edition]', 'page');
   } catch {}
+}
+
+/** "2026-11-30" -> midnight at the start of that day in New Zealand, as an ISO timestamp. */
+export function nzStartOfDay(date: string): string {
+  return new Date(new Date(nzEndOfDay(date)).getTime() - (24 * 3600 - 1) * 1000).toISOString();
 }
 
 /** "2026-11-30" -> the last second of that day in New Zealand, as an ISO timestamp. */
