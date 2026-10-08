@@ -130,8 +130,8 @@ export function emailShell(opts: { preheader: string; body: string; footer: stri
 export const button = (href: string, label: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr><td style="border-radius:999px;background:#151515"><a href="${href}" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:999px">${esc(label)}</a></td></tr></table>`;
 
-/** Legally required sender details. Set EPAPER_POSTAL_ADDRESS to your business address. */
+/** Sender details (NZ Unsolicited Electronic Messages Act): who sent it and how to reach us. Override with EPAPER_SENDER_CONTACT. */
 export function senderFooter() {
-  const address = process.env.EPAPER_POSTAL_ADDRESS?.trim() || 'Webfit Solutions Limited, Auckland, New Zealand';
-  return `${esc(SITE_NAME)} · published by ${esc(address)}`;
+  const contact = process.env.EPAPER_SENDER_CONTACT?.trim() || '022 129 9323 · webfitnews.com';
+  return `${esc(SITE_NAME)} · ${esc(contact)}`;
 }
