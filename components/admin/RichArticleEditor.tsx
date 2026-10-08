@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { altFromFilename } from '../../lib/alt-text';
 import styles from './RichArticleEditor.module.css';
 import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
 
@@ -723,7 +724,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   function imageHtml(item: MediaItem, captionOverride = '') {
     if (!item.public_url) return '';
     const inlineInstance = newInlineInstance();
-    const alt = escapeHtml(item.alt_text || item.filename || '');
+    const alt = escapeHtml(item.alt_text || altFromFilename(item.filename || ''));
     const caption = captionOverride.trim() || (item.caption || '').trim();
     const credit = (item.credit || '').trim();
     const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
@@ -735,7 +736,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     const figures = items
       .filter(item => item.public_url)
       .map(item => {
-        const alt = escapeHtml(item.alt_text || item.filename || '');
+        const alt = escapeHtml(item.alt_text || altFromFilename(item.filename || ''));
         const caption = (item.caption || '').trim();
         const credit = (item.credit || '').trim();
         const captionText = [caption, credit ? `Credit: ${credit}` : ''].filter(Boolean).join(' ');
