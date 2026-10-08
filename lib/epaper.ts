@@ -200,6 +200,8 @@ export type EpaperStory = {
   published_at: string;
   image: string | null;
   imageAlt: string;
+  /** Width ÷ height of the photo as uploaded (null when unknown). */
+  imageRatio: number | null;
   section: SectionKey;
   categoryName: string | null;
   score: number;
@@ -241,7 +243,7 @@ const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<E
   const [{ data: cats }, { data, error }] = await Promise.all([
     supabase.from('categories').select('id,slug,name,parent_id'),
     supabase.from('articles')
-      .select('id,title,slug,published_at,view_count,is_homepage_hero,is_featured,is_editor_pick,is_breaking,media:media!articles_featured_media_id_fkey(public_url,alt_text),article_categories(category_id,is_primary)')
+      .select('id,title,slug,published_at,view_count,is_homepage_hero,is_featured,is_editor_pick,is_breaking,media:media!articles_featured_media_id_fkey(public_url,alt_text,width,height),article_categories(category_id,is_primary)')
       .eq('status', 'published')
       .gte('published_at', fromIso)
       .lt('published_at', toIso)
@@ -261,6 +263,7 @@ const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<E
       published_at: row.published_at,
       image: row.media?.public_url || null,
       imageAlt: row.media?.alt_text || cleanText(row.title),
+      imageRatio: row.media?.width > 0 && row.media?.height > 0 ? Number(row.media.width) / Number(row.media.height) : null,
       section: key,
       categoryName: name,
       score,

@@ -22,8 +22,8 @@ export const SLOT_GUIDE: Record<string, { where: string; desktop: string; mobile
   ARTICLE_RAIL: { where: 'Right-hand column of every story, follows the reader', desktop: '300×600 or 300×250', mobile: 'Not shown', video: true },
   MOBILE_STICKY: { where: 'Bar pinned to the bottom of stories', desktop: 'Not shown', mobile: '320×50' },
   CATEGORY_TOP: { where: 'Top of section pages', desktop: '970×250', mobile: '300×250' },
-  EPAPER_FULL_PAGE: { where: 'E-paper: a full page between sections (/epaper)', desktop: '1240×1754 portrait', mobile: 'Same artwork' },
-  EPAPER_HALF_PAGE: { where: 'E-paper: bottom half of a section page (/epaper)', desktop: '1240×860 landscape', mobile: 'Same artwork' },
+  EPAPER_FULL_PAGE: { where: 'E-paper: featured poster on a news page, stories alongside (/epaper)', desktop: 'Portrait or square poster, e.g. 1080×1350', mobile: 'Same artwork' },
+  EPAPER_HALF_PAGE: { where: 'E-paper: banner across the foot of a news page (/epaper)', desktop: '1240×620 landscape (a poster also works)', mobile: 'Same artwork' },
 };
 
 export function fmtDate(v?: string | null) {
