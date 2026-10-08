@@ -281,7 +281,9 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
   const pages: FlowPage[] = [];
   let houseHalves = 0;
   // Which news page each ad block aims for: spread evenly over the desk pages (front page stays clean).
-  const targets = blocks.slice(0, NEWS_PAGES).map((b, i) => ({ block: b, at: 1 + Math.floor((i * NEWS_PAGES) / Math.min(blocks.length, NEWS_PAGES)) }));
+  // Pages 1 to AD_FREE_PAGES are news only; ads are spread over the news pages after them.
+  const adPages = NEWS_PAGES + 1 - AD_FREE_PAGES;
+  const targets = blocks.slice(0, adPages).map((b, i) => ({ block: b, at: AD_FREE_PAGES + Math.floor((i * adPages) / Math.min(blocks.length, adPages)) }));
   const placedBlocks = new Set<string>();
   const placed = new Set<string>();
   const shortTries = new Map<string, number>();
@@ -464,7 +466,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
     const endBlock = block as AdBlock | null;
     if (endBlock && Htop - used() > 120) { placedBlocks.delete(endBlock.id); block = null; Htop = H; }
     // Space left after the section's last story: our own "advertise here" panel (never on a page that already has an ad).
-    if (!block && houseHalves < HOUSE_HALF_LIMIT) {
+    if (!block && houseHalves < HOUSE_HALF_LIMIT && pages.length >= AD_FREE_PAGES) {
       const node = build({ t: 'half', ad: null });
       flow.append(node);
       if (!overflows(flow)) houseHalves += 1;
@@ -476,18 +478,19 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
   return { pages, dropped, unplaced: blocks.filter(b => !placedBlocks.has(b.id)) };
 }
 
-/** Our own "Advertise with Webfit News" page. */
-const HOUSE_PAGE_NUMBER = 2;
-/** News pages after the front page: front + house page + 9 + back = 12 pages. */
+/** The first pages of the paper are news only: no paid ads, no "advertise here" panels. */
+const AD_FREE_PAGES = 3;
+/** News pages after the front page: front + 9 + back page + our advertising page = 12 pages. */
 const NEWS_PAGES = 9;
 
 function assemble(flow: FlowPage[], unplaced: AdBlock[]): BookPage[] {
   const out: BookPage[] = [...flow];
-  out.splice(Math.min(HOUSE_PAGE_NUMBER - 1, out.length), 0, { kind: 'house' });
   // Only if there were fewer news pages than ads (a thin edition): the rest share a page before the back page.
   const rest = unplaced.flatMap(b => b.ads);
   for (let i = 0; i < rest.length; i += 2) out.push({ kind: 'shared', ads: rest.slice(i, i + 2) });
   out.push({ kind: 'back' });
+  // Our own "Advertise with Webfit News" page closes the paper.
+  out.push({ kind: 'house' });
   return out;
 }
 
@@ -550,7 +553,7 @@ const REACH: Array<[string, string]> = [
   ['1K+', 'YouTube subscribers'],
 ];
 
-/** Page 2: Webfit News selling its own space. The only full-page advertisement in the paper. */
+/** Last page: Webfit News selling its own space. The only full-page advertisement in the paper. */
 function HousePageView({ n, edition }: { n: number; edition: Edition }) {
   return <div className={`${styles.page} ${styles.housePage}`}>
     <img className={styles.houseLogo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
