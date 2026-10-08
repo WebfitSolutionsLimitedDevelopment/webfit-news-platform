@@ -171,7 +171,7 @@ function build(item: Item): HTMLElement {
         const box = el('div', `${styles.it} ${styles.halfSlot} ${styles.houseHalfIn}`);
         box.append(el('span', styles.houseKicker, 'Advertise in the e-paper'));
         box.append(el('strong', styles.houseTitleSm, 'Your business could be on this page'));
-        box.append(el('span', styles.houseTextSm, 'Full and half pages in every edition, next to the stories Kiwi-Indian families read.'));
+        box.append(el('span', styles.houseTextSm, 'Poster and banner spots in every edition, right next to the stories our readers come for.'));
         const a = el('a', styles.houseButton, 'Book a page') as HTMLAnchorElement;
         a.href = '/advertise-media-kit';
         box.append(a);
@@ -556,7 +556,7 @@ function HousePageView({ n, edition }: { n: number; edition: Edition }) {
     <img className={styles.houseLogo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
     <div className={styles.houseRule}/>
     <span className={styles.houseKicker}>Advertise with Webfit News</span>
-    <h2 className={styles.houseHeadline}>Put your business in front of New Zealand’s Indian community</h2>
+    <h2 className={styles.houseHeadline}>Put your business in front of communities across New Zealand</h2>
     <p className={styles.houseLead}>Your ad sits right next to the stories our readers come for, in every e-paper edition, twice a week, and across webfitnews.com and our social channels.</p>
     <div className={styles.houseStats}>{REACH.map(([v, l]) => <div key={l}><strong>{v}</strong><span>{l}</span></div>)}</div>
     <div className={styles.houseOffers}>
