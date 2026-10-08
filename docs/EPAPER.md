@@ -2,7 +2,7 @@
 
 ## E-paper (`/epaper`)
 
-- Two editions a week (New Zealand time): **Midweek** (Mon–Wed, out Monday) and **Weekend** (Thu–Sun, out Thursday), at `/epaper/<start date>`. `/epaper` opens the current edition once it has 10 stories, otherwise the previous one. Editions inside the last 15 days stay on the shelf. Fully automatic.
+- Two editions a week (New Zealand time): **Midweek** (Mon–Wed, out Monday) and **Weekend** (Thu–Sun, out Thursday), at `/epaper/<start date>`. `/epaper` opens the current edition once it has 10 stories, otherwise the previous one. The shelf shows the last 15 days; every edition since launch stays readable at `/epaper/<date>` and is listed at `/epaper/archive` (pure date arithmetic, no database query). Old editions are rebuilt from today's version of each story and show today's ads. Fully automatic.
 - Each edition has 12 pages: front, **9 news pages** (pages 2–3 ad-free, paid ads inside the rest), back page, our advertising page (`NEWS_PAGES` in `EpaperBook.tsx`). A long story can add one more page. Earlier note: front page (the strongest story, trimmed to fit), desk pages, full-page ads on pages 2 and 6, back page (`EDITION_PAGES` in `EpaperBook.tsx`). Desks: Aotearoa Today · Power & Politics (+ opinion) · Desi Diaries (India, community, visas, notices) · Money & World · Style & Sports (`DESKS` in `lib/epaper.ts`). The desk pages (8 with two ads, 9 with one) are shared out in proportion to each desk's stories (at least one each). Stories are trimmed (lead ~260 words, others ~130) and end with "Read the full story at webfitnews.com/…"; if a story won't fit on a desk's last page a shorter version goes in, or it is skipped. Everything not printed is listed on the back page and under the viewer, so every story stays one click away.
 - Order: front page (the week's strongest story: hero, breaking, featured, editor's pick, then views) → Aotearoa Today (NZ) → Power & Politics → Visa Desk → Desi Diaries (India & community) → Money Matters → World Window → Style & Living (lifestyle, beauty, health) → Sports Arena → Point of View → Community Board → back page. Empty sections are skipped. Category → section map: `EPAPER_SECTIONS` in `lib/epaper.ts`.
 - The server sends the stories as plain text blocks (`lib/epaper-text.ts`: paragraphs, subheadings, lists, quotes, table rows; images and embeds dropped). The reader’s browser lays them out (`components/epaper/EpaperBook.tsx`) into 560 × 792 pages: full-width headlines and lead photos, then three fixed-height columns per story (each column is measured on its own — no CSS multi-column, which Safari clipped), balanced to the shortest height that holds the text, splitting text across pages mid-paragraph and printing "continued on / from page N". Each section starts on a new page.
@@ -25,6 +25,14 @@ Paid ads sit **inside news pages**, the way a printed paper runs them: the ad ta
 Ad blocks are spread evenly over the news pages from page 4 on, one per page, in order: featured posters, shared pairs, banners. If a section ends high up on its page, that page's ad moves to the next page instead of leaving a gap. Only when an edition has fewer news pages than ads do the leftovers share a page before the back page. Spare space at the end of a section gets our own "advertise here" panel (at most two per edition). Impressions are counted the first time an ad is on screen; clicks go through `/api/ads/click` as usual.
 
 Story photos are framed at their real shape (from `media.width/height`), within limits (front 1.75–2.6, section leads 1.5–2.6, column photos 0.9–1.8 width ÷ height). Only a photo taller than the limit, or one squeezed above an ad, loses a strip, mostly from the bottom (`object-position: 50% 22%`), so faces stay in.
+
+### Booking an e-paper ad (Newsroom → Advertisements → Add an ad)
+
+1. Upload the poster (any size; it is resized), give it a name.
+2. First day and last day (book ahead by choosing a later first day; the list shows it as "Scheduled").
+3. Where it shows → Change → tick **E-paper: featured poster** (one poster on a news page), **E-paper: poster shared with another ad** (two side by side) or **E-paper: banner** (landscape). Video ads can't go in the e-paper.
+4. Optional button text under the poster (e.g. "Book now") and the link.
+5. Publish. The e-paper refreshes straight away; the ad comes down by itself after the last day.
 
 ## Automatic categories
 

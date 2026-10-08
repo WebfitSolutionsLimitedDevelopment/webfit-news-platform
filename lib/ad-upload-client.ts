@@ -23,6 +23,7 @@ export const SLOT_GUIDE: Record<string, { where: string; desktop: string; mobile
   MOBILE_STICKY: { where: 'Bar pinned to the bottom of stories', desktop: 'Not shown', mobile: '320×50' },
   CATEGORY_TOP: { where: 'Top of section pages', desktop: '970×250', mobile: '300×250' },
   EPAPER_FULL_PAGE: { where: 'E-paper: featured poster on a news page, stories alongside (/epaper)', desktop: 'Portrait or square poster, e.g. 1080×1350', mobile: 'Same artwork' },
+  EPAPER_SHARED_PAGE: { where: 'E-paper: poster side by side with another advertiser, across the foot of a news page (/epaper)', desktop: 'Portrait poster, about 2:3 (e.g. 1000×1500)', mobile: 'Same artwork' },
   EPAPER_HALF_PAGE: { where: 'E-paper: banner across the foot of a news page (/epaper)', desktop: '1240×620 landscape (a poster also works)', mobile: 'Same artwork' },
 };
 

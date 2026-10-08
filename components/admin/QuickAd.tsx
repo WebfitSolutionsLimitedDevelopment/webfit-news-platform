@@ -18,6 +18,7 @@ const PLACE_OPTIONS: { key: string; label: string }[] = [
   { key: 'HOME_SIDEBAR_1', label: 'Homepage: further down (phones)' },
   { key: 'CATEGORY_TOP', label: 'Top of section pages' },
   { key: 'EPAPER_FULL_PAGE', label: 'E-paper: featured poster' },
+  { key: 'EPAPER_SHARED_PAGE', label: 'E-paper: poster shared with another ad' },
   { key: 'EPAPER_HALF_PAGE', label: 'E-paper: banner' },
 ];
 
@@ -52,7 +53,9 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
   const [fileError, setFileError] = useState('');
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
+  const [starts, setStarts] = useState(todayPlus(0));
   const [expires, setExpires] = useState(todayPlus(30));
+  const [cta, setCta] = useState('');
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [showPlaces, setShowPlaces] = useState(false);
   const [election, setElection] = useState(false);
@@ -94,16 +97,20 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
     if (!file) { setMsg('Choose the image or video first.'); return; }
     if (fileError) { setMsg(fileError); return; }
     if (!placements.length) { setMsg('Choose at least one place for the ad.'); setShowPlaces(true); return; }
+    if (starts > expires) { setMsg('The first day must be on or before the last day.'); return; }
     setBusy(true); setOk('Uploading…');
     try {
       const mediaId = await uploadToMedia(file, name);
       const r = await fetch('/api/admin/ads/quick', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, format: kind, media_id: kind === 'image' ? mediaId : null, video_media_id: kind === 'video' ? mediaId : null, destination_url: normaliseLink(link), expires_on: expires, placements, is_election_ad: election, promoter_statement: election ? promoter : '' }),
+        body: JSON.stringify({ name, format: kind, media_id: kind === 'image' ? mediaId : null, video_media_id: kind === 'video' ? mediaId : null, destination_url: normaliseLink(link), starts_on: starts, expires_on: expires, cta_label: cta, placements, is_election_ad: election, promoter_statement: election ? promoter : '' }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || 'Could not publish the ad.');
-      setOk(`Published. "${name}" is live now and comes down automatically after ${niceDate(new Date(expires + 'T12:00:00').toISOString())}.`);
+      const until = niceDate(new Date(expires + 'T12:00:00').toISOString());
+      setOk(starts > todayPlus(0)
+        ? `Booked. "${name}" goes live on ${niceDate(new Date(starts + 'T12:00:00').toISOString())} and comes down automatically after ${until}.`
+        : `Published. "${name}" is live now and comes down automatically after ${until}.`);
       setTimeout(() => location.reload(), 1400);
     } catch (err: any) {
       setOk(''); setMsg(err?.message || 'Could not publish the ad.');
@@ -113,7 +120,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
 
   return <section className={`admin-card ${styles.quick}`}>
     <div className={styles.quickHead}>
-      <div><h2>Add an ad</h2><p>Upload the poster, banner or video, give it a name and an end date. It goes live straight away and comes down by itself.</p></div>
+      <div><h2>Add an ad</h2><p>Upload the poster, banner or video, give it a name and its first and last day. It goes live on the first day and comes down by itself.</p></div>
     </div>
     {msg ? <div className="admin-alert" role="alert">{msg}</div> : null}
     {ok ? <div className={styles.ok} role="status">{ok}</div> : null}
@@ -127,8 +134,10 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
 
       <div className={styles.quickFields}>
         <label htmlFor="quick-name">Ad name<input id="quick-name" value={name} onChange={e => setName(e.target.value)} required minLength={2} maxLength={120} placeholder="e.g. Bank of Baroda festive offers"/></label>
-        <label htmlFor="quick-expires">Show until (last day)<input id="quick-expires" type="date" value={expires} min={todayPlus(0)} onChange={e => setExpires(e.target.value)} required/></label>
+        <label htmlFor="quick-starts">Start showing (first day)<input id="quick-starts" type="date" value={starts} min={todayPlus(0)} onChange={e => setStarts(e.target.value)} required/></label>
+        <label htmlFor="quick-expires">Show until (last day)<input id="quick-expires" type="date" value={expires} min={starts || todayPlus(0)} onChange={e => setExpires(e.target.value)} required/></label>
         <label htmlFor="quick-link">Link when clicked <span className={styles.optional}>optional</span><input id="quick-link" type="text" inputMode="url" autoComplete="url" value={link} onChange={e => setLink(e.target.value)} onBlur={() => setLink(v => normaliseLink(v))} placeholder="advertiser.co.nz"/></label>
+        {placements.some(p => p.key.startsWith('EPAPER_')) ? <label htmlFor="quick-cta">Button under the poster <span className={styles.optional}>optional, e-paper only</span><input id="quick-cta" value={cta} onChange={e => setCta(e.target.value)} maxLength={30} placeholder="e.g. Book now"/></label> : null}
 
         <div className={styles.whereBox}>
           <div className={styles.whereHead}>
@@ -138,7 +147,7 @@ export function QuickAdForm({ slots }: { slots: Any[] }) {
           {!showPlaces ? (placements.length
             ? <ul className={styles.wherePills}>{placements.map(p => <li key={p.key}>{PLACE_OPTIONS.find(o => o.key === p.key)?.label || p.key}<span>{DEVICE_LABEL[p.device]}</span></li>)}</ul>
             : <small className={styles.muted}>{file ? 'Nothing chosen yet. Click Change.' : 'Picked automatically from the shape of your file.'}</small>)
-            : <div className={styles.whereList}>{PLACE_OPTIONS.filter(o => activeKeys.has(o.key)).map(o => {
+            : <div className={styles.whereList}>{PLACE_OPTIONS.filter(o => activeKeys.has(o.key) && !(kind === 'video' && o.key.startsWith('EPAPER_'))).map(o => {
               const current = placements.find(p => p.key === o.key);
               return <div key={o.key} className={current ? styles.whereOn : ''}>
                 <label htmlFor={`quick-place-${o.key}`}><input id={`quick-place-${o.key}`} type="checkbox" checked={Boolean(current)} onChange={e => toggle(o.key, e.target.checked)}/> {o.label}<small>{SLOT_GUIDE[o.key] ? `Best size: desktop ${SLOT_GUIDE[o.key].desktop}, phone ${SLOT_GUIDE[o.key].mobile}` : ''}</small></label>
@@ -172,7 +181,8 @@ export function AdList({ campaigns, creatives, assignments, performance, slots }
     const views = crs.reduce((t, x) => t + Number(stats.get(x.id)?.impressions || 0), 0);
     const clicks = crs.reduce((t, x) => t + Number(stats.get(x.id)?.clicks || 0), 0);
     const expired = c.ends_at && new Date(c.ends_at).getTime() < Date.now();
-    const status = expired ? 'Expired' : c.status === 'active' ? (places.length ? 'Live' : 'Not placed') : c.status === 'paused' ? 'Paused' : c.status === 'ended' ? 'Ended' : 'Draft';
+    const upcoming = c.starts_at && new Date(c.starts_at).getTime() > Date.now();
+    const status = expired ? 'Expired' : c.status === 'active' ? (!places.length ? 'Not placed' : upcoming ? 'Scheduled' : 'Live') : c.status === 'paused' ? 'Paused' : c.status === 'ended' ? 'Ended' : 'Draft';
     return { c, crs, places, views, clicks, status };
   }).sort((a, b) => (a.status === 'Live' ? 0 : 1) - (b.status === 'Live' ? 0 : 1));
 
@@ -194,7 +204,7 @@ export function AdList({ campaigns, creatives, assignments, performance, slots }
         <div className={styles.adThumb}>{cr?.format === 'video' && cr.video?.public_url ? <video src={cr.video.public_url} muted playsInline preload="metadata"/> : cr?.media?.public_url ? <img src={cr.media.public_url} alt=""/> : <span>No file</span>}</div>
         <div className={styles.adInfo}>
           <div className={styles.adTitle}><b>{c.campaign_name === c.advertiser_name ? c.campaign_name : `${c.advertiser_name}: ${c.campaign_name}`}</b><span className={`status-badge ${cls}`}>{status}</span></div>
-          <small>{status === 'Expired' ? 'Expired' : 'Shows until'} {niceDate(c.ends_at)} · {views.toLocaleString('en-NZ')} views · {clicks.toLocaleString('en-NZ')} clicks</small>
+          <small>{status === 'Scheduled' ? `Starts ${niceDate(c.starts_at)} · ` : ''}{status === 'Expired' ? 'Expired' : 'Shows until'} {niceDate(c.ends_at)} · {views.toLocaleString('en-NZ')} views · {clicks.toLocaleString('en-NZ')} clicks</small>
           <small className={styles.muted}>{places.length ? places.map(p => `${PLACE_OPTIONS.find(o => o.key === slotLabel.get(p.slot_id))?.label || slotLabel.get(p.slot_id)} (${DEVICE_LABEL[p.device as Placement['device']] || p.device})`).join(' · ') : 'Not placed anywhere'}</small>
           {editing === c.id ? <div className={styles.inlineEdit}>
             <label htmlFor={`exp-${c.id}`}>New last day<input id={`exp-${c.id}`} type="date" value={newDate} min={todayPlus(0)} onChange={e => setNewDate(e.target.value)}/></label>
@@ -202,7 +212,7 @@ export function AdList({ campaigns, creatives, assignments, performance, slots }
             <button type="button" onClick={() => setEditing(null)}>Cancel</button>
           </div> : confirming === c.id ? <div className={styles.confirm}><span>Delete this ad and its figures?</span><button type="button" disabled={busy === c.id} onClick={() => call(c.id, 'DELETE')}>Delete</button><button type="button" onClick={() => setConfirming(null)}>Keep</button></div>
             : <div className={styles.rowActions}>
-              {status === 'Live' ? <button type="button" disabled={busy === c.id} onClick={() => call(c.id, 'PATCH', { paused: true })}>Pause</button> : null}
+              {status === 'Live' || status === 'Scheduled' ? <button type="button" disabled={busy === c.id} onClick={() => call(c.id, 'PATCH', { paused: true })}>Pause</button> : null}
               {status === 'Paused' ? <button type="button" disabled={busy === c.id} onClick={() => call(c.id, 'PATCH', { paused: false })}>Resume</button> : null}
               <button type="button" onClick={() => { setEditing(c.id); setNewDate(toDateInput(c.ends_at) || todayPlus(30)); }}>{status === 'Expired' ? 'Run again' : 'Change end date'}</button>
               <button type="button" className={styles.danger} onClick={() => setConfirming(c.id)}>Delete</button>
