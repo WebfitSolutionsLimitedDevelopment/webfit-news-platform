@@ -34,6 +34,7 @@ export async function EpaperPromo() {
         <p className={styles.lead}>{main.title} · {main.coverage} · {main.storyCount} stories, laid out as a newspaper you can flip through on your phone or laptop. New editions every Monday and Thursday.</p>
         <div className={styles.actions}>
           <Link href="/epaper" className={styles.primary}>Read the e-paper →</Link>
+          <Link href="/subscribe" className={styles.email}>Get it by email</Link>
           {main.isLive ? <span className={styles.live}>Updating as we publish</span> : null}
         </div>
         {others.length ? <div className={styles.shelf}>
