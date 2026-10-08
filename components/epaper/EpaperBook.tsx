@@ -30,7 +30,7 @@ type Item =
   | { t: 'half'; ad: EpaperAd | null };
 
 type FlowPage = { kind: 'flow'; front: boolean; section: EditionSection; html: string; lastStoryId: string | null; startsWithContinuation: boolean; endsMidStory: boolean };
-type BookPage = FlowPage | { kind: 'ad'; ad: EpaperAd | null } | { kind: 'back' };
+type BookPage = FlowPage | { kind: 'ad'; ad: EpaperAd | null } | { kind: 'shared'; ads: EpaperAd[] } | { kind: 'back' };
 
 const dateLabel = (iso: string) => new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }).format(new Date(iso));
 
@@ -184,7 +184,7 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
   const shortTries = new Map<string, number>();
 
   // 12 pages in all: front, desk pages, full-page ads, back.
-  const STORY_PAGES = EDITION_PAGES - 2 - adPlan(edition).length;
+  const STORY_PAGES = NEWS_PAGES;
   // Page quota per desk: STORY_PAGES shared out in proportion to each desk's stories (at least one each).
   const deskSizes = edition.sections.map((sec, i) => (i === 0 ? 0 : sec.stories.length));
   const totalStories = deskSizes.reduce((a, b) => a + b, 0) || 1;
@@ -353,8 +353,10 @@ function paginate(edition: Edition, host: HTMLElement): { pages: FlowPage[]; dro
  * the next on page 6. With no bookings, one "advertise here" page goes on page 6.
  */
 const AD_PAGE_NUMBERS = [2, 6];
-/** Pages in every edition, counting the front page, ad pages and back page. */
-const EDITION_PAGES = 12;
+/** Shared ad pages (two posters side by side) go on these pages, after the full-page ads are placed. */
+const SHARED_PAGE_NUMBERS = [9, 12];
+/** News pages in every edition. Front, back and ad pages come on top (12 with two ad pages). */
+const NEWS_PAGES = 8;
 
 function adPlan(edition: Edition): Array<{ at: number; ad: EpaperAd | null }> {
   const booked = edition.fullPageAds.slice(0, AD_PAGE_NUMBERS.length);
@@ -362,9 +364,20 @@ function adPlan(edition: Edition): Array<{ at: number; ad: EpaperAd | null }> {
   return booked.map((ad, i) => ({ at: AD_PAGE_NUMBERS[i], ad }));
 }
 
+/** Shared-page bookings, two per page in priority order (1+2, 3+4 …). */
+function sharedPlan(edition: Edition): Array<{ at: number; ads: EpaperAd[] }> {
+  const pages: EpaperAd[][] = [];
+  edition.sharedPageAds.forEach((ad, i) => { if (i % 2 === 0) pages.push([ad]); else pages[pages.length - 1].push(ad); });
+  return pages.slice(0, SHARED_PAGE_NUMBERS.length).map((ads, i) => ({ at: SHARED_PAGE_NUMBERS[i], ads }));
+}
+
 function assemble(edition: Edition, flow: FlowPage[]): BookPage[] {
   const out: BookPage[] = [...flow];
-  for (const { at, ad } of adPlan(edition)) out.splice(Math.min(at - 1, out.length), 0, { kind: 'ad', ad });
+  const inserts: Array<{ at: number; page: BookPage }> = [
+    ...adPlan(edition).map(({ at, ad }) => ({ at, page: { kind: 'ad', ad } as BookPage })),
+    ...sharedPlan(edition).map(({ at, ads }) => ({ at, page: { kind: 'shared', ads } as BookPage })),
+  ].sort((a, b) => a.at - b.at);
+  for (const { at, page } of inserts) out.splice(Math.min(at - 1, out.length), 0, page);
   out.push({ kind: 'back' });
   return out;
 }
@@ -437,6 +450,26 @@ function AdPageView({ ad, n, edition }: { ad: EpaperAd | null; n: number; editio
   </div>;
 }
 
+/** Two advertisers side by side on one page (or one, larger, when only one is booked). */
+function SharedAdPageView({ ads, n, edition }: { ads: EpaperAd[]; n: number; edition: Edition }) {
+  return <div className={`${styles.page} ${styles.sharedPage}`}>
+    <header className={styles.sharedHead}>
+      <span>Marketplace</span>
+      <strong>Local businesses &amp; what’s on</strong>
+    </header>
+    <div className={`${styles.sharedGrid} ${ads.length === 1 ? styles.sharedOne : ''}`}>
+      {ads.map(ad => <figure key={ad.assignmentId} className={styles.sharedCard} data-ad-assignment={ad.assignmentId}>
+        <a href={ad.href} target="_blank" rel="sponsored noopener" className={styles.sharedArt}><img src={resizedImage(ad.image, 900, 82)} alt={ad.alt} loading="lazy"/></a>
+        <figcaption>
+          <span className={styles.adLabel}>Advertisement{ad.advertiser ? ` · ${ad.advertiser}` : ''}</span>
+          {ad.cta ? <a href={ad.href} target="_blank" rel="sponsored noopener" className={styles.sharedCta}>{ad.cta} →</a> : null}
+        </figcaption>
+      </figure>)}
+    </div>
+    <Folio n={n} label="Marketplace" edition={edition}/>
+  </div>;
+}
+
 function BackPageView({ n, edition, shelf, extra }: { n: number; edition: Edition; shelf: EditionSummary[]; extra: Array<{ title: string; slug: string }> }) {
   const others = shelf.filter(e => e.key !== edition.key);
   const all = [...extra, ...edition.moreStories];
@@ -494,6 +527,7 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
           return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1}/> };
         }
         if (p.kind === 'ad') return { key: `p${n}`, label: 'Advertisement', node: <AdPageView ad={p.ad} n={n} edition={edition}/> };
+        if (p.kind === 'shared') return { key: `p${n}`, label: 'Marketplace', node: <SharedAdPageView ads={p.ads} n={n} edition={edition}/> };
         return { key: `p${n}`, label: 'Back page', node: <BackPageView n={n} edition={edition} shelf={shelf} extra={dropped}/> };
       });
       if (!cancelled) setPages(rendered);

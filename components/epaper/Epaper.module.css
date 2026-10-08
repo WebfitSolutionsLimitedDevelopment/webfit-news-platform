@@ -162,6 +162,20 @@
 .houseText{margin:0;font:12.5px/1.55 Arial,Helvetica,sans-serif;color:#e9e6df;max-width:420px}
 .page .houseButton{display:inline-block;background:#c8232c;color:#fff;border-radius:999px;padding:10px 18px;font:700 12px/1 Arial,Helvetica,sans-serif;text-decoration:none;text-indent:0}
 
+/* shared ad page: two posters side by side */
+.sharedPage{padding:22px 22px 34px;gap:12px}
+.sharedHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:3px double #151515;padding-bottom:6px;flex:none}
+.sharedHead span{font:italic 700 26px/1 Georgia,'Times New Roman',serif;color:#c8232c}
+.sharedHead strong{font:700 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#1f2a6b}
+.sharedGrid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center}
+.sharedOne{grid-template-columns:1fr;padding:0 40px}
+.sharedCard{margin:0;display:flex;flex-direction:column;gap:6px;min-height:0;height:100%;justify-content:center}
+.sharedArt{display:flex;align-items:center;justify-content:center;min-height:0;flex:0 1 auto;max-height:640px;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12),0 6px 18px rgba(0,0,0,.08)}
+.sharedArt img{display:block;width:100%;height:auto;max-height:640px;object-fit:contain}
+.sharedCard figcaption{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sharedCard .adLabel{margin:0}
+.page .sharedCta{display:inline-block;background:#151515;color:#fff;border-radius:999px;padding:7px 14px;font:700 10px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+
 /* back page */
 .backPage{align-items:center;text-align:center;justify-content:center;gap:16px;padding-bottom:34px}
 .backLogo{height:70px;width:auto}

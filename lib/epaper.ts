@@ -52,6 +52,8 @@ const EPAPER_LAUNCH = '2026-09-21';
 
 export const EPAPER_FULL_PAGE_SLOT = 'EPAPER_FULL_PAGE';
 export const EPAPER_HALF_PAGE_SLOT = 'EPAPER_HALF_PAGE';
+/** Two posters side by side on one page. */
+export const EPAPER_SHARED_PAGE_SLOT = 'EPAPER_SHARED_PAGE';
 
 /* ---------------------------------------------------------------- sections */
 
@@ -276,6 +278,8 @@ export type EpaperAd = {
   advertiser: string | null;
   isElectionAd: boolean;
   promoterStatement: string | null;
+  /** Button text under a shared-page poster, e.g. "Book online". */
+  cta: string | null;
 };
 
 export type EditionSection = { key: SectionKey; title: string; kicker: string; stories: EpaperFullStory[] };
@@ -288,6 +292,8 @@ export type Edition = EditionInfo & {
   moreStories: Array<{ title: string; slug: string }>;
   coverImage: string | null;
   fullPageAds: EpaperAd[];
+  /** Highest priority first; paired two to a page. */
+  sharedPageAds: EpaperAd[];
   halfPageAds: EpaperAd[];
 };
 
@@ -302,6 +308,7 @@ function toEpaperAd(ad: LiveAd): EpaperAd | null {
     advertiser: ad.advertiser,
     isElectionAd: ad.is_election_ad,
     promoterStatement: ad.promoter_statement,
+    cta: ad.cta_label || null,
   };
 }
 
@@ -403,6 +410,7 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
     coverImage: lead?.image || stories.find(s => s.image)?.image || null,
     // Highest priority first: it gets page 2, the next one page 6.
     fullPageAds: [...(ads[EPAPER_FULL_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
+    sharedPageAds: [...(ads[EPAPER_SHARED_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
   };
 });
