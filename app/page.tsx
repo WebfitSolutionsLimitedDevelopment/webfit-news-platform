@@ -6,6 +6,7 @@ import { BreakingStrip } from '@/components/BreakingStrip';
 import { AdSlot } from '@/components/AdSlot';
 import { VideoSection } from '@/components/VideoSection';
 import { AnimatedMastheadLogo } from '@/components/AnimatedMastheadLogo';
+import { EpaperPromo } from '@/components/epaper/EpaperPromo';
 import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
 import { getPublicStoryTitle } from '@/lib/public-story-display';
 import adFlow from './HomeAdFlow.module.css';
@@ -113,6 +114,9 @@ export default async function Home(){
           </Link>)}
         </div>
       </section>:null}
+
+      {/* E-paper: right after Popular, before the first ad slot. Keep ads away from this band. */}
+      <EpaperPromo/>
 
       <section className={styles.subscribeBand}>
         <div><span>Stay in the loop</span><h2>Webfit News, wherever you are.</h2><p>Follow the stories shaping New Zealand and our communities.</p></div>
