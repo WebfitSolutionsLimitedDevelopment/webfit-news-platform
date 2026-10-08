@@ -49,9 +49,17 @@ function safeDate(value:string|null|undefined,fallback:string|null|undefined){co
 
 export default async function sitemap():Promise<MetadataRoute.Sitemap>{
   const supabase=await createClient();const now=new Date().toISOString();
-  const {data,error}=await supabase.from('articles').select('slug,updated_at,published_at,robots_index').eq('status','published').not('slug','is',null).neq('slug','').not('published_at','is',null).lte('published_at',now).order('published_at',{ascending:false}).limit(50000);
-  if(error)console.error('Failed to build sitemap:',error.message);
-  const articles=(data||[]).filter(a=>typeof a.slug==='string'&&a.slug.trim().length>0&&a.robots_index!==false);
+  // Supabase returns at most 1,000 rows per request whatever .limit() says, so read
+  // the archive page by page; otherwise the oldest stories silently drop out of the sitemap.
+  const PAGE=1000;
+  const data:{slug:string|null;updated_at:string|null;published_at:string|null;robots_index:boolean|null}[]=[];
+  for(let from=0;from<50000;from+=PAGE){
+    const {data:rows,error}=await supabase.from('articles').select('slug,updated_at,published_at,robots_index').eq('status','published').not('slug','is',null).neq('slug','').not('published_at','is',null).lte('published_at',now).order('published_at',{ascending:false}).order('id',{ascending:true}).range(from,from+PAGE-1);
+    if(error){console.error('Failed to build sitemap:',error.message);break}
+    data.push(...(rows||[]));
+    if(!rows||rows.length<PAGE)break;
+  }
+  const articles=data.filter(a=>typeof a.slug==='string'&&a.slug.trim().length>0&&a.robots_index!==false);
   // Section pages that actually have stories, so Google can find every beat of the newsroom.
   const {data:sections}=await supabase.from('categories').select('slug,article_categories(count)').eq('is_active',true);
   const sectionPages=(sections||[])
@@ -59,5 +67,5 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
     .map((c:any)=>({url:`${SITE_URL}/category/${c.slug}`,changeFrequency:'hourly' as const,priority:0.7}));
   const {data:authorRows}=await supabase.from('authors').select('slug,articles(count)').eq('is_active',true);
   const authorPages=(authorRows||[]).filter((a:any)=>a.slug&&Number(a.articles?.[0]?.count||0)>0).map((a:any)=>({url:`${SITE_URL}/author/${a.slug}`,changeFrequency:'daily' as const,priority:0.5}));
-  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...sectionPages,...authorPages,...articles.map(a=>({url:articleUrl(a.slug),lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
+  return [{url:`${SITE_URL}/`,lastModified:new Date(),changeFrequency:'hourly',priority:1},...evergreenPages,...sectionPages,...authorPages,...articles.map(a=>({url:articleUrl(a.slug as string),lastModified:safeDate(a.updated_at,a.published_at),changeFrequency:'daily' as const,priority:0.8}))];
 }
