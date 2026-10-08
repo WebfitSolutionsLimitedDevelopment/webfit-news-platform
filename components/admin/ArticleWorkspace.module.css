@@ -141,4 +141,4 @@
    being typed; autosave keeps running, so it can step aside. */
 @media(max-width:760px){
   :global(html[data-keyboard="open"]) .mobileBar{display:none}
-}
+}.altField{display:grid;gap:6px;padding:0 10px 11px;font-size:10px;font-weight:800;color:#373b40}.altField textarea{width:100%;border:1px solid #ccd2d8;border-radius:7px;background:#fff;padding:8px 9px;font:inherit;font-weight:500;font-size:11px;line-height:1.45;resize:vertical;outline:none}.altField textarea:focus{border-color:#111317;box-shadow:0 0 0 3px rgba(17,19,23,.07)}.altField small{font-weight:500;color:#818893}
