@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
+import { altFromFilename } from '../../lib/alt-text';
 
 export default function MediaUploader(){
   const ref=useRef<HTMLInputElement>(null);
@@ -23,7 +24,7 @@ export default function MediaUploader(){
       }
       const fd=new FormData();
       fd.set('file',uploadFile);
-      fd.set('alt_text',file.name.replace(/\.[^.]+$/,''));
+      fd.set('alt_text',altFromFilename(file.name));
       const r=await fetch('/api/admin/media',{method:'POST',body:fd});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'Upload failed');

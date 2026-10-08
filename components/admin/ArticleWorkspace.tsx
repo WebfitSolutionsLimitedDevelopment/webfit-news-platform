@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import styles from './ArticleWorkspace.module.css';
 import { RichArticleEditor } from './RichArticleEditor';
 import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
+import { altFromFilename, isWeakAlt } from '../../lib/alt-text';
 
 type Option={id:string;name:string};
 type Media={id:string;public_url:string|null;alt_text:string|null;filename:string|null;width:number|null;height:number|null};
@@ -232,6 +233,8 @@ export default function ArticleWorkspace({
   const [categorySearch,setCategorySearch]=useState('');
   const [media,setMedia]=useState<Media|null>(initialMedia);
   const [mediaOpen,setMediaOpen]=useState(false);
+  const [altDraft,setAltDraft]=useState(initialMedia?.alt_text||'');
+  const [altSaving,setAltSaving]=useState(false);
   const [mediaItems,setMediaItems]=useState<Media[]>([]);
   const [mediaSearch,setMediaSearch]=useState('');
   const [mediaBusy,setMediaBusy]=useState(false);
@@ -475,13 +478,14 @@ export default function ArticleWorkspace({
 
       const fd=new FormData();
       fd.set('file',compressed);
-      fd.set('alt_text',file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' '));
+      fd.set('alt_text',altFromFilename(file.name));
 
       const r=await fetch('/api/admin/media',{method:'POST',body:fd});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'Upload failed');
 
       setMedia(d.media);
+      setAltDraft(d.media.alt_text||'');
       update('featured_media_id',d.media.id);
       setMediaItems(current=>[d.media,...current.filter(item=>item.id!==d.media.id)]);
       setMediaOpen(false);
@@ -497,7 +501,7 @@ export default function ArticleWorkspace({
     }
   }
 
-  function chooseMedia(item:Media){setMedia(item);update('featured_media_id',item.id);setMediaOpen(false)}
+  function chooseMedia(item:Media){setMedia(item);setAltDraft(item.alt_text||'');update('featured_media_id',item.id);setMediaOpen(false)}
 
   function applyImportedDraft(draft:any,rawText?:string){
     if(rawText)setReleaseText(rawText);
@@ -701,6 +705,28 @@ export default function ArticleWorkspace({
     };
   }
 
+  /** Saves the featured image's alt text if it was edited. Returns false when it could not be saved. */
+  async function saveFeaturedAlt(){
+    if(!media?.id)return true;
+    const next=altDraft.trim();
+    if(next===(media.alt_text||'').trim())return true;
+    setAltSaving(true);
+    try{
+      const r=await fetch('/api/admin/media',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id:media.id,alt_text:next})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Could not save the image description');
+      setMedia(current=>current&&current.id===d.media.id?{...current,alt_text:d.media.alt_text}:current);
+      setMediaItems(current=>current.map(item=>item.id===d.media.id?{...item,alt_text:d.media.alt_text}:item));
+      return true;
+    }catch(e:any){
+      setMessageKind('error');
+      setMessage(e.message||'Could not save the image description');
+      return false;
+    }finally{
+      setAltSaving(false);
+    }
+  }
+
   /** Things a story should have before it goes live. Publishing is still allowed. */
   function publishGaps(){
     const gaps:string[]=[];
@@ -715,6 +741,12 @@ export default function ArticleWorkspace({
   async function save(finalStatus=status){
     if(title.trim().length<5){setMessageKind('error');setMessage('Add a clear headline before saving.');return}
     if(finalStatus==='scheduled'&&!form.scheduled_at){setMessageKind('error');setMessage('Choose a schedule date and time.');return}
+    if(!(await saveFeaturedAlt()))return;
+    if((finalStatus==='published'||finalStatus==='scheduled')&&form.featured_media_id&&isWeakAlt(altDraft)){
+      setMessageKind('error');
+      setMessage('Describe the featured image before it goes live: say who or what is in the photo and where (e.g. "Erica Stanford speaks to residents at a public meeting in Auckland"). File names like "IMG 3737" are not accepted.');
+      return;
+    }
     if((finalStatus==='published'||finalStatus==='scheduled')&&serverStatusRef.current!=='published'){
       const gaps=publishGaps();
       if(gaps.length&&!window.confirm(`Before this goes live, it is missing:\n\n• ${gaps.join('\n• ')}\n\n${finalStatus==='scheduled'?'Schedule':'Publish'} anyway?`))return;
@@ -834,7 +866,7 @@ export default function ArticleWorkspace({
         </section>
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>IMAGE</span><h2>Featured image</h2></div><small>16:9 recommended</small></header>
-          {media?.public_url?<div className={styles.featured}><img src={media.public_url} alt={media.alt_text||media.filename||''}/><strong>{media.filename||'Featured image'}</strong><small>{media.width&&media.height?`${media.width} × ${media.height}`:'Image selected'}</small><div><button onClick={openMedia}>Change image</button><button onClick={()=>{setMedia(null);update('featured_media_id','')}}>Remove</button></div></div>:<button className={styles.addImage} onClick={openMedia}><b>+</b><strong>Add featured image</strong><small>Upload new or browse Media Library</small></button>}
+          {media?.public_url?<div className={styles.featured}><img src={media.public_url} alt={media.alt_text||media.filename||''}/><strong>{media.filename||'Featured image'}</strong><small>{media.width&&media.height?`${media.width} × ${media.height}`:'Image selected'}</small><div><button onClick={openMedia}>Change image</button><button onClick={()=>{setMedia(null);setAltDraft('');update('featured_media_id','')}}>Remove</button></div><label className={styles.altField}>Describe this image (alt text) — required to publish<textarea rows={2} maxLength={250} value={altDraft} onChange={e=>setAltDraft(e.target.value)} onBlur={()=>{void saveFeaturedAlt()}} placeholder="Who or what is in the photo, and where. e.g. Erica Stanford speaks to residents at a public meeting in Auckland"/><small className={altDraft.trim()&&isWeakAlt(altDraft)?styles.over:undefined}>{altSaving?'Saving…':!altDraft.trim()?'Needed for Google Images and screen readers.':isWeakAlt(altDraft)?'Too short or looks like a file name — describe the picture.':`${altDraft.trim().length}/125 recommended`}</small></label></div>:<button className={styles.addImage} onClick={openMedia}><b>+</b><strong>Add featured image</strong><small>Upload new or browse Media Library</small></button>}
         </section>
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>CLASSIFICATION</span><h2>Categories and tags</h2></div></header>
