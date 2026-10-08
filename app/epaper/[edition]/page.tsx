@@ -34,7 +34,7 @@ export default async function EpaperEditionPage({ params }: { params: Promise<{ 
   const [edition, shelf] = await Promise.all([getEdition(key), getEditionShelf()]);
   if (!edition) notFound();
   return <>
-    <SiteHeader/>
+    <SiteHeader quiet/>
     <EpaperScreen edition={edition} shelf={shelf}/>
     <PublicFooter/>
   </>;

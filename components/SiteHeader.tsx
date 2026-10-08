@@ -9,7 +9,8 @@ import { AdSlot } from './AdSlot';
 
 const links=[['E-Paper','/epaper'],['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
 
-export async function SiteHeader(){
+/** quiet: no ads or promo strips in the header (used around the e-paper flipbook). */
+export async function SiteHeader({ quiet = false }: { quiet?: boolean } = {}){
   const settings=await getPublicSiteSettings();
   const siteName=settings.identity.name||'Webfit News';
   const today=new Intl.DateTimeFormat('en-NZ',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Pacific/Auckland'}).format(new Date());
@@ -55,7 +56,7 @@ export async function SiteHeader(){
       <nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav>
     </div>
 
-    <ElectionPollStrip/>
-    <AdSlot slotKey="SPOTLIGHT" variant="spotlight"/>
+    {quiet ? null : <ElectionPollStrip/>}
+    {quiet ? null : <AdSlot slotKey="SPOTLIGHT" variant="spotlight"/>}
   </div>;
 }

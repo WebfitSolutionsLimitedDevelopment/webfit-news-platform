@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 
 /** The newsroom CMS and sign-in pages never load ads or analytics. */
 const PRIVATE_PATHS = /^\/(admin|login)(\/|$)/;
+/** The e-paper carries its own booked ads only: no Google ads around the flipbook. */
+const AD_FREE_PATHS = /^\/epaper(\/|$)/;
 
 const GA_MEASUREMENT_ID = 'G-YP1WWRYGHY';
 
@@ -38,15 +40,17 @@ function useAfterFirstInteraction(enabled: boolean) {
 export function ThirdPartyScripts() {
   const pathname = usePathname() || '';
   const isPrivate = PRIVATE_PATHS.test(pathname);
+  const adFree = isPrivate || AD_FREE_PATHS.test(pathname);
   const [load, setLoad] = useState(false);
   useEffect(() => {
     setLoad(!isPrivate && !navigator.userAgent.includes('WebfitNewsApp'));
     // Arriving in the CMS from a public page (e.g. the Newsroom link) keeps the
     // AdSense script that page loaded, and its anchor ads cover the editor.
     // One clean reload drops it; the fresh load never fetches ads.
-    if (isPrivate && document.querySelector('script[src*="adsbygoogle"]')) window.location.reload();
-  }, [isPrivate]);
-  const adsReady = useAfterFirstInteraction(load);
+    // The same goes for the e-paper: Google's anchor and in-page ads would sit on top of the flipbook.
+    if (adFree && document.querySelector('script[src*="adsbygoogle"]')) window.location.reload();
+  }, [isPrivate, adFree]);
+  const adsReady = useAfterFirstInteraction(load && !adFree);
   if (!load) return null;
   return <>
     <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive"/>
@@ -56,6 +60,6 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', '${GA_MEASUREMENT_ID}');`}
     </Script>
-    {adsReady ? <Script async strategy="afterInteractive" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9134063543493779" crossOrigin="anonymous"/> : null}
+    {adsReady && !adFree ? <Script async strategy="afterInteractive" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9134063543493779" crossOrigin="anonymous"/> : null}
   </>;
 }

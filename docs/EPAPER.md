@@ -9,6 +9,7 @@
 - Zoom: pinch or double-tap on the paper (phones), the − / Fit / + buttons, Ctrl/⌘ + scroll or + / − / 0 keys (desktop). 100%–400%; drag to move around a zoomed page.
 - Page-turn sound: made in the browser with Web Audio (`components/epaper/flipSound.ts`, no audio file). 🔊/🔇 button; the choice is remembered on that device.
 - Share ↗: on phones opens the system share sheet (WhatsApp, Messages…); on laptops a menu with WhatsApp, Facebook, X, Email and Copy link. The link opens the same edition at the page being read (`/epaper/<date>#page-N`), as the flipbook. (A PDF download was tried and removed: a PDF can't flip.)
+- No site ads around the flipbook: /epaper pages skip Google AdSense (auto, anchor and in-page ads), the Spotlight slide-in and the election poll strip (`SiteHeader quiet`, `AD_FREE_PATHS` in ThirdPartyScripts). Only the e-paper's own booked pages show.
 - Only `/epaper` is indexed. Edition pages are `noindex, follow` because every story already has its own page.
 
 ## E-paper advertising
