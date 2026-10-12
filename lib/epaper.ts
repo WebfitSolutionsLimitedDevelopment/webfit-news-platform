@@ -296,7 +296,8 @@ const getWindowStories = cache(async (fromIso: string, toIso: string): Promise<E
 
 export type EpaperAd = {
   assignmentId: string;
-  href: string;
+  /** Null when the advertiser has no web page: the poster is shown without a link. */
+  href: string | null;
   image: string;
   alt: string;
   advertiser: string | null;
@@ -326,7 +327,7 @@ function toEpaperAd(ad: LiveAd): EpaperAd | null {
   if (!image) return null;
   return {
     assignmentId: ad.assignment_id,
-    href: `/api/ads/click?a=${encodeURIComponent(ad.assignment_id)}`,
+    href: ad.destination_url ? `/api/ads/click?a=${encodeURIComponent(ad.assignment_id)}` : null,
     image,
     alt: ad.alt_text || ad.headline || ad.advertiser || 'Advertisement',
     advertiser: ad.advertiser,
