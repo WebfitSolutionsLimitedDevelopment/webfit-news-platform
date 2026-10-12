@@ -4,6 +4,7 @@ import type { LiveAd } from '@/lib/ads';
 import { clickHref, sendEvent } from './AdUnit';
 import { resizedImage } from '@/lib/image-url';
 import styles from './AdSpotlight.module.css';
+import { AdLightbox } from './AdLightbox';
 
 /** Wait this long after the page opens, then slide in. */
 const SHOW_AFTER_MS = 3000;
@@ -20,6 +21,7 @@ export function AdSpotlight({ ads }: { ads: LiveAd[] }) {
   const ad = ads.find(a => a.format === 'image' && (a.desktop_image || a.mobile_image)) ?? null;
   const [phase, setPhase] = useState<'waiting' | 'in' | 'out'>('waiting');
   const [hold, setHold] = useState(false);
+  const [big, setBig] = useState(false);
   const counted = useRef(false);
   const seenKey = ad ? `wf-spotlight-${ad.assignment_id}` : '';
 
@@ -37,10 +39,10 @@ export function AdSpotlight({ ads }: { ads: LiveAd[] }) {
       sendEvent(ad, 'impression');
       try { sessionStorage.setItem(seenKey, '1'); } catch {}
     }
-    if (hold) return;
+    if (hold || big) return;
     const timer = setTimeout(() => setPhase('out'), STAY_MS);
     return () => clearTimeout(timer);
-  }, [phase, hold, ad, seenKey]);
+  }, [phase, hold, big, ad, seenKey]);
 
   if (!ad || phase === 'waiting') return null;
   const image = ad.mobile_image || ad.desktop_image || '';
@@ -58,12 +60,15 @@ export function AdSpotlight({ ads }: { ads: LiveAd[] }) {
   >
     <span className={styles.label}>Advertisement</span>
     <button type="button" className={styles.close} onClick={() => setPhase('out')} aria-label="Close advertisement">×</button>
-    <a className={styles.body} href={href} target="_blank" rel="sponsored noopener">
-      <img className={styles.poster} src={resizedImage(image, 560, 78)} alt={ad.alt_text || text} decoding="async"/>
+    <div className={styles.body}>
+      <button type="button" className={styles.open} onClick={() => { setBig(true); sendEvent(ad, 'expand'); }} aria-label={`${ad.alt_text || text}. Open larger`}>
+        <img className={styles.poster} src={resizedImage(image, 560, 78)} alt="" decoding="async"/>
+      </button>
       <span className={styles.text}>
         <strong>{text}</strong>
-        {href ? <span className={styles.cta}>{ad.cta_label || 'Learn more'}</span> : null}
+        {href ? <a className={styles.cta} href={href} target="_blank" rel="sponsored noopener">{ad.cta_label || 'Learn more'}</a> : null}
       </span>
-    </a>
+    </div>
+    {big ? <AdLightbox ad={ad} clickHref={href ?? null} onClose={() => setBig(false)}/> : null}
   </aside>;
 }

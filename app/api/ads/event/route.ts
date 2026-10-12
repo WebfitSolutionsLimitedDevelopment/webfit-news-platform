@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 
 const Input = z.object({
   a: z.string().uuid(),
-  e: z.enum(['impression', 'video_start', 'video_complete']),
+  e: z.enum(['impression', 'expand', 'video_start', 'video_complete']),
   d: z.enum(['desktop', 'mobile']).optional(),
 });
 

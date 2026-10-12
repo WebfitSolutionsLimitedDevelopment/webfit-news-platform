@@ -180,10 +180,11 @@ export function AdList({ campaigns, creatives, assignments, performance, slots }
     const places = assignments.filter(a => crIds.has(a.creative_id) && a.is_active);
     const views = crs.reduce((t, x) => t + Number(stats.get(x.id)?.impressions || 0), 0);
     const clicks = crs.reduce((t, x) => t + Number(stats.get(x.id)?.clicks || 0), 0);
+    const expands = crs.reduce((t, x) => t + Number(stats.get(x.id)?.expands || 0), 0);
     const expired = c.ends_at && new Date(c.ends_at).getTime() < Date.now();
     const upcoming = c.starts_at && new Date(c.starts_at).getTime() > Date.now();
     const status = expired ? 'Expired' : c.status === 'active' ? (!places.length ? 'Not placed' : upcoming ? 'Scheduled' : 'Live') : c.status === 'paused' ? 'Paused' : c.status === 'ended' ? 'Ended' : 'Draft';
-    return { c, crs, places, views, clicks, status };
+    return { c, crs, places, views, clicks, expands, status };
   }).sort((a, b) => (a.status === 'Live' ? 0 : 1) - (b.status === 'Live' ? 0 : 1));
 
   async function call(id: string, method: 'PATCH' | 'DELETE', body?: Any) {
@@ -195,16 +196,16 @@ export function AdList({ campaigns, creatives, assignments, performance, slots }
   }
 
   return <section className="admin-card">
-    <div className="admin-card-head"><h2>Your ads</h2><span className="admin-note">Views and clicks cover the last 30 days.</span></div>
+    <div className="admin-card-head"><h2>Your ads</h2><span className="admin-note">Views, enlargements and clicks cover the last 30 days.</span></div>
     {msg ? <div className="admin-alert" role="alert">{msg}</div> : null}
-    {rows.length ? <div className={styles.adRows}>{rows.map(({ c, crs, places, views, clicks, status }) => {
+    {rows.length ? <div className={styles.adRows}>{rows.map(({ c, crs, places, views, clicks, expands, status }) => {
       const cr = crs[0];
       const cls = status === 'Live' ? 'status-active' : status === 'Expired' || status === 'Ended' ? 'status-ended' : 'status-draft';
       return <article key={c.id} className={styles.adRow}>
         <div className={styles.adThumb}>{cr?.format === 'video' && cr.video?.public_url ? <video src={cr.video.public_url} muted playsInline preload="metadata"/> : cr?.media?.public_url ? <img src={cr.media.public_url} alt=""/> : <span>No file</span>}</div>
         <div className={styles.adInfo}>
           <div className={styles.adTitle}><b>{c.campaign_name === c.advertiser_name ? c.campaign_name : `${c.advertiser_name}: ${c.campaign_name}`}</b><span className={`status-badge ${cls}`}>{status}</span></div>
-          <small>{status === 'Scheduled' ? `Starts ${niceDate(c.starts_at)} · ` : ''}{status === 'Expired' ? 'Expired' : 'Shows until'} {niceDate(c.ends_at)} · {views.toLocaleString('en-NZ')} views · {clicks.toLocaleString('en-NZ')} clicks</small>
+          <small>{status === 'Scheduled' ? `Starts ${niceDate(c.starts_at)} · ` : ''}{status === 'Expired' ? 'Expired' : 'Shows until'} {niceDate(c.ends_at)} · {views.toLocaleString('en-NZ')} views · {expands.toLocaleString('en-NZ')} opened larger · {clicks.toLocaleString('en-NZ')} clicks</small>
           <small className={styles.muted}>{places.length ? places.map(p => `${PLACE_OPTIONS.find(o => o.key === slotLabel.get(p.slot_id))?.label || slotLabel.get(p.slot_id)} (${DEVICE_LABEL[p.device as Placement['device']] || p.device})`).join(' · ') : 'Not placed anywhere'}</small>
           {editing === c.id ? <div className={styles.inlineEdit}>
             <label htmlFor={`exp-${c.id}`}>New last day<input id={`exp-${c.id}`} type="date" value={newDate} min={todayPlus(0)} onChange={e => setNewDate(e.target.value)}/></label>

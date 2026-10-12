@@ -205,3 +205,33 @@
 .dots button.arrow:hover { border-color: #0b1117; }
 .dots button.arrow:first-child { margin-right: 4px; }
 .dots button.arrow:last-child { margin-left: 4px; }
+
+/* Posters open full size when tapped */
+.expandable {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.zoomHint {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(11, 17, 23, .72);
+  opacity: .85;
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+}
+.zoomHint svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; }
+.expandable:hover .zoomHint { opacity: 1; transform: scale(1.06); }
+.sticky .zoomHint { display: none; }

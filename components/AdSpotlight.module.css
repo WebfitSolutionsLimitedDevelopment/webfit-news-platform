@@ -73,3 +73,8 @@
 @media (prefers-reduced-motion: reduce) {
   .in, .out { animation-duration: .01s; }
 }
+
+/* Tap the poster to open it full size */
+.open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.cta { text-decoration: none; }
+.open:focus-visible, .cta:focus-visible { outline: 3px solid #a97718; outline-offset: 2px; }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveAd } from '@/lib/ads';
 import styles from './AdUnit.module.css';
+import { AdLightbox } from './AdLightbox';
 import { imageSrcSet, resizedImage } from '@/lib/image-url';
 
 export type AdVariant = 'banner' | 'inline' | 'rail' | 'sticky';
@@ -26,7 +27,7 @@ function currentDevice(): 'mobile' | 'desktop' {
   return window.matchMedia(MOBILE_QUERY).matches ? 'mobile' : 'desktop';
 }
 
-export function sendEvent(ad: LiveAd, event: 'impression' | 'video_start' | 'video_complete') {
+export function sendEvent(ad: LiveAd, event: 'impression' | 'expand' | 'video_start' | 'video_complete') {
   try {
     const body = JSON.stringify({ a: ad.assignment_id, e: event, d: currentDevice() });
     if (navigator.sendBeacon) {
@@ -121,7 +122,7 @@ function VideoCreative({ ad, active = true, onEnded }: { ad: LiveAd; active?: bo
 /** How long each poster stays up before the next one slides in. */
 const ROTATE_MS = 5000;
 
-function Creative({ ad, variant, active, onVideoEnd }: { ad: LiveAd; variant: AdVariant; active: boolean; onVideoEnd: () => void }) {
+function Creative({ ad, variant, active, onVideoEnd, onExpand }: { ad: LiveAd; variant: AdVariant; active: boolean; onVideoEnd: () => void; onExpand: (ad: LiveAd) => void }) {
   const altText = ad.alt_text || ad.headline || (ad.advertiser ? `Advertisement from ${ad.advertiser}` : 'Advertisement');
   const isVideo = ad.format === 'video' && Boolean(ad.video_url);
   const hasImage = Boolean(ad.desktop_image || ad.mobile_image);
@@ -140,9 +141,11 @@ function Creative({ ad, variant, active, onVideoEnd }: { ad: LiveAd; variant: Ad
         {mobile ? <source media={MOBILE_QUERY} srcSet={srcSet(mobile, [480, 720, 1080]) || mobile} sizes="100vw"/> : null}
         <img src={resized(main, widths[1] || widths[0])} srcSet={srcSet(main, widths)} sizes={sizes} alt={altText} loading={variant === 'banner' ? 'eager' : 'lazy'} decoding="async"/>
       </picture>;
-      return ad.destination_url
-        ? <a className={styles.frame} href={clickHref(ad)} target="_blank" rel="sponsored noopener" tabIndex={active ? 0 : -1}>{picture}</a>
-        : <div className={styles.frame}>{picture}</div>;
+      // Tap to see the poster full size; the advertiser's link is a button in that view.
+      return <button type="button" className={`${styles.frame} ${styles.expandable}`} onClick={() => onExpand(ad)} tabIndex={active ? 0 : -1} aria-label={`${altText}. Open larger`}>
+        {picture}
+        <span className={styles.zoomHint} aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M10.5 8v5M8 10.5h5"/></svg></span>
+      </button>;
     })() : null}
     {ad.is_election_ad && ad.promoter_statement ? <p className={styles.promoter}>{ad.promoter_statement}</p> : null}
   </>;
@@ -162,6 +165,9 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
   const [list, setList] = useState<LiveAd[]>(ads.slice(0, 1));
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [expanded, setExpanded] = useState<LiveAd | null>(null);
+  const expand = useCallback((item: LiveAd) => { setExpanded(item); sendEvent(item, 'expand'); }, []);
+  const closeExpanded = useCallback(() => setExpanded(null), []);
   const [onScreen, setOnScreen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [stickyVisible, setStickyVisible] = useState(variant !== 'sticky');
@@ -203,11 +209,11 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
 
   // Move to the next poster every few seconds. Videos play to the end instead.
   useEffect(() => {
-    if (!many || !ad || paused || !onScreen || ad.format === 'video') return;
+    if (!many || !ad || paused || expanded || !onScreen || ad.format === 'video') return;
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const timer = setTimeout(next, ROTATE_MS);
     return () => clearTimeout(timer);
-  }, [many, ad, paused, onScreen, next]);
+  }, [many, ad, paused, expanded, onScreen, next]);
 
   // Sticky bar: appear once the reader is a third of the way down, remember a close for the session.
   useEffect(() => {
@@ -258,7 +264,7 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
         aria-roledescription="slide"
         aria-label={`${i + 1} of ${list.length}`}
       >
-        <Creative ad={item} variant={variant} active={i === index} onVideoEnd={next}/>
+        <Creative ad={item} variant={variant} active={i === index} onVideoEnd={next} onExpand={expand}/>
       </div>)}
     </div>
     {many && variant !== 'sticky' ? <div className={styles.dots}>
@@ -274,5 +280,6 @@ export function AdUnit({ ads, variant = 'banner', className = '' }: { ads: LiveA
       <button type="button" className={styles.arrow} onClick={next} aria-label="Next advertisement">›</button>
     </div> : null}
     {variant === 'sticky' ? <button type="button" className={styles.close} onClick={close} aria-label="Close advertisement">×</button> : null}
+    {expanded ? <AdLightbox ad={expanded} clickHref={expanded.destination_url ? clickHref(expanded) : null} onClose={closeExpanded}/> : null}
   </aside>;
 }
