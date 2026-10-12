@@ -76,7 +76,7 @@ function buildAdBlock(block: AdBlock): HTMLElement {
   const box = el('aside', `${styles.adBlock} ${block.full ? styles.adBlockFull : styles.adBlockSide}`);
   box.style.width = `${block.w}px`;
   box.style.height = `${block.h}px`;
-  box.append(el('span', styles.adLabel, block.ads.length > 1 ? 'Advertisements' : `Advertisement${block.ads[0].advertiser ? ` · ${block.ads[0].advertiser}` : ''}`));
+  box.append(el('span', styles.adLabel, block.ads.length > 1 ? 'Advertisements' : `${block.ads[0].isElectionAd ? 'Election advertisement' : 'Advertisement'}${block.ads[0].advertiser ? ` · ${block.ads[0].advertiser}` : ''}`));
   const row = el('div', styles.adBlockRow);
   block.ads.forEach((ad, i) => {
     const fig = el('figure', styles.adBlockItem);
@@ -89,7 +89,7 @@ function buildAdBlock(block: AdBlock): HTMLElement {
     a.append(im);
     fig.append(a);
     if (ad.cta) { const c = el('a', styles.adBlockCta, `${ad.cta} →`) as HTMLAnchorElement; c.href = ad.href; c.target = '_blank'; c.rel = 'sponsored noopener'; fig.append(c); }
-    if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, ad.promoterStatement));
+    if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, block.ads.length > 1 ? `Election advertisement. ${ad.promoterStatement}` : ad.promoterStatement));
     row.append(fig);
   });
   box.append(row);
@@ -179,7 +179,7 @@ function build(item: Item): HTMLElement {
       }
       const box = el('div', `${styles.it} ${styles.halfSlot}`);
       box.dataset.adAssignment = item.ad.assignmentId;
-      box.append(el('span', styles.adLabel, `Advertisement${item.ad.advertiser ? ` · ${item.ad.advertiser}` : ''}`));
+      box.append(el('span', styles.adLabel, `${item.ad.isElectionAd ? 'Election advertisement' : 'Advertisement'}${item.ad.advertiser ? ` · ${item.ad.advertiser}` : ''}`));
       const a = el('a', styles.adLink) as HTMLAnchorElement;
       a.href = item.ad.href; a.target = '_blank'; a.rel = 'sponsored noopener';
       a.append(img(item.ad.image, item.ad.alt, 1000));
@@ -588,8 +588,9 @@ function SharedAdPageView({ ads, n, edition }: { ads: EpaperAd[]; n: number; edi
       {ads.map(ad => <figure key={ad.assignmentId} className={styles.sharedCard} data-ad-assignment={ad.assignmentId}>
         <a href={ad.href} target="_blank" rel="sponsored noopener" className={styles.sharedArt}><img src={resizedImage(ad.image, 900, 82)} alt={ad.alt} loading="lazy"/></a>
         <figcaption>
-          <span className={styles.adLabel}>Advertisement{ad.advertiser ? ` · ${ad.advertiser}` : ''}</span>
+          <span className={styles.adLabel}>{ad.isElectionAd ? 'Election advertisement' : 'Advertisement'}{ad.advertiser ? ` · ${ad.advertiser}` : ''}</span>
           {ad.cta ? <a href={ad.href} target="_blank" rel="sponsored noopener" className={styles.sharedCta}>{ad.cta} →</a> : null}
+          {ad.isElectionAd && ad.promoterStatement ? <span className={styles.promoter}>{ad.promoterStatement}</span> : null}
         </figcaption>
       </figure>)}
     </div>
