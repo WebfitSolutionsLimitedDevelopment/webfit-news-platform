@@ -238,6 +238,13 @@ export default function ArticleWorkspace({
   const [mediaItems,setMediaItems]=useState<Media[]>([]);
   const [mediaSearch,setMediaSearch]=useState('');
   const [mediaBusy,setMediaBusy]=useState(false);
+  const [mediaPage,setMediaPage]=useState(1);
+  const [mediaTotal,setMediaTotal]=useState(0);
+  const [mediaTotalPages,setMediaTotalPages]=useState(1);
+  const [mediaQuery,setMediaQuery]=useState('');
+  const [mediaError,setMediaError]=useState('');
+  const mediaRequestRef=useRef(0);
+  const mediaDialogRef=useRef<HTMLDivElement>(null);
   const [releaseText,setReleaseText]=useState('');
   const [sourceUrl,setSourceUrl]=useState('');
   const [converterBusy,setConverterBusy]=useState(false);
@@ -450,18 +457,27 @@ export default function ArticleWorkspace({
 
   function toggleCategory(id:string){setCategoryIds(current=>current.includes(id)?current.filter(x=>x!==id):[...current,id])}
 
-  async function loadMedia(q=''){
+  async function loadMedia(q='',page=1){
+    const request=++mediaRequestRef.current;
     setMediaBusy(true);
+    setMediaError('');
     try{
-      const r=await fetch(`/api/admin/media?q=${encodeURIComponent(q)}&limit=80`);
+      const r=await fetch(`/api/admin/media?q=${encodeURIComponent(q)}&limit=80&page=${page}`);
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'Could not load media');
+      if(request!==mediaRequestRef.current)return;
+      if(page>d.totalPages){await loadMedia(q,d.totalPages);return}
       setMediaItems(d.media||[]);
-    }catch(e:any){setMessage(e.message||'Could not load media')}
-    finally{setMediaBusy(false)}
+      setMediaPage(d.page);
+      setMediaTotal(d.total);
+      setMediaTotalPages(d.totalPages);
+      setMediaQuery(q);
+      mediaDialogRef.current?.scrollTo({top:0});
+    }catch(e:any){if(request===mediaRequestRef.current)setMediaError(e.message||'Could not load media')}
+    finally{if(request===mediaRequestRef.current)setMediaBusy(false)}
   }
 
-  async function openMedia(){setMediaOpen(true);if(!mediaItems.length)await loadMedia('')}
+  async function openMedia(){setMediaOpen(true);await loadMedia(mediaSearch,1)}
 
   async function uploadMedia(){
     const file=fileRef.current?.files?.[0];
@@ -888,11 +904,17 @@ export default function ArticleWorkspace({
 
     {mediaOpen&&<div className={styles.modal}>
       <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
-      <div className={styles.dialog}>
+      <div className={styles.dialog} ref={mediaDialogRef}>
         <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>Upload a new image or select an existing newsroom image.</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
         <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Images are automatically optimised to about 300–500 KB before upload.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
-        <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')loadMedia(mediaSearch)}} placeholder="Search filename, caption or alt text"/><button onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
+        <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!mediaBusy){e.preventDefault();void loadMedia(mediaSearch)}}} placeholder="Search filename, caption or alt text"/><button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
+        {mediaError&&<p className={styles.mediaError} role="alert">{mediaError} <button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch,mediaPage)}>Retry</button></p>}
+        {!mediaBusy&&!mediaError&&mediaItems.length===0&&<p className={styles.loading}>No images found. Try another search.</p>}
         {mediaBusy?<div className={styles.loading}>Loading images...</div>:<div className={styles.mediaGrid}>{mediaItems.map(item=><button key={item.id} onClick={()=>chooseMedia(item)}><span>{item.public_url?<img src={item.public_url} alt={item.alt_text||item.filename||''}/>:null}</span><strong>{item.filename||'Untitled image'}</strong><small>{item.width&&item.height?`${item.width} × ${item.height}`:'Image'}</small></button>)}</div>}
+        <nav className={styles.mediaPagination} aria-label="Image library pages">
+          <span aria-live="polite">{mediaBusy?'Loading images...':`${mediaTotal} images · Page ${mediaPage} of ${mediaTotalPages}`}</span>
+          <div><button type="button" disabled={mediaBusy||mediaPage<=1} onClick={()=>loadMedia(mediaQuery,mediaPage-1)}>Previous</button><button type="button" disabled={mediaBusy||mediaPage>=mediaTotalPages} onClick={()=>loadMedia(mediaQuery,mediaPage+1)}>Next</button></div>
+        </nav>
       </div>
     </div>}
   </div>;
