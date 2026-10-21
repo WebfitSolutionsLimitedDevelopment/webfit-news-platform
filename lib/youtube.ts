@@ -42,7 +42,7 @@ export async function getChannelFeed(): Promise<YoutubeFeedVideo[]> {
     });
     if (!res.ok) return [];
     const xml = await res.text();
-    const parsed = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' }).parse(xml);
+    const parsed = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', parseTagValue: false }).parse(xml);
     const raw = parsed?.feed?.entry;
     const entries: any[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
     return entries
