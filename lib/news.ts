@@ -1,3 +1,4 @@
+import { getChannelFeed } from './youtube';
 import { cache } from 'react';
 import { createPublicClient as createClient } from './supabase-public';
 
@@ -203,13 +204,32 @@ async function resolveYoutubeTitle(url:string,fallback:string){
   }catch{return fallback;}
 }
 
-export async function getPublishedVideos(limit=8):Promise<VideoStory[]>{
-  const supabase=await createClient();
-  const {data,error}=await supabase.from('videos').select('id,title,video_url,provider,published_at,is_featured').eq('is_published',true).order('is_featured',{ascending:false}).order('published_at',{ascending:false}).limit(limit);
-  if(error)throw error;
-  return Promise.all((data||[]).map(async(v:any)=>{
+export async function getPublishedVideos(limit=10,{includeShorts=false}:{includeShorts?:boolean}={}):Promise<VideoStory[]>{
+  // 1. Channel feed: automatic, no CMS work needed for new uploads.
+  const feed=(await getChannelFeed()).filter(v=>includeShorts||!v.is_short);
+  // 2. CMS rows: still supported for videos not on the channel (or older ones).
+  let cms:any[]=[];
+  try{
+    const supabase=await createClient();
+    const {data,error}=await supabase.from('videos').select('id,title,video_url,provider,published_at,is_featured').eq('is_published',true).order('published_at',{ascending:false}).limit(limit);
+    if(error)throw error;
+    cms=data||[];
+  }catch{cms=[];}
+
+  const byId=new Map<string,VideoStory>();
+  for(const v of feed){
+    byId.set(v.youtube_id,{id:`yt-${v.youtube_id}`,title:v.title,video_url:v.video_url,provider:'youtube',published_at:v.published_at,is_featured:false,youtube_id:v.youtube_id,display_title:v.title});
+  }
+  const extras:any[]=[];
+  for(const v of cms){
     const youtube_id=getYoutubeId(v.video_url);
-    const display_title=youtube_id?await resolveYoutubeTitle(v.video_url,v.title):v.title;
-    return {...v,youtube_id,display_title} as VideoStory;
-  }));
+    if(youtube_id&&byId.has(youtube_id))continue; // channel copy wins: real title and real upload date
+    extras.push({...v,youtube_id});
+  }
+  const extraStories=await Promise.all(extras.map(async(v)=>({...v,display_title:v.youtube_id?await resolveYoutubeTitle(v.video_url,v.title):v.title} as VideoStory)));
+
+  // Newest first, always. No manual "featured" pin.
+  return [...byId.values(),...extraStories]
+    .sort((a,b)=>(Date.parse(b.published_at||'')||0)-(Date.parse(a.published_at||'')||0))
+    .slice(0,limit);
 }

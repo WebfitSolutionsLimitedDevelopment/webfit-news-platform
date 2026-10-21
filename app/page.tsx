@@ -57,7 +57,7 @@ function EditorialSection({title,stories,index}:{title:string;stories:any[];inde
 
 export default async function Home(){
   let breaking:any[]=[];try{breaking=await getBreakingStories(4)}catch{breaking=[]}
-  let videos:any[]=[];try{videos=await getPublishedVideos(8)}catch{videos=[]}
+  let videos:any[]=[];try{videos=await getPublishedVideos(10)}catch{videos=[]}
   let latestStories:any[]=[];try{latestStories=await getLatestStories(48)}catch{latestStories=[]}
   let sections:any[]=[];try{sections=await getHomepageFeed()}catch{sections=[]}
 
