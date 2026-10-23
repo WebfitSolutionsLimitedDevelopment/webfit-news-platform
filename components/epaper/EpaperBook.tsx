@@ -155,6 +155,7 @@ function build(item: Item): HTMLElement {
       node.style.aspectRatio = String(ratio);
       // Only if the frame is shorter than the photo is anything cut, and then mostly from the bottom: heads stay in.
       node.style.objectPosition = '50% 22%';
+      fig.dataset.story = item.story.id;
       fig.append(node);
       return fig;
     }
@@ -260,7 +261,8 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
       }
       // A paragraph that is only a word or two too long for the column used to be
       // skipped entirely, leaving the column empty. Carry at least two words over instead.
-      const take = Math.min(best, words.length - 2);
+      // The "Read the full story at …" line is never split across columns.
+      const take = /^Read the full story at /.test(item.text) ? 0 : Math.min(best, words.length - 2);
       if (take >= 3) {
         col.append(build({ ...item, text: words.slice(0, take).join(' '), last: false }));
         queue[0] = { ...item, text: words.slice(take).join(' '), first: false, cont: true };
@@ -453,10 +455,28 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       const sideLimit = blk?.full ? Infinity : side < 40 ? 0 : side;
 
       let full = flowColumns(run, colsH, flow, sideLimit);
+      const runStory = (run.find(r => r.t === 'text') as Extract<Item, { t: 'text' }> | undefined)?.story;
+      // Only a few lines would spill onto the next page: shorten this story's wide photo
+      // so the story finishes here, instead of leaving a near-empty page behind it.
+      const fig = full.rest.length && runStory ? flow.querySelector<HTMLElement>(`figure[data-story="${runStory.id}"]`) : null;
+      const figImg = fig && !fig.dataset.shrunk ? fig.querySelector('img') : null;
+      if (fig && figImg) {
+        fig.dataset.shrunk = '1';
+        const grow = (e: number) => flowColumns(run, colsH + e, flow, sideLimit === Infinity ? Infinity : sideLimit + e);
+        const MAX_SHRINK = 160, MIN_PHOTO = 180;
+        const maxE = Math.min(MAX_SHRINK, figImg.offsetHeight - MIN_PHOTO);
+        if (maxE >= 10 && !grow(maxE).rest.length) {
+          let lo = 1, hi = maxE;
+          while (hi - lo > 2) { const mid = (lo + hi) >> 1; if (grow(mid).rest.length) lo = mid + 1; else hi = mid; }
+          const frameH = figImg.offsetHeight;
+          figImg.style.aspectRatio = 'auto';
+          figImg.style.height = `${frameH - hi - 2}px`;
+          continue; // lay this run out again with the extra room
+        }
+      }
       // The desk has run out of pages and this story can't continue overleaf: end it on a
       // whole paragraph with a pointer to the full story, rather than stop mid-sentence.
       const lastDeskPage = pageNo >= quota && !(snap && snap.page === pageNo && snap.children > 0);
-      const runStory = (run.find(r => r.t === 'text') as Extract<Item, { t: 'text' }> | undefined)?.story;
       if (full.rest.length && lastDeskPage && runStory) {
         const more: Item = { t: 'text', story: runStory, k: 'p', text: `Read the full story at webfitnews.com/${runStory.slug}`, first: false, last: true, cont: false };
         for (let k = n - full.rest.length; k >= 1; k -= 1) {
@@ -486,9 +506,11 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       queue.splice(0, n);
     }
 
-    // The section ended well above its ad: a short tail page. Move the ad to the next full page rather than leave a hole.
+    // The section ended well above its ad: a short tail page. Move the ad to the next full page rather than
+    // leave a hole, but only when our small "advertise here" panel can fill most of the space instead.
+    // On a tail page with just a few lines of text, the paid ad stays: otherwise most of the page is blank.
     const endBlock = block as AdBlock | null;
-    if (endBlock && Htop - used() > 120) { placedBlocks.delete(endBlock.id); block = null; Htop = H; }
+    if (endBlock && Htop - used() > 120 && H - used() <= 420) { placedBlocks.delete(endBlock.id); block = null; Htop = H; }
     // Space left after the section's last story: our own "advertise here" panel (never on a page that already has an ad).
     if (!block && houseHalves < HOUSE_HALF_LIMIT && pages.length >= AD_FREE_PAGES) {
       const node = build({ t: 'half', ad: null });
