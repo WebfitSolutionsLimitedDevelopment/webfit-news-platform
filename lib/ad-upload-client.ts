@@ -16,6 +16,7 @@ export const SLOT_GUIDE: Record<string, { where: string; desktop: string; mobile
   HOME_AFTER_HERO: { where: 'Homepage, after the lead stories', desktop: '970×250', mobile: '300×250' },
   HOME_MIDDLE: { where: 'Homepage, mid-page', desktop: '970×250', mobile: '300×250', video: true },
   HOME_SIDEBAR_1: { where: 'Homepage, further down the feed', desktop: 'Not shown', mobile: '300×250' },
+  HOME_SECTION_RAIL: { where: 'Homepage, right-hand space beside short sections', desktop: 'Portrait poster, 4:5 or A4', mobile: 'Under the section lead story' },
   ARTICLE_INLINE_1: { where: 'Every story, after paragraph 3', desktop: '728×90', mobile: '300×250', video: true },
   ARTICLE_INLINE_2: { where: 'Longer stories, after paragraph 8', desktop: '728×90', mobile: '300×250' },
   ARTICLE_BOTTOM: { where: 'End of every story', desktop: '728×90', mobile: '300×250' },

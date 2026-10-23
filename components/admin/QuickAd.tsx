@@ -16,6 +16,7 @@ const PLACE_OPTIONS: { key: string; label: string }[] = [
   { key: 'HOME_AFTER_HERO', label: 'Homepage: after lead stories' },
   { key: 'HOME_MIDDLE', label: 'Homepage: middle' },
   { key: 'HOME_SIDEBAR_1', label: 'Homepage: further down (phones)' },
+  { key: 'HOME_SECTION_RAIL', label: 'Homepage: beside short sections (portrait poster)' },
   { key: 'CATEGORY_TOP', label: 'Top of section pages' },
   { key: 'EPAPER_FULL_PAGE', label: 'E-paper: featured poster' },
   { key: 'EPAPER_SHARED_PAGE', label: 'E-paper: poster shared with another ad' },

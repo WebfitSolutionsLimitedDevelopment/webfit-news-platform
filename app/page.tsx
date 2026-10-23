@@ -4,6 +4,8 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 import { BreakingStrip } from '@/components/BreakingStrip';
 import { AdSlot } from '@/components/AdSlot';
+import { AdUnit } from '@/components/AdUnit';
+import { getLiveAds, type LiveAd } from '@/lib/ads';
 import { VideoSection } from '@/components/VideoSection';
 import { AnimatedMastheadLogo } from '@/components/AnimatedMastheadLogo';
 import { EpaperPromo } from '@/components/epaper/EpaperPromo';
@@ -26,7 +28,7 @@ export const metadata:Metadata={
 
 const sectionTone=(index:number)=>[styles.cream,styles.blue,styles.yellow,styles.mint][index%4];
 
-function EditorialSection({title,stories,index}:{title:string;stories:any[];index:number}){
+function EditorialSection({title,stories,index,ad}:{title:string;stories:any[];index:number;ad?:LiveAd|null}){
   const normalizedTitle=title.trim().toLowerCase();
   const hiddenSlugs=new Set(
     normalizedTitle==='features'
@@ -47,8 +49,12 @@ function EditorialSection({title,stories,index}:{title:string;stories:any[];inde
       </div>
       <div className={styles.sectionFeature}>
         {visible[0]?<StoryCard story={visible[0]} variant="horizontal" eyebrowLabel={eyebrowLabel}/>:null}
-        <div className={styles.sectionGrid}>
-          {visible.slice(1,7).map((story:any)=><StoryCard key={story.id} story={story} eyebrowLabel={eyebrowLabel}/>) }
+        <div className={styles.sectionSide}>
+          {visible.length>1?<div className={styles.sectionGrid}>
+            {visible.slice(1,7).map((story:any)=><StoryCard key={story.id} story={story} eyebrowLabel={eyebrowLabel}/>) }
+          </div>:null}
+          {/* A section with only a few stories leaves room on the right: a poster goes there (under the lead story on phones). */}
+          {ad?<div className={styles.sectionAd}><AdUnit ads={[ad]} variant="rail"/></div>:null}
         </div>
       </div>
     </div>
@@ -81,6 +87,16 @@ export default async function Home(){
   const popular=editorPicks.length>=4?editorPicks:latestStories.filter(s=>!heroIds.has(s.id)).slice(4,8);
   const configuredRest=sections.filter(s=>s!==configuredHero&&s.stories?.length&&s.key!=='latest');
   const rest=latest.length?[{key:'latest',title:'Latest',stories:latest},...configuredRest]:configuredRest;
+
+  // Posters booked into HOME_SECTION_RAIL fill the empty right-hand space of short sections, one each, in turn.
+  let sectionPosters:LiveAd[]=[];try{sectionPosters=(await getLiveAds())['HOME_SECTION_RAIL']||[]}catch{sectionPosters=[]}
+  const sectionAd=new Map<number,LiveAd>();
+  let nextPoster=0;
+  rest.forEach((section:any,i:number)=>{
+    if(!sectionPosters.length||(section.stories?.length||0)>3)return;
+    sectionAd.set(i,sectionPosters[nextPoster%sectionPosters.length]);
+    nextPoster+=1;
+  });
 
   return <>
     <SiteHeader/>
@@ -126,7 +142,7 @@ export default async function Home(){
       <div className={`shell ${adFlow.desktopAfterHeroAd}`}><AdSlot slotKey="HOME_AFTER_HERO"/></div>
 
       {rest.map((section:any,index:number)=><div key={section.id||section.key}>
-        <EditorialSection title={section.title} stories={section.stories} index={index}/>
+        <EditorialSection title={section.title} stories={section.stories} index={index} ad={sectionAd.get(index)||null}/>
         {index===0?<div className={`shell ${adFlow.mobileAdBreak}`}><AdSlot slotKey="HOME_AFTER_HERO"/></div>:null}
         {index===1?<div className={`shell ${adFlow.sectionAdBreak}`}><AdSlot slotKey="HOME_MIDDLE"/></div>:null}
         {index===2&&videos.length?<section className={styles.watchBand}><div className={styles.bandInner}><VideoSection videos={videos}/></div></section>:null}
