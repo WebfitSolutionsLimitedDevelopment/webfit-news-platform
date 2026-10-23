@@ -23,7 +23,7 @@ function toText(html: string) {
 }
 
 /** "By Webfit News | 7 October 2026" style lines repeat what the page already shows. */
-const DATELINE = /^(?:by\s+[^|]{2,60}\|\s*)?(?:updated\s+)?\d{1,2}\s+[a-z]+\s+\d{4}$/i;
+const DATELINE = /^(?:by\s+[^|]{2,60}\|\s*)?(?:[^|]{2,40}\|\s*)?(?:updated\s+)?\d{1,2}\s+[a-z]+\s+\d{4}$/i;
 const BYLINE_ONLY = /^by\s+webfit news$/i;
 
 export function htmlToBlocks(html: string | null | undefined, title = ''): TextBlock[] {
@@ -39,7 +39,16 @@ export function htmlToBlocks(html: string | null | undefined, title = ''): TextB
     return rows.filter(Boolean).map(r => `<row>${r}</row>`).join('');
   });
 
-  s = s.replace(/<\/?(?:div|section|article|span|font)\b[^>]*>/gi, ' ');
+  // Some stories are pasted as one <div> per line with no <p> tags at all.
+  // Treat those lines as paragraphs, otherwise the whole story becomes one
+  // block and bylines and subheadings run into the text.
+  const fromDivs = !/<p\b/i.test(s) && /<div\b/i.test(s);
+  if (fromDivs) {
+    s = s.replace(/<div\b[^>]*>/gi, '<p>').replace(/<\/div>/gi, '</p>');
+  } else {
+    s = s.replace(/<\/?(?:div|section|article)\b[^>]*>/gi, ' ');
+  }
+  s = s.replace(/<\/?(?:span|font)\b[^>]*>/gi, ' ');
 
   // Quotes keep their text as one block.
   s = s.replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner) => `<quote>${toText(inner)}</quote>`);
@@ -55,7 +64,9 @@ export function htmlToBlocks(html: string | null | undefined, title = ''): TextB
     if (!text) continue;
     // A short paragraph that is entirely bold is a subheading in our CMS.
     const allBold = tag === 'p' && text.length <= 120 && /^\s*<(strong|b)\b[^>]*>[\s\S]*<\/\1>\s*$/i.test(match[2]) && !/[.!?]["”’]?$/.test(text);
-    const k: BlockKind = tag.startsWith('h') || allBold ? 'h' : tag === 'li' ? 'li' : tag === 'quote' ? 'quote' : tag === 'row' ? 'row' : 'p';
+    // Stories pasted line by line have plain-text subheadings: a short line with no closing punctuation.
+    const plainSub = fromDivs && tag === 'p' && text.length <= 90 && text.split(' ').length >= 2 && !/[.!?:;,"”’)]$/.test(text) && !/^(source|currency note|by)\b/i.test(text);
+    const k: BlockKind = tag.startsWith('h') || allBold || plainSub ? 'h' : tag === 'li' ? 'li' : tag === 'quote' ? 'quote' : tag === 'row' ? 'row' : 'p';
     blocks.push({ k, t: text });
   }
   if (!found) {
@@ -68,6 +79,8 @@ export function htmlToBlocks(html: string | null | undefined, title = ''): TextB
   // Drop the dateline/byline at the top and a first paragraph that repeats the headline.
   const cleanTitle = title.trim().toLowerCase();
   while (blocks.length && (DATELINE.test(blocks[0].t) || BYLINE_ONLY.test(blocks[0].t) || (cleanTitle && blocks[0].t.toLowerCase() === cleanTitle))) blocks.shift();
+  // A dateline/byline a line or two further down (after a pasted standfirst) also repeats the page furniture.
+  for (let i = Math.min(blocks.length, 3) - 1; i >= 0; i -= 1) if (DATELINE.test(blocks[i].t) || BYLINE_ONLY.test(blocks[i].t)) blocks.splice(i, 1);
   if (blocks[0]?.k === 'p') blocks[0].t = blocks[0].t.replace(/^\d{1,2}\s+[A-Z][a-z]+\s+\d{4}\s+(?=[A-Z])/, '');
   return blocks;
 }

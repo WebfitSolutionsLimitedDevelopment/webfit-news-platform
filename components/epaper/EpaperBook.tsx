@@ -258,9 +258,12 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
         trial.remove();
         if (ok) { best = mid; lo = mid + 1; } else hi = mid - 1;
       }
-      if (best >= 3 && words.length - best >= 2) {
-        col.append(build({ ...item, text: words.slice(0, best).join(' '), last: false }));
-        queue[0] = { ...item, text: words.slice(best).join(' '), first: false, cont: true };
+      // A paragraph that is only a word or two too long for the column used to be
+      // skipped entirely, leaving the column empty. Carry at least two words over instead.
+      const take = Math.min(best, words.length - 2);
+      if (take >= 3) {
+        col.append(build({ ...item, text: words.slice(0, take).join(' '), last: false }));
+        queue[0] = { ...item, text: words.slice(take).join(' '), first: false, cont: true };
         lastPlaced = null;
       }
     } else if (!col.children.length && ci === COLS - 1 && ch(ci) >= 300) {
@@ -415,6 +418,15 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
           queue.splice(at, 0, photo);
           fits = true;
         }
+        // A story that opens a page but has no room for any text above this page's ad:
+        // move the ad on to the next page rather than leave a headline with no story under it.
+        const pageAd = block as AdBlock | null;
+        if (!fits && needsText && flow.children.length === nodes.length && pageAd) {
+          placedBlocks.delete(pageAd.id);
+          block = null;
+          Htop = H;
+          fits = !overflows(flow) && used() <= Htop && Htop - used() >= minAfter;
+        }
         if (fits || flow.children.length === nodes.length) {
           if (!fits) nodes.forEach(n => { n.style.maxHeight = `${Math.max(60, Htop - 120)}px`; n.style.overflow = 'hidden'; });
           queue.splice(0, group.length);
@@ -430,7 +442,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       // A run of column items: one story's body (and its narrow photo).
       let n = 0;
       while (n < queue.length && !isSpan(queue[n])) n += 1;
-      const run = queue.slice(0, n);
+      let run = queue.slice(0, n);
       const R = Math.floor(H - used()) - 2;
       const blk = block as AdBlock | null; // set inside open(); TS can't see that
       const side = blk ? Math.floor(Htop - used()) - 2 : Infinity;
@@ -440,7 +452,19 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       const colsH = blk?.full ? Math.max(0, side) : R;
       const sideLimit = blk?.full ? Infinity : side < 40 ? 0 : side;
 
-      const full = flowColumns(run, colsH, flow, sideLimit);
+      let full = flowColumns(run, colsH, flow, sideLimit);
+      // The desk has run out of pages and this story can't continue overleaf: end it on a
+      // whole paragraph with a pointer to the full story, rather than stop mid-sentence.
+      const lastDeskPage = pageNo >= quota && !(snap && snap.page === pageNo && snap.children > 0);
+      const runStory = (run.find(r => r.t === 'text') as Extract<Item, { t: 'text' }> | undefined)?.story;
+      if (full.rest.length && lastDeskPage && runStory) {
+        const more: Item = { t: 'text', story: runStory, k: 'p', text: `Read the full story at webfitnews.com/${runStory.slug}`, first: false, last: true, cont: false };
+        for (let k = n - full.rest.length; k >= 1; k -= 1) {
+          const shorter = [...run.slice(0, k), more];
+          const trial = flowColumns(shorter, colsH, flow, sideLimit);
+          if (!trial.rest.length) { queue.splice(0, n, ...shorter); n = shorter.length; run = shorter; full = trial; break; }
+        }
+      }
       if (full.rest.length) {
         flow.append(full.band);
         lastStoryId = run[0].t === 'half' ? lastStoryId : (run[0] as any).story.id;
