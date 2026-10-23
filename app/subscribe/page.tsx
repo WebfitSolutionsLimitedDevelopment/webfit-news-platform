@@ -8,7 +8,7 @@ import styles from './subscribe.module.css';
 
 export const metadata: Metadata = {
   title: { absolute: `Get the e-paper by email | ${SITE_NAME}` },
-  description: 'Get the free Webfit News e-paper in your inbox twice a week: the Midweek and Weekend editions, as soon as each one is out.',
+  description: 'Get the free Webfit News e-paper in your inbox every Thursday morning, as soon as the new weekly edition is out.',
   alternates: { canonical: absoluteUrl('/subscribe') },
 };
 
@@ -26,7 +26,7 @@ export default async function SubscribePage({ searchParams }: { searchParams: Pr
     <main className="static-page">
       <span className="article-kicker">E-paper by email</span>
       <h1>Get the Webfit News e-paper in your inbox</h1>
-      <p className="standfirst">Free, twice a week. We email you when each Midweek and Weekend edition is out, with the top stories and a link to flip through every page.</p>
+      <p className="standfirst">Free, every Thursday. We email you when the new weekly edition is out, with the top stories and a link to flip through every page.</p>
       {notice ? <div className={`${styles.notice} ${notice.cls}`} role="status">{notice.text}</div> : null}
       {status === 'confirmed' ? <p><Link href="/epaper">Read the latest e-paper →</Link></p> : <SubscribeForm/>}
     </main>

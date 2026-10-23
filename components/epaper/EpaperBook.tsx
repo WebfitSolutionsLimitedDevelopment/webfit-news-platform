@@ -606,8 +606,8 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
     return <div className={`${styles.page} ${styles.front}`}>
       <header className={styles.masthead}>
         <div className={styles.mastheadTop}>
-          <span>{edition.dateline} · Twice weekly</span>
-          <span>{edition.isLive ? 'Live edition · updating as we publish' : edition.title}</span>
+          <span>{edition.dateline} · Weekly, every Thursday</span>
+          <span>{edition.released ? edition.title : edition.isLive ? `Preview · out ${edition.dateline}` : edition.title}</span>
           <span>Vol. 1 · No. {edition.number} · Free</span>
         </div>
         <div className={styles.nameplate}>
@@ -661,10 +661,10 @@ function HousePageView({ n, edition }: { n: number; edition: Edition }) {
     <div className={styles.houseRule}/>
     <span className={styles.houseKicker}>Advertise with Webfit News</span>
     <h2 className={styles.houseHeadline}>Put your business in front of communities across New Zealand</h2>
-    <p className={styles.houseLead}>Your ad sits right next to the stories our readers come for, in every e-paper edition, twice a week, and across webfitnews.com and our social channels.</p>
+    <p className={styles.houseLead}>Your ad sits right next to the stories our readers come for, in every weekly e-paper edition, and across webfitnews.com and our social channels.</p>
     <div className={styles.houseStats}>{REACH.map(([v, l]) => <div key={l}><strong>{v}</strong><span>{l}</span></div>)}</div>
     <div className={styles.houseOffers}>
-      <div><b>E-paper</b><span>Half-page and poster spots on news pages, every Monday and Thursday edition</span></div>
+      <div><b>E-paper</b><span>Half-page and poster spots on news pages, every weekly edition</span></div>
       <div><b>Website</b><span>Homepage, section and article placements on webfitnews.com</span></div>
       <div><b>Social &amp; sponsored</b><span>Campaigns across our channels and clearly labelled partner stories</span></div>
     </div>
@@ -713,7 +713,7 @@ function BackPageView({ n, edition, shelf, extra }: { n: number; edition: Editio
       {all.length > more.length ? <span>…and {all.length - more.length} more at webfitnews.com</span> : null}
     </div> : <>
       <h2 className={styles.backTitle}>Every story, every day, on webfitnews.com</h2>
-      <p className={styles.backText}>New editions arrive every Monday and Thursday, and the current one keeps updating as we publish.</p>
+      <p className={styles.backText}>A new edition comes out every Thursday morning.</p>
     </>}
     {others.length ? <div className={styles.backEditions}>
       <strong>Other editions</strong>

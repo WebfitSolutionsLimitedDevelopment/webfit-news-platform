@@ -8,11 +8,15 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  *
  * Built automatically from published stories, with every story printed in full.
  *
- *   Midweek edition   Monday–Wednesday (New Zealand time)
- *   Weekend edition   Thursday–Sunday
+ *   Weekly edition    Thursday–Wednesday (New Zealand time), released the
+ *                     following Thursday at RELEASE_HOUR, complete, like a printed weekly.
+ *   (Before WEEKLY_FROM there were two a week: Midweek Mon–Wed and Weekend Thu–Sun.
+ *   Those editions keep their dates, numbers and URLs.)
  *
- * The current edition fills up as we publish. /epaper opens it once it has
- * MIN_LIVE_STORIES stories; until then it opens the previous (complete) edition.
+ * /epaper and the shelf show released editions only. The edition still being
+ * filled can be previewed at /epaper/<its Thursday> but isn't listed. In the
+ * changeover week, when the newest released edition is still a twice-weekly one,
+ * /epaper keeps showing the first weekly edition as it fills, as before.
  * The shelf shows editions from the last EPAPER_WINDOW_DAYS days; every edition since launch stays readable at /epaper/<date> and is listed at /epaper/archive.
  * Each edition is a 12-page paper: the front-page story, then desk pages
  * per desk (DESKS) carrying that desk's strongest stories, trimmed to fit, each
@@ -25,9 +29,11 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  */
 
 export const EPAPER_TIMEZONE = 'Pacific/Auckland';
-export const EPAPER_WINDOW_DAYS = 15;
-/** Open the in-progress edition by default once it has this many stories. */
-const MIN_LIVE_STORIES = 10;
+export const EPAPER_WINDOW_DAYS = 29;
+/** First weekly edition (a Thursday). Editions starting earlier are the old twice-weekly ones. */
+export const WEEKLY_FROM = '2026-10-22';
+/** A weekly edition is released at this hour, NZ time, on the Thursday after it ends. */
+const RELEASE_HOUR = 6;
 /** Words printed per desk page, and per story. Tuned so each desk fills about one page. */
 const PAGE_WORDS = 400;
 /** Story pages to aim for (with the front, ad and back pages: 12). */
@@ -121,19 +127,31 @@ function mondayOf(ymd: string): string {
   return addDays(ymd, -((weekday(ymd) + 6) % 7));
 }
 
-/** Monday for Mon–Wed, Thursday for Thu–Sun. */
+const isWeekly = (start: string) => start >= WEEKLY_FROM;
+
+/** Weekly: the Thursday on or before the date. Before WEEKLY_FROM: Monday for Mon–Wed, Thursday for Thu–Sun. */
 function editionStart(ymd: string): string {
+  if (ymd >= WEEKLY_FROM) return addDays(ymd, -((weekday(ymd) + 3) % 7));
   const monday = mondayOf(ymd);
   return (weekday(ymd) + 6) % 7 <= 2 ? monday : addDays(monday, 3);
 }
 
 function editionEnd(start: string): string {
+  if (isWeekly(start)) return addDays(start, 6);
   return addDays(start, weekday(start) === 1 ? 2 : 3);
 }
 
 function editionNumber(start: string): number {
-  const days = Math.round((Date.parse(`${start}T00:00:00Z`) - Date.parse(`${EPAPER_LAUNCH}T00:00:00Z`)) / 86_400_000);
-  return Math.max(1, Math.floor(days / 7) * 2 + (weekday(start) === 4 ? 1 : 0) + 1);
+  const daysFrom = (a: string, b: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
+  const twiceWeekly = (d: string) => Math.max(1, Math.floor(daysFrom(d, EPAPER_LAUNCH) / 7) * 2 + (weekday(d) === 4 ? 1 : 0) + 1);
+  if (!isWeekly(start)) return twiceWeekly(start);
+  return twiceWeekly(WEEKLY_FROM) + daysFrom(start, WEEKLY_FROM) / 7;
+}
+
+/** When an edition goes out: weekly ones the Thursday after they end, at RELEASE_HOUR; old ones on their first day. */
+function releaseAt(firstDay: string, lastDay: string): Date {
+  if (!isWeekly(firstDay)) return nzMidnight(firstDay);
+  return new Date(nzMidnight(addDays(lastDay, 1)).getTime() + RELEASE_HOUR * 3_600_000);
 }
 
 const fmt = (opts: Intl.DateTimeFormatOptions) => (ymd: string) =>
@@ -142,31 +160,41 @@ const longDate = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'nu
 const shortDate = fmt({ day: 'numeric', month: 'short' });
 
 export type EditionInfo = {
-  /** The Monday or Thursday it starts (URL: /epaper/<key>). */
+  /** The day it starts (URL: /epaper/<key>): a Thursday for weekly editions, Monday or Thursday before WEEKLY_FROM. */
   key: string;
   href: string;
   title: string;
   dateline: string;
   coverage: string;
   number: number;
+  /** Still being filled (stories published now go into it). */
   isLive: boolean;
+  /** Out: listed on the shelf and in the archive, and emailed. */
+  released: boolean;
+  /** NZ date it is (or will be) released. */
+  releaseDay: string;
   firstDay: string;
   lastDay: string;
   fromIso: string;
   toIso: string;
 };
 
-function makeEdition(firstDay: string, isLive: boolean, today: string): EditionInfo {
+function makeEdition(firstDay: string, isLive: boolean, today: string, now: Date): EditionInfo {
   const lastDay = editionEnd(firstDay);
   const coverage = `${shortDate(firstDay)} – ${shortDate(lastDay)}`;
+  const weekly = isWeekly(firstDay);
+  const releaseDay = weekly ? addDays(lastDay, 1) : firstDay;
   return {
     key: firstDay,
     href: `/epaper/${firstDay}`,
-    title: `${weekday(firstDay) === 1 ? 'Midweek' : 'Weekend'} edition`,
-    dateline: longDate(isLive ? today : lastDay),
+    title: weekly ? 'Weekly edition' : `${weekday(firstDay) === 1 ? 'Midweek' : 'Weekend'} edition`,
+    // A weekly edition is dated the day it comes out, like a printed weekly.
+    dateline: longDate(weekly ? releaseDay : isLive ? today : lastDay),
     coverage,
     number: editionNumber(firstDay),
     isLive,
+    released: now.getTime() >= releaseAt(firstDay, lastDay).getTime(),
+    releaseDay,
     firstDay,
     lastDay,
     fromIso: nzMidnight(firstDay).toISOString(),
@@ -181,7 +209,7 @@ export function listEditions(now = new Date()): EditionInfo[] {
   const out: EditionInfo[] = [];
   let start = editionStart(today);
   while (editionEnd(start) >= oldestDay) {
-    out.push(makeEdition(start, out.length === 0, today));
+    out.push(makeEdition(start, out.length === 0, today, now));
     start = editionStart(addDays(start, -1));
   }
   return out;
@@ -193,7 +221,7 @@ export function listAllEditions(now = new Date()): EditionInfo[] {
   const out: EditionInfo[] = [];
   let start = editionStart(today);
   while (start >= EPAPER_LAUNCH) {
-    out.push(makeEdition(start, out.length === 0, today));
+    out.push(makeEdition(start, out.length === 0, today, now));
     start = editionStart(addDays(start, -1));
   }
   return out;
@@ -205,11 +233,24 @@ export function editionInfo(key: string, now = new Date()): EditionInfo | null {
   const today = nzDate(now);
   const current = editionStart(today);
   if (key > current) return null;
-  return makeEdition(key, key === current, today);
+  return makeEdition(key, key === current, today, now);
+}
+
+/**
+ * The edition /epaper opens: the newest released one. In the changeover week the newest
+ * released edition is still a twice-weekly one, so the first weekly edition shows as it fills.
+ */
+export function pickFeatured<T extends EditionInfo>(editions: T[]): T | null {
+  const released = editions.find(e => e.released) ?? null;
+  if (released && isWeekly(released.key)) return released;
+  // Changeover: show the first weekly edition (the oldest weekly one listed) until it is released.
+  const weekly = editions.filter(e => isWeekly(e.key));
+  return weekly[weekly.length - 1] ?? released ?? editions[0] ?? null;
 }
 
 export function isEditionKey(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && [1, 4].includes(weekday(value));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  return isWeekly(value) ? weekday(value) === 4 : [1, 4].includes(weekday(value));
 }
 
 /* ---------------------------------------------------------------- stories */
@@ -354,17 +395,10 @@ function inEdition(info: EditionInfo) {
 
 /** One edition with every story's full text (any edition since launch), or null if the key isn't one. */
 export const getEdition = cache(async (key?: string): Promise<Edition | null> => {
-  const editions = listEditions();
-  // A key can be any edition since launch (the archive); no key means the one /epaper opens.
-  let info: EditionInfo | null = key ? editionInfo(key) : editions[0];
+  // A key can be any edition since launch (the archive, or a preview of the one being filled); no key means the one /epaper opens.
+  const info: EditionInfo | null = key ? editionInfo(key) : pickFeatured(listEditions());
   if (!info) return null;
-  const [fetched, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
-  let inWindow = fetched;
-  // No key: the live edition once it has enough stories, otherwise the previous one.
-  if (!key && editions[1] && inWindow.filter(inEdition(info)).length < MIN_LIVE_STORIES) {
-    info = editions[1];
-    inWindow = await getWindowStories(info.fromIso, info.toIso);
-  }
+  const [inWindow, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
   const stories = inWindow.filter(inEdition(info));
 
   // Full text for this edition's stories only.
@@ -445,10 +479,9 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
 
 export type EditionSummary = EditionInfo & { storyCount: number; coverImage: string | null; headline: string | null };
 
-/** The edition /epaper opens: the current one once it has enough stories, otherwise the previous one. */
+/** The edition /epaper opens (see pickFeatured). */
 export function featuredEdition(shelf: EditionSummary[]): EditionSummary | null {
-  if (!shelf.length) return null;
-  return shelf[0].storyCount >= MIN_LIVE_STORIES || !shelf[1] ? shelf[0] : shelf[1];
+  return pickFeatured(shelf);
 }
 
 /** Shelf of editions in the window, newest first, with a cover photo and headline each. */
@@ -456,7 +489,9 @@ export const getEditionShelf = cache(async (): Promise<EditionSummary[]> => {
   const editions = listEditions();
   const from = editions.reduce((min, e) => (e.fromIso < min ? e.fromIso : min), editions[0].fromIso);
   const all = await getWindowStories(from, editions[0].toIso);
-  return editions.map(info => {
+  // Only editions that are out, plus the featured one (in the changeover week it is still filling).
+  const featured = pickFeatured(editions);
+  return editions.filter(info => info.released || info.key === featured?.key).map(info => {
     const stories = all.filter(inEdition(info));
     const top = [...stories].sort(byImportance)[0];
     return { ...info, storyCount: stories.length, coverImage: top?.image || null, headline: top?.title || null };

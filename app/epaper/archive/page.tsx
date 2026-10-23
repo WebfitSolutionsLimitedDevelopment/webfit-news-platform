@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
-import { listAllEditions } from '@/lib/epaper';
+import { listAllEditions, pickFeatured } from '@/lib/epaper';
 import { SITE_NAME, absoluteUrl } from '@/lib/site';
 import styles from '@/components/epaper/Epaper.module.css';
 
@@ -11,14 +11,17 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: { absolute: `E-paper archive | ${SITE_NAME}` },
-  description: 'Every Webfit News e-paper edition since launch, Midweek and Weekend, newest first.',
+  description: 'Every Webfit News e-paper edition since launch, newest first: weekly every Thursday, and the earlier Midweek and Weekend editions.',
   alternates: { canonical: absoluteUrl('/epaper/archive') },
 };
 
 const monthLabel = (ymd: string) => new Intl.DateTimeFormat('en-NZ', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${ymd}T00:00:00Z`));
 
 export default function EpaperArchivePage() {
-  const editions = listAllEditions();
+  const all = listAllEditions();
+  const featured = pickFeatured(all);
+  // Only editions that are out (plus, in the changeover week, the first weekly edition as it fills).
+  const editions = all.filter(e => e.released || e.key === featured?.key);
   const months: Array<{ label: string; items: typeof editions }> = [];
   for (const e of editions) {
     const label = monthLabel(e.firstDay);
@@ -33,17 +36,17 @@ export default function EpaperArchivePage() {
         <div>
           <span className={styles.hubKicker}>Webfit News e-paper</span>
           <h1 className={styles.hubTitle}>Every edition</h1>
-          <p className={styles.hubSub}>{editions.length} editions since {monthLabel(editions[editions.length - 1]?.firstDay || '2026-09-21')}. A new one every Monday and Thursday.</p>
+          <p className={styles.hubSub}>{editions.length} editions since {monthLabel(editions[editions.length - 1]?.firstDay || '2026-09-21')}. A new one every Thursday.</p>
         </div>
       </div>
       {months.map(m => <section key={m.label} className={styles.archiveMonth} aria-label={m.label}>
         <h2>{m.label}</h2>
         <ul>{m.items.map(e => <li key={e.key}>
-          <Link href={e.isLive ? '/epaper' : e.href}>
+          <Link href={e.key === featured?.key ? '/epaper' : e.href}>
             <span className={styles.archiveNo}>No. {e.number}</span>
             <strong>{e.title}</strong>
             <span>{e.coverage}</span>
-            {e.isLive ? <em>Current</em> : null}
+            {e.key === featured?.key ? <em>Current</em> : null}
           </Link>
         </li>)}</ul>
       </section>)}

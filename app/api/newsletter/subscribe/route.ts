@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     preheader: 'Confirm your free Webfit News e-paper emails.',
     body: `<h1 style="margin:0 0 12px;font-size:26px;line-height:32px">Confirm your e-paper emails</h1>
 <p style="margin:0 0 12px;font-size:17px;line-height:26px">${firstName ? `Kia ora ${esc(firstName)},` : 'Kia ora,'}</p>
-<p style="margin:0 0 12px;font-size:17px;line-height:26px">Tap the button to get the free Webfit News e-paper by email, twice a week, when each Midweek and Weekend edition comes out.</p>
+<p style="margin:0 0 12px;font-size:17px;line-height:26px">Tap the button to get the free Webfit News e-paper by email every Thursday morning, when the new weekly edition comes out.</p>
 ${button(link, 'Yes, send me the e-paper')}
 <p style="margin:0;font-size:14px;line-height:22px;color:#6b6b6b">If you didn’t ask for this, ignore this email and you won’t hear from us. The link works for 3 days.</p>`,
     footer: senderFooter(),

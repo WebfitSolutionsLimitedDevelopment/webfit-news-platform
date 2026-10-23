@@ -12,9 +12,9 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
       <div>
         <span className={styles.hubKicker}>Webfit News e-paper · No. {edition.number}</span>
         <h1 className={styles.hubTitle}>{edition.title}</h1>
-        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, the best of them laid out as a newspaper. New editions every Monday and Thursday.</p>
+        <p className={styles.hubSub}>{edition.storyCount} stories from {edition.coverage}, the best of them laid out as a newspaper. A new edition every Thursday.</p>
       </div>
-      {edition.isLive ? <span className={styles.liveBadge}>Live · updating as we publish</span> : null}
+      {!edition.released ? <span className={styles.liveBadge}>Preview · still being filled, out {edition.dateline}</span> : null}
     </div>
 
     <EpaperBook edition={edition} shelf={shelf}/>
@@ -27,7 +27,7 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
       <div className={styles.shelfGrid}>
         {shelf.map(e => <Link key={e.key} href={e.href} className={`${styles.cover} ${e.key === edition.key ? styles.coverCurrent : ''}`} aria-current={e.key === edition.key ? 'page' : undefined}>
           <div className={styles.coverThumb}>
-            {e.isLive ? <span className={styles.coverLive}>{e.storyCount < 10 ? 'Filling up' : 'Live'}</span> : null}
+            {!e.released ? <span className={styles.coverLive}>Filling up</span> : null}
             <img className={styles.coverLogo} src="/webfit-news-logo-400.webp" alt=""/>
             <div className={styles.coverRule}/>
             {e.coverImage ? <img className={styles.coverImg} src={resizedImage(e.coverImage, 320, 70)} alt="" loading="lazy"/> : <div className={styles.coverImg}/>}
@@ -39,7 +39,7 @@ export function EpaperScreen({ edition, shelf }: { edition: Edition; shelf: Edit
     </section>
 
     <div className={styles.advertiseStrip}>
-      <div><strong>Put your business in the e-paper</strong><p>Full pages and half pages in every edition, twice a week.</p></div>
+      <div><strong>Put your business in the e-paper</strong><p>Full pages and half pages in every weekly edition.</p></div>
       <Link href="/advertise-media-kit">See the media kit</Link>
     </div>
 

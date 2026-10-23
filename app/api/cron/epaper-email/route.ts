@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Daily (vercel.json). Emails the live e-paper edition once it has enough
- * stories to open on /epaper, once per edition.
+ * Daily at 06:30 NZ time (vercel.json). Emails the e-paper edition /epaper opens,
+ * once it is released (weekly: Thursday morning), once per edition.
  *
  *   ?preview=1   show the email in the browser, send nothing
  *   ?dry=1       report what would happen, send nothing
@@ -34,9 +34,10 @@ export async function GET(request: Request) {
   const html = renderEditionEmail(edition);
   if (preview) return new NextResponse(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
 
-  if (!main.isLive) return NextResponse.json({ sent: false, reason: `Current edition isn't ready yet (fewer stories than needed); ${main.title} ${main.coverage} is showing.` });
+  if (!main.released) return NextResponse.json({ sent: false, reason: `${main.title} ${main.coverage} isn't released yet (out ${main.releaseDay}).` });
 
-  const name = `epaper-${edition.key}`;
+  // Weekly editions get their own name: the 22 Oct edition was already emailed once as a twice-weekly Weekend edition.
+  const name = edition.title === 'Weekly edition' ? `epaper-weekly-${edition.key}` : `epaper-${edition.key}`;
   const existing = await resend<{ data: Array<{ name: string | null; status: string }> }>('/broadcasts');
   if (existing.data?.some(b => b.name === name)) return NextResponse.json({ sent: false, reason: `${name} already sent.` });
   if (dry) return NextResponse.json({ sent: false, dry: true, wouldSend: name, subject });

@@ -31,11 +31,11 @@ export async function EpaperPromo() {
       <div className={styles.copy}>
         <span className={styles.kicker}>Webfit News e-paper</span>
         <h2 id="home-epaper" className={styles.title}>Read this week’s paper, page by page</h2>
-        <p className={styles.lead}>{main.title} · {main.coverage} · {main.storyCount} stories, laid out as a newspaper you can flip through on your phone or laptop. New editions every Monday and Thursday.</p>
+        <p className={styles.lead}>{main.title} · {main.coverage} · {main.storyCount} stories, laid out as a newspaper you can flip through on your phone or laptop. A new edition every Thursday.</p>
         <div className={styles.actions}>
           <Link href="/epaper" className={styles.primary}>Read the e-paper →</Link>
           <Link href="/subscribe" className={styles.email}>Get it by email</Link>
-          {main.isLive ? <span className={styles.live}>Updating as we publish</span> : null}
+          {!main.released ? <span className={styles.live}>Updating as we publish</span> : null}
         </div>
         {others.length ? <div className={styles.shelf}>
           <span>Earlier editions</span>

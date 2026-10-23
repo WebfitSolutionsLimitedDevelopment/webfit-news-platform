@@ -44,6 +44,6 @@ export function SubscribeForm() {
     <input className={styles.hp} name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true"/>
     <button className={styles.submit} type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send me the e-paper'}</button>
     {state === 'error' ? <p className={styles.error} role="alert">{message}</p> : null}
-    <p className={styles.small}>Free. Twice a week. One tap to unsubscribe. See our <a href="/privacy-policy">privacy policy</a>.</p>
+    <p className={styles.small}>Free. Every Thursday. One tap to unsubscribe. See our <a href="/privacy-policy">privacy policy</a>.</p>
   </form>;
 }
