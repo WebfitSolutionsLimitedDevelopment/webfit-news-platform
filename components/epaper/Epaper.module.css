@@ -90,7 +90,10 @@
 .pageSection strong{font:italic 700 26px/1 Georgia,'Times New Roman',serif;color:#c8232c;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pageSection span{font:700 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#1f2a6b}
 .pageBrand{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-.pageBrand img{height:30px;width:auto}
+.pageBrandName{display:flex;align-items:center;gap:5px;font:700 17px/1 Georgia,'Times New Roman',serif;letter-spacing:-.02em;white-space:nowrap}
+.pageBrandName img{width:20px;height:20px}
+.pageBrand .pageBrandName span{font:inherit;letter-spacing:inherit;text-transform:none;color:#1f2a6b}
+.pageBrandName b{color:#c8232c;font-style:italic}
 .pageBrand span{font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4b4740}
 
 .folio{position:absolute;left:22px;right:22px;bottom:10px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid #d9d3c5;padding-top:6px;font:600 8px/1 Arial,Helvetica,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#6b665c}
@@ -133,16 +136,26 @@
 
 /* half-page ad at the end of a section */
 .halfSlot{height:250px;margin-top:10px;border-top:1px solid #d9d3c5;padding-top:6px;display:flex;flex-direction:column}
-.houseHalfIn{background:#151515;color:#fff;border-top:0;padding:20px 22px;gap:8px;justify-content:center;align-items:flex-start;text-align:left}
-.houseTitleSm{font:700 22px/1.1 Georgia,'Times New Roman',serif}
-.houseTextSm{font:11.5px/1.5 Arial,Helvetica,sans-serif;color:#e0dcd2;max-width:400px}
+.houseHalfIn{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;height:250px;margin:0;background:#faf8f3;color:#151515;border:1px solid #151515;padding:20px 22px;gap:8px;justify-content:center;align-items:center;text-align:center}
+.houseHalfIn .houseKicker{color:#c8232c}
+.houseTitleSm{font:700 22px/1.1 Georgia,'Times New Roman',serif;color:#1f2a6b}
+.houseTextSm{font:11.5px/1.5 Arial,Helvetica,sans-serif;color:#4b4740;max-width:400px}
+.backNameplate{display:flex;align-items:center;gap:10px}
+.backNameplate img{width:48px;height:48px}
+.backNameplate .wordmark{font-size:40px}
 
 /* front page */
 .front .masthead{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px}
 .mastheadTop{position:relative;z-index:1;background:#fff;white-space:nowrap;width:100%;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #151515;padding-bottom:5px;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#4b4740}
 .mastheadTop span:nth-child(2){color:#c8232c}
-.logo{height:64px;width:auto;display:block;margin:2px 0 0;position:relative;z-index:0}
-.tagline{font:italic 10.5px/1 Georgia,'Times New Roman',serif;color:#1f2a6b}
+.nameplate{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:2px 0}
+.globe{width:58px;min-width:58px;height:58px;display:block;object-fit:contain}
+.wordmark{min-width:0;font:700 48px/1 Georgia,'Times New Roman',serif;letter-spacing:-.03em;white-space:nowrap;text-align:center}
+.wordmark span{color:#1f2a6b}
+.wordmark b{color:#c8232c;font-style:italic}
+.nameplateSide{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid #151515;padding:6px 8px;font:600 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4b4740;white-space:nowrap}
+.nameplateSide strong{font:700 9px/1 Arial,Helvetica,sans-serif;color:#151515}
+.tagline{width:100%;text-align:center;border-top:1px solid #151515;padding-top:5px;font:italic 10.5px/1 Georgia,'Times New Roman',serif;color:#1f2a6b}
 .contentsBar{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;border-top:3px double #151515;border-bottom:1px solid #151515;padding:5px 0;font:600 8px/1.2 Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#3a3732}
 .contentsBar strong{color:#c8232c}
 .contentsBar b{color:#c8232c}
@@ -227,18 +240,15 @@
 .advertiseStrip p{margin:4px 0 0;color:#d9d5cc;font-size:14px}
 .advertiseStrip a{background:#c8232c;color:#fff;border-radius:999px;padding:11px 18px;font:700 13px/1 Arial,Helvetica,sans-serif;white-space:nowrap}
 
-/* Ads inside news pages (adBlock in EpaperBook.tsx): bottom right beside column 1, or across the foot of the page. */
-.adBlock{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:stretch;background:#fff}
-.adBlockSide{border-left:1px solid #e3ded3;padding-left:8px}
-.adBlockSide::before,.adBlockFull::before{content:'';position:absolute;left:8px;right:0;top:-6px;border-top:2px solid #151515}
-.adBlockFull::before{left:0}
-.adBlock .adLabel{height:16px;margin:0;line-height:16px;text-align:left}
-.adBlockRow{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start;gap:12px}
-.adBlockSide .adBlockRow{justify-content:flex-end}
+/* Ads inside news pages (adBlock in EpaperBook.tsx): a framed box across the foot of the page, news above it. */
+.adBlock{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;display:flex;flex-direction:column;align-items:stretch;border:1px solid #151515;padding:8px;background:#faf8f3}
+.adBlock .adLabel{box-sizing:border-box;height:16px;margin:0;line-height:12px;text-align:center;border-bottom:1px solid #d9d3c5;color:#6b665c}
+.adBlockRow{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start;gap:12px;padding-top:0}
 .adBlockItem{margin:0;display:flex;flex-direction:column;align-items:center}
-.adBlockArt{display:block;line-height:0;box-shadow:0 0 0 1px #e3ded3}
+.adBlockArt{display:block;line-height:0;box-shadow:0 0 0 1px #d9d3c5}
 .adBlockArt img{display:block;object-fit:contain;background:#f4f1ea}
 .page .adBlockCta{display:inline-block;margin-top:5px;background:#151515;color:#fff;border-radius:999px;padding:5px 12px;font:700 9px/1 Arial,Helvetica,sans-serif;text-decoration:none;text-indent:0}
+.adBlock .promoter{margin-top:3px;font-size:7.5px;line-height:1.2}
 
 /* Page 2: our own advertising page. */
 .housePage{align-items:center;justify-content:center;text-align:center;padding:20px 38px 40px}

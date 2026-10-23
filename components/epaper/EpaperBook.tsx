@@ -35,20 +35,17 @@ type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[]
 /*
  * Paid ads sit inside news pages, the way a printed paper does it: the ad takes
  * the lower part of the page and the stories run above it and beside it.
- *   - One portrait or square poster: bottom of columns 2–3, column 1 keeps running.
- *   - Two posters (shared bookings) or a landscape ad: across the bottom, full width.
+ *   - Every ad sits in a framed box across the foot of the page, news above it.
+ *   - One poster is centred in the box; two posters (shared bookings) sit side by side.
  * One ad block per page, spread through the news pages. The only full-page ad
  * is our own "Advertise with Webfit News" page on page 2.
  */
 type AdBlock = { id: string; ads: EpaperAd[]; ratios: number[]; full: boolean; w: number; h: number; artH: number };
 
 const FLOW_W = 516;
-const COL_W = 167;
-const GUTTER = 15; // 7px margin + 7px padding + 1px rule
-const SIDE_AD_W = FLOW_W - COL_W - GUTTER; // columns 2–3
 const AD_LABEL_H = 16;
 const AD_CTA_H = 27;
-const AD_MAX_ART_H = 372;
+const AD_MAX_ART_H = 260;
 
 const dateLabel = (iso: string) => new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }).format(new Date(iso));
 
@@ -73,7 +70,7 @@ function img(src: string, alt: string, width: number, ratio?: [number, number]) 
 }
 
 function buildAdBlock(block: AdBlock): HTMLElement {
-  const box = el('aside', `${styles.adBlock} ${block.full ? styles.adBlockFull : styles.adBlockSide}`);
+  const box = el('aside', styles.adBlock);
   box.style.width = `${block.w}px`;
   box.style.height = `${block.h}px`;
   box.append(el('span', styles.adLabel, block.ads.length > 1 ? 'Advertisements' : `${block.ads[0].isElectionAd ? 'Election advertisement' : 'Advertisement'}${block.ads[0].advertiser ? ` · ${block.ads[0].advertiser}` : ''}`));
@@ -96,22 +93,27 @@ function buildAdBlock(block: AdBlock): HTMLElement {
   return box;
 }
 
-/** Size an ad block from the artwork's real shape (posters are never cropped). */
+/**
+ * Size an ad block from the artwork's real shape (posters are never cropped).
+ * Every ad sits in its own framed box across the foot of the page, the way a
+ * printed paper separates advertising from news: one poster is centred in the
+ * box, two posters share it side by side.
+ */
+const AD_BOX_PAD = 8; // inside the frame, all round
+const AD_BOX_CHROME = AD_LABEL_H + AD_BOX_PAD * 2 + 2; // label, padding, 1px frame top and bottom
 function makeBlock(ads: EpaperAd[], ratios: number[]): AdBlock {
   const hasCta = ads.some(a => a.cta);
-  const extra = AD_LABEL_H + (hasCta ? AD_CTA_H : 0);
+  const hasPromoter = ads.some(a => a.isElectionAd && a.promoterStatement);
+  const extra = AD_BOX_CHROME + (hasCta ? AD_CTA_H : 0) + (hasPromoter ? 16 : 0);
+  const inner = FLOW_W - AD_BOX_PAD * 2 - 2;
   if (ads.length > 1) {
-    const each = (FLOW_W - 12) / ads.length;
-    const artH = Math.round(Math.min(AD_MAX_ART_H - 20, ...ratios.map(r => each / r)));
+    const each = (inner - 12 * (ads.length - 1)) / ads.length;
+    const artH = Math.round(Math.min(AD_MAX_ART_H, ...ratios.map(r => each / r)));
     return { id: ads.map(a => a.assignmentId).join('+'), ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
   }
   const r = ratios[0];
-  if (r >= 1.3) {
-    const artH = Math.round(Math.min(300, FLOW_W / r));
-    return { id: ads[0].assignmentId, ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
-  }
-  const artH = Math.round(Math.min(AD_MAX_ART_H, (SIDE_AD_W - 8) / r));
-  return { id: ads[0].assignmentId, ads, ratios, full: false, w: SIDE_AD_W, h: artH + extra, artH };
+  const artH = Math.round(Math.min(r >= 1.3 ? 260 : AD_MAX_ART_H, inner / r));
+  return { id: ads[0].assignmentId, ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
 }
 
 function artRatio(src: string): Promise<number> {
@@ -246,7 +248,12 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
     const item = queue[0];
     const node = build(item);
     col.append(node);
-    if (!overflows(col)) { queue.shift(); lastPlaced = item; continue; }
+    if (!overflows(col)) {
+      // A subheading needs a couple of lines under it in the same column, or it moves on.
+      const room = ch(ci) - (node.offsetTop - col.offsetTop + node.offsetHeight);
+      if (item.t === 'text' && item.k === 'h' && queue.length > 1 && room < 30 && col.children.length > 1) { node.remove(); ci += 1; continue; }
+      queue.shift(); lastPlaced = item; continue;
+    }
     node.remove();
     if (item.t === 'text') {
       const words = item.text.split(' ');
@@ -261,8 +268,8 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
       }
       // A paragraph that is only a word or two too long for the column used to be
       // skipped entirely, leaving the column empty. Carry at least two words over instead.
-      // The "Read the full story at …" line is never split across columns.
-      const take = /^Read the full story at /.test(item.text) ? 0 : Math.min(best, words.length - 2);
+      // Subheadings and the "Read the full story at …" line are never split across columns.
+      const take = /^Read the full story at /.test(item.text) || item.k === 'h' ? 0 : Math.min(best, words.length - 2);
       if (take >= 3) {
         col.append(build({ ...item, text: words.slice(0, take).join(' '), last: false }));
         queue[0] = { ...item, text: words.slice(take).join(' '), first: false, cont: true };
@@ -456,6 +463,13 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
 
       let full = flowColumns(run, colsH, flow, sideLimit);
       const runStory = (run.find(r => r.t === 'text') as Extract<Item, { t: 'text' }> | undefined)?.story;
+      // Only the "Read the full story" line would go overleaf: drop it and end the story here instead.
+      const spill = full.rest.length === 1 ? full.rest[0] : null;
+      const prevText = run[n - 2];
+      if (spill && spill === run[n - 1] && spill.t === 'text' && /^Read the full story at /.test(spill.text) && prevText?.t === 'text') {
+        queue.splice(n - 2, 2, { ...prevText, last: true });
+        continue;
+      }
       // Only a few lines would spill onto the next page: shorten this story's wide photo
       // so the story finishes here, instead of leaving a near-empty page behind it.
       const fig = full.rest.length && runStory ? flow.querySelector<HTMLElement>(`figure[data-story="${runStory.id}"]`) : null;
@@ -515,7 +529,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
     if (!block && houseHalves < HOUSE_HALF_LIMIT && pages.length >= AD_FREE_PAGES) {
       const node = build({ t: 'half', ad: null });
       flow.append(node);
-      if (!overflows(flow)) houseHalves += 1;
+      if (!overflows(flow) && used() + 10 <= H) houseHalves += 1;
       else node.remove();
     }
     close(false);
@@ -563,8 +577,16 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
           <span>{edition.isLive ? 'Live edition · updating as we publish' : edition.title}</span>
           <span>Vol. 1 · No. {edition.number} · Free</span>
         </div>
-        <img className={styles.logo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
-        <div className={styles.tagline}>Independent New Zealand journalism · {edition.storyCount} stories in this edition</div>
+        <div className={styles.nameplate}>
+          <img className={styles.globe} src="/icon-192.png" alt=""/>
+          <div className={styles.wordmark} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div>
+          <div className={styles.nameplateSide}>
+            <strong>{edition.title}</strong>
+            <span>{edition.coverage}</span>
+            <span>{edition.storyCount} stories</span>
+          </div>
+        </div>
+        <div className={styles.tagline}>Independent New Zealand journalism · Member, New Zealand Media Council</div>
         <div className={styles.contentsBar}>
           <strong>Inside</strong>
           {contents.slice(1, 9).map(c => <span key={c.title}>{c.title} <b>{c.page}</b></span>)}
@@ -583,7 +605,7 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
         <span>{page.startsWithContinuation && prevOf ? `Continued from page ${prevOf}` : page.section.kicker}</span>
       </div>
       <div className={styles.pageBrand}>
-        <img src="/webfit-news-logo-400.webp" alt=""/>
+        <div className={styles.pageBrandName}><img src="/icon-192.png" alt=""/><span>Webfit</span> <b>News</b></div>
         <span>{edition.dateline}</span>
       </div>
     </header>
@@ -651,7 +673,7 @@ function BackPageView({ n, edition, shelf, extra }: { n: number; edition: Editio
   const all = [...extra, ...edition.moreStories];
   const more = all.slice(0, 14);
   return <div className={`${styles.page} ${styles.backPage} ${more.length ? styles.backPageList : ''}`}>
-    <img className={styles.backLogo} src="/webfit-news-logo-400.webp" alt="Webfit News"/>
+    <div className={styles.backNameplate}><img src="/icon-192.png" alt=""/><div className={styles.wordmark} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div></div>
     {more.length ? <div className={styles.backMore}>
       <strong>Also this edition on webfitnews.com</strong>
       <ul>{more.map(s => <li key={s.slug}><a href={`/${s.slug}`}>{s.title}</a></li>)}</ul>
