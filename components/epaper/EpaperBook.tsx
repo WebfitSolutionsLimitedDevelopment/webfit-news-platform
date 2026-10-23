@@ -43,8 +43,7 @@ type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[]
 type AdBlock = { id: string; ads: EpaperAd[]; ratios: number[]; full: boolean; w: number; h: number; artH: number };
 
 const FLOW_W = 516;
-const AD_CTA_H = 27;
-const AD_MAX_ART_H = 260;
+const AD_MAX_ART_H = 340;
 
 const dateLabel = (iso: string) => new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }).format(new Date(iso));
 
@@ -68,24 +67,41 @@ function img(src: string, alt: string, width: number, ratio?: [number, number]) 
   return node;
 }
 
+/** Our own "advertise here" panel, used to fill the second half of the foot of a page. */
+const HOUSE_AD: EpaperAd = { assignmentId: 'house', href: '/advertise-media-kit', image: '', alt: 'Advertise in the Webfit News e-paper', advertiser: null, isElectionAd: false, promoterStatement: null, cta: null };
+
 function buildAdBlock(block: AdBlock): HTMLElement {
-  // No shared backdrop: each poster gets its own ruled frame, only as big as the poster.
+  // As in a printed paper: the ads fill the foot of the page, each in its own ruled frame.
   const box = el('aside', styles.adBlock);
   box.style.height = `${block.h}px`;
   box.setAttribute('aria-label', block.ads.length > 1 ? 'Advertisements' : 'Advertisement');
   block.ads.forEach((ad, i) => {
+    const w = Math.round(block.artH * block.ratios[i]);
     const fig = el('figure', styles.adFrame);
-    fig.style.width = `${Math.round(block.artH * block.ratios[i]) + AD_FRAME}px`;
+    fig.style.width = `${w + AD_FRAME}px`;
+    if (ad.assignmentId === 'house') {
+      fig.classList.add(styles.adFrameHouse);
+      fig.style.height = `${block.h}px`;
+      const inner = el('a', styles.adHouse) as HTMLAnchorElement;
+      inner.href = ad.href!;
+      inner.append(el('img', '') as HTMLImageElement);
+      (inner.firstChild as HTMLImageElement).src = '/icon-192.png';
+      (inner.firstChild as HTMLImageElement).alt = '';
+      inner.append(el('strong', '', 'Advertise with Webfit News'));
+      inner.append(el('span', '', 'Your business could be here, next to the stories our readers come for.'));
+      inner.append(el('b', '', 'Book a spot →'));
+      fig.append(inner);
+      box.append(fig);
+      return;
+    }
     fig.dataset.adAssignment = ad.assignmentId;
-    fig.append(el('span', styles.adFrameLabel, ad.isElectionAd ? 'Election advertisement' : 'Advertisement'));
     const a = el(ad.href ? 'a' : 'div', styles.adBlockArt) as HTMLAnchorElement;
     if (ad.href) { a.href = ad.href; a.target = '_blank'; a.rel = 'sponsored noopener'; }
     const im = img(ad.image, ad.alt, 900);
     im.style.height = `${block.artH}px`;
-    im.style.width = `${Math.round(block.artH * block.ratios[i])}px`;
+    im.style.width = `${w}px`;
     a.append(im);
     fig.append(a);
-    if (ad.cta && ad.href) { const c = el('a', styles.adBlockCta, `${ad.cta} →`) as HTMLAnchorElement; c.href = ad.href; c.target = '_blank'; c.rel = 'sponsored noopener'; fig.append(c); }
     if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, ad.promoterStatement));
     box.append(fig);
   });
@@ -94,19 +110,16 @@ function buildAdBlock(block: AdBlock): HTMLElement {
 
 /**
  * Size an ad block from the artwork's real shape (posters are never cropped).
- * Every ad sits in its own framed box across the foot of the page, the way a
- * printed paper separates advertising from news: one poster is centred in the
- * box, two posters share it side by side.
+ * Like the printed papers: a landscape ad runs the full width of the page foot;
+ * portrait posters go two side by side, filling the width.
  */
-const AD_FRAME = 12; // 5px padding + 1px rule, each side
-const AD_FRAME_LABEL_H = 14;
-const AD_GAP = 14;
+const AD_FRAME = 10; // 4px padding + 1px rule, each side
+const AD_GAP = 12;
 function makeBlock(ads: EpaperAd[], ratios: number[]): AdBlock {
-  const hasCta = ads.some(a => a.cta && a.href);
   const hasPromoter = ads.some(a => a.isElectionAd && a.promoterStatement);
-  const extra = AD_FRAME + AD_FRAME_LABEL_H + (hasCta ? AD_CTA_H : 0) + (hasPromoter ? 22 : 0);
+  const extra = AD_FRAME + (hasPromoter ? 18 : 0);
   const each = (FLOW_W - AD_GAP * (ads.length - 1)) / ads.length - AD_FRAME;
-  const cap = ads.length === 1 && ratios[0] >= 1.3 ? 240 : AD_MAX_ART_H;
+  const cap = ads.length === 1 ? 300 : AD_MAX_ART_H;
   const artH = Math.round(Math.min(cap, ...ratios.map(r => each / r)));
   return { id: ads.map(a => a.assignmentId).join('+'), ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
 }
@@ -122,14 +135,32 @@ function artRatio(src: string): Promise<number> {
   });
 }
 
-/** Paid bookings as ad blocks, most important first: full-page bookings, then shared pairs, then half pages. */
+/**
+ * Paid bookings as ad blocks, most important first. A landscape ad gets the page
+ * foot to itself; portrait posters are paired two to a page (never two election
+ * ads together), and a poster left over is paired with our own "advertise here" panel.
+ */
 async function adBlocks(edition: Edition): Promise<AdBlock[]> {
-  const groups: EpaperAd[][] = [
-    ...edition.fullPageAds.map(a => [a]),
-    ...edition.sharedPageAds.reduce<EpaperAd[][]>((acc, a, i) => { if (i % 2 === 0) acc.push([a]); else acc[acc.length - 1].push(a); return acc; }, []),
-    ...edition.halfPageAds.map(a => [a]),
-  ];
-  return Promise.all(groups.map(async ads => makeBlock(ads, await Promise.all(ads.map(a => artRatio(a.image))))));
+  const all = [...edition.fullPageAds, ...edition.sharedPageAds, ...edition.halfPageAds];
+  const ratios = await Promise.all(all.map(a => artRatio(a.image)));
+  const used = new Set<number>();
+  const out: AdBlock[] = [];
+  all.forEach((ad, i) => {
+    if (used.has(i)) return;
+    used.add(i);
+    if (ratios[i] >= 1.3) { out.push(makeBlock([ad], [ratios[i]])); return; }
+    const j = all.findIndex((o, k) => !used.has(k) && ratios[k] < 1.3 && !(o.isElectionAd && ad.isElectionAd));
+    if (j >= 0) { used.add(j); out.push(makeBlock([ad, all[j]], [ratios[i], ratios[j]])); }
+    else out.push(makeBlock([ad, HOUSE_AD], [ratios[i], ratios[i]]));
+  });
+  // Keep election ads apart: never on facing pages, so no two in neighbouring blocks.
+  const political = (b: AdBlock) => b.ads.some(a => a.isElectionAd);
+  for (let i = 1; i < out.length; i += 1) {
+    if (!political(out[i]) || !political(out[i - 1])) continue;
+    const k = out.findIndex((b, x) => x > i && !political(b));
+    if (k > 0) [out[i], out[k]] = [out[k], out[i]];
+  }
+  return out;
 }
 
 function build(item: Item): HTMLElement {
