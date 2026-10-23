@@ -87,7 +87,7 @@
 .sectionGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
 .sectionSide{display:flex;flex-direction:column;gap:24px;min-width:0}
 .sectionAd{display:flex;justify-content:center}
-.sectionAd aside{position:static;width:100%;max-width:420px;margin:0}
+.sectionAd aside{display:block;position:static;width:100%;max-width:420px;margin:0}
 .sectionAd aside img{max-height:560px;object-fit:contain}
 .editorialBand :global(.story-card){border-color:rgba(17,17,15,.3)}
 .editorialBand :global(.story-image){background:rgba(255,255,255,.3)}
