@@ -115,11 +115,11 @@ function buildAdBlock(block: AdBlock): HTMLElement {
  */
 const AD_FRAME = 10; // 4px padding + 1px rule, each side
 const AD_GAP = 12;
-function makeBlock(ads: EpaperAd[], ratios: number[]): AdBlock {
+function makeBlock(ads: EpaperAd[], ratios: number[], maxArtH?: number): AdBlock {
   const hasPromoter = ads.some(a => a.isElectionAd && a.promoterStatement);
   const extra = AD_FRAME + (hasPromoter ? 18 : 0);
   const each = (FLOW_W - AD_GAP * (ads.length - 1)) / ads.length - AD_FRAME;
-  const cap = ads.length === 1 ? 300 : AD_MAX_ART_H;
+  const cap = maxArtH ?? (ads.length === 1 ? 300 : AD_MAX_ART_H);
   const artH = Math.round(Math.min(cap, ...ratios.map(r => each / r)));
   return { id: ads.map(a => a.assignmentId).join('+'), ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
 }
@@ -315,18 +315,30 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
   return { band, rest: queue, endsStory: !queue.length && Boolean(lastPlaced && lastPlaced.t === 'text' && lastPlaced.last) };
 }
 
-function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pages: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[] } {
+function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEWS_PAGES: number): { pages: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[] } {
   const pages: FlowPage[] = [];
   let houseHalves = 0;
-  // Which news page each ad block aims for: spread evenly over the desk pages (front page stays clean).
-  // Pages 1 to AD_FREE_PAGES are news only; ads are spread over the news pages after them.
+  // The front page carries a strip of up to three posters at its foot, taken from the most important
+  // non-election bookings (election ads stay off the front, next to whatever the lead story is).
+  const frontPicks: number[] = [];
+  let frontCount = 0;
+  allBlocks.forEach((b, i) => {
+    const real = b.ads.filter(a => a.assignmentId !== 'house').length;
+    const portrait = b.ratios.every(r => r < 1.3);
+    if (!b.ads.some(a => a.isElectionAd) && portrait && frontCount + real <= 3) { frontPicks.push(i); frontCount += real; }
+  });
+  const frontAds = frontPicks.flatMap(i => allBlocks[i].ads.map((a, k) => ({ a, r: allBlocks[i].ratios[k] }))).filter(x => x.a.assignmentId !== 'house');
+  const frontBlock = frontAds.length ? makeBlock(frontAds.map(x => x.a), frontAds.map(x => x.r), FRONT_AD_ART_H) : null;
+  const blocks = allBlocks.filter((_, i) => !frontPicks.includes(i));
+  // Which news page each other ad block aims for: spread evenly over the desk pages.
+  // Pages 1 to AD_FREE_PAGES (after the front) are news only; ads are spread over the news pages after them.
   const adPages = NEWS_PAGES + 1 - AD_FREE_PAGES;
   const targets = blocks.slice(0, adPages).map((b, i) => ({ block: b, at: AD_FREE_PAGES + Math.floor((i * adPages) / Math.min(blocks.length, adPages)) }));
   const placedBlocks = new Set<string>();
   const placed = new Set<string>();
   const shortTries = new Map<string, number>();
 
-  // 12 pages in all: front, desk pages, full-page ads, back.
+  // TOTAL_PAGES in all: front, desk pages, back page, our advertising page.
   const STORY_PAGES = NEWS_PAGES;
   // Page quota per desk: STORY_PAGES shared out in proportion to each desk's stories (at least one each).
   const deskSizes = edition.sections.map((sec, i) => (i === 0 ? 0 : sec.stories.length));
@@ -362,7 +374,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       const front = !frontUsed;
       frontUsed = true;
       H = front ? FRONT_FLOW_H : PAGE_FLOW_H;
-      block = front ? null : targets.find(t => t.at <= pages.length && !placedBlocks.has(t.block.id))?.block || null;
+      block = front ? frontBlock : targets.find(t => t.at <= pages.length && !placedBlocks.has(t.block.id))?.block || null;
       if (block) placedBlocks.add(block.id);
       Htop = block ? H - block.h - 18 : H; // room for the news box rule and a gap above the ads
       flow = el('div', styles.flow);
@@ -389,7 +401,8 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
     // started on this page is taken out again (it goes to the back-page list).
     const nextPage = (midStory: boolean) => {
       if (pageNo + 1 >= quota) {
-        if (snap && snap.page === pageNo && snap.children > 0) {
+        // The front page always finishes its story on the front: shorten it rather than run on to a near-empty page 2.
+        if (snap && snap.page === pageNo && (snap.children > 0 || isFront)) {
           while (flow.children.length > snap.children) flow.lastElementChild!.remove();
           placed.delete(snap.storyId);
           const id = snap.storyId;
@@ -402,10 +415,11 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
           const tries = (shortTries.get(id) || 0) + 1;
           shortTries.set(id, tries);
           const textBlocks = story.blocks.filter(bk => !/^Read the full story at /.test(bk.t));
-          const keep = Math.max(1, Math.floor(textBlocks.length / (2 ** tries)));
-          if (Htop - used() >= 150 && tries <= 4) {
-            const short: EpaperFullStory = { ...story, image: tries > 1 ? null : story.image, blocks: [...textBlocks.slice(0, keep), { k: 'p' as const, t: `Read the full story at webfitnews.com/${story.slug}` }] };
-            queue.splice(firstIdx, 0, ...storyItems(short, false, false));
+          // Front page: drop one paragraph at a time and keep the photo. Elsewhere: halve it.
+          const keep = isFront ? Math.max(1, textBlocks.length - tries) : Math.max(1, Math.floor(textBlocks.length / (2 ** tries)));
+          if (Htop - used() >= 150 && tries <= (isFront ? textBlocks.length : 4)) {
+            const short: EpaperFullStory = { ...story, image: tries > 1 && !isFront ? null : story.image, blocks: [...textBlocks.slice(0, keep), { k: 'p' as const, t: `Read the full story at webfitnews.com/${story.slug}` }] };
+            queue.splice(firstIdx, 0, ...storyItems(short, isFront, isFront));
           }
           return 'skip' as const;
         }
@@ -442,7 +456,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
           // The image fills the frame (object-fit: cover) with the top kept, so nothing is chopped off mid-face.
           const photo = nodes[1].querySelector('img') as HTMLImageElement | null;
           const room = Math.floor(Htop - (used() - nodes[1].offsetHeight) - minAfter - 12);
-          if (photo && room >= 150) {
+          if (photo && room >= (isFront ? 120 : 150)) {
             photo.style.aspectRatio = 'auto';
             photo.style.height = `${room}px`;
             fits = !overflows(flow) && used() <= Htop && Htop - used() >= minAfter;
@@ -460,7 +474,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
         // A story that opens a page but has no room for any text above this page's ad:
         // move the ad on to the next page rather than leave a headline with no story under it.
         const pageAd = block as AdBlock | null;
-        if (!fits && needsText && flow.children.length === nodes.length && pageAd) {
+        if (!fits && needsText && flow.children.length === nodes.length && pageAd && !isFront) {
           placedBlocks.delete(pageAd.id);
           block = null;
           Htop = H;
@@ -565,13 +579,17 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
     close(false);
   });
   const dropped = edition.sections.flatMap(sec => sec.stories).filter(st => !placed.has(st.id)).map(st => ({ title: st.title, slug: st.slug }));
-  return { pages, dropped, unplaced: blocks.filter(b => !placedBlocks.has(b.id)) };
+  const unplaced = blocks.filter(b => !placedBlocks.has(b.id));
+  if (frontBlock && !placedBlocks.has(frontBlock.id)) unplaced.unshift(...frontPicks.map(i => allBlocks[i]));
+  return { pages, dropped, unplaced };
 }
 
-/** The first pages of the paper are news only: no paid ads, no "advertise here" panels. */
-const AD_FREE_PAGES = 3;
-/** News pages after the front page: front + 9 + back page + our advertising page = 12 pages. */
-const NEWS_PAGES = 9;
+/** Page 2 is news only: no paid ads, no "advertise here" panels. (The front page has its own ad strip.) */
+const AD_FREE_PAGES = 2;
+/** Every edition is this many pages, like the printed community weeklies. */
+export const TOTAL_PAGES = 20;
+/** Height of the poster art in the front page's ad strip (inside pages allow up to AD_MAX_ART_H). */
+const FRONT_AD_ART_H = 210;
 
 function assemble(flow: FlowPage[], unplaced: AdBlock[]): BookPage[] {
   const out: BookPage[] = [...flow];
@@ -741,7 +759,22 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       if (!host || cancelled) return;
       const blocks = await adBlocks(edition);
       if (cancelled) return;
-      const { pages: flow, dropped, unplaced } = paginate(edition, host, blocks);
+      // Aim for exactly TOTAL_PAGES. Desk pages are filled to a quota, but a desk can end early or a
+      // story can run one page over, so lay out again with the quota corrected (at most 4 passes).
+      let newsPages = TOTAL_PAGES - 3; // the front, the back page and our advertising page are the other 3
+      let best: { flow: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[]; total: number } | null = null;
+      for (let pass = 0; pass < 4 && !cancelled; pass += 1) {
+        const r = paginate(edition, host, blocks, newsPages);
+        const total = assemble(r.pages, r.unplaced).length;
+        const better = !best || (total <= TOTAL_PAGES && (best.total > TOTAL_PAGES || total > best.total)) || (best.total > TOTAL_PAGES && total < best.total);
+        if (better) best = { flow: r.pages, dropped: r.dropped, unplaced: r.unplaced, total };
+        if (total === TOTAL_PAGES) break;
+        newsPages += TOTAL_PAGES - total;
+        if (newsPages < 1) break;
+        await new Promise(res => setTimeout(res, 0)); // let the page breathe between passes
+      }
+      if (cancelled || !best) return;
+      const { flow, dropped, unplaced } = best;
       host.replaceChildren();
       const book = assemble(flow, unplaced);
 

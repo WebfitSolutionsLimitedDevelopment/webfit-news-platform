@@ -18,7 +18,7 @@ import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
  * changeover week, when the newest released edition is still a twice-weekly one,
  * /epaper keeps showing the first weekly edition as it fills, as before.
  * The shelf shows editions from the last EPAPER_WINDOW_DAYS days; every edition since launch stays readable at /epaper/<date> and is listed at /epaper/archive.
- * Each edition is a 12-page paper: the front-page story, then desk pages
+ * Each edition is a 20-page paper: the front-page story, then desk pages
  * per desk (DESKS) carrying that desk's strongest stories, trimmed to fit, each
  * ending with a link to the full story. Stories that don't make the paper are
  * listed on the back page.
@@ -36,8 +36,8 @@ export const WEEKLY_FROM = '2026-10-22';
 const RELEASE_HOUR = 6;
 /** Words printed per desk page, and per story. Tuned so each desk fills about one page. */
 const PAGE_WORDS = 400;
-/** Story pages to aim for (with the front, ad and back pages: 12). */
-const STORY_PAGES = 9;
+/** Story pages to aim for (with the front, back and advertising pages: 20, see TOTAL_PAGES in EpaperBook). */
+const STORY_PAGES = 17;
 const LEAD_WORDS = 260;
 const STORY_WORDS = 130;
 const MIN_STORY_WORDS = 60;
