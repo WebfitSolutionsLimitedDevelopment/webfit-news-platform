@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
+import { useReadingGate } from './useReadingGate';
 
 /** The newsroom CMS and sign-in pages never load ads or analytics. */
 const PRIVATE_PATHS = /^\/(admin|login)(\/|$)/;
@@ -17,26 +18,12 @@ const GA_MEASUREMENT_ID = 'G-YP1WWRYGHY';
  * site uncacheable; the browser can check its own user agent instead.
  */
 /**
- * AdSense Auto ads are loaded only once the reader starts using the page
- * (scrolls, taps or presses a key). Loaded straight away, they dropped a
- * 280px ad above the headline after it had painted, pushing the story down
- * (CLS ~0.2, Google's limit is 0.1) and adding ~350 KB of script to the
- * first load. Once the reader has scrolled, the browser keeps what they are
- * reading in place when the ad is inserted above it.
+ * AdSense Auto ads (including Google's anchor bar and full-screen vignette)
+ * load only after 10 seconds of reading with the tab visible, and only once
+ * the reader has scrolled, tapped or pressed a key (useReadingGate). Loaded
+ * at once they covered the opening screen; loaded before any interaction they
+ * pushed the story down (CLS ~0.2, Google's limit is 0.1).
  */
-function useAfterFirstInteraction(enabled: boolean) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    if (!enabled) return;
-    const events = ['scroll', 'pointerdown', 'touchstart', 'keydown'] as const;
-    const go = () => { setReady(true); events.forEach(e => window.removeEventListener(e, go)); };
-    if (window.scrollY > 0) { go(); return; }
-    events.forEach(e => window.addEventListener(e, go, { passive: true, once: true }));
-    return () => events.forEach(e => window.removeEventListener(e, go));
-  }, [enabled]);
-  return ready;
-}
-
 export function ThirdPartyScripts() {
   const pathname = usePathname() || '';
   const isPrivate = PRIVATE_PATHS.test(pathname);
@@ -50,7 +37,7 @@ export function ThirdPartyScripts() {
     // The same goes for the e-paper: Google's anchor and in-page ads would sit on top of the flipbook.
     if (adFree && document.querySelector('script[src*="adsbygoogle"]')) window.location.reload();
   }, [isPrivate, adFree]);
-  const adsReady = useAfterFirstInteraction(load && !adFree);
+  const adsReady = useReadingGate(load && !adFree);
   if (!load) return null;
   return <>
     <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive"/>

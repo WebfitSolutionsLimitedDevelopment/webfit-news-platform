@@ -5,15 +5,14 @@ import { clickHref, sendEvent } from './AdUnit';
 import { resizedImage } from '@/lib/image-url';
 import styles from './AdSpotlight.module.css';
 import { AdLightbox } from './AdLightbox';
+import { useReadingGate } from './useReadingGate';
 
-/** Wait this long after the page opens, then slide in. */
-const SHOW_AFTER_MS = 3000;
 /** Stay up this long (paused while the reader hovers or focuses it), then slide away. */
 const STAY_MS = 12000;
 
 /**
- * Short-lived promotion: a card slides into the bottom corner a few seconds
- * after the page opens, stays briefly, then slides away by itself. Once per
+ * Short-lived promotion: a card slides into the bottom corner once the reader
+ * has read for 10 seconds and scrolled or tapped (useReadingGate), stays briefly, then slides away by itself. Once per
  * ad per browser session, and the reader can close it. It never covers the
  * story text on desktop, and on phones it is a slim bar along the bottom.
  */
@@ -24,13 +23,13 @@ export function AdSpotlight({ ads }: { ads: LiveAd[] }) {
   const [big, setBig] = useState(false);
   const counted = useRef(false);
   const seenKey = ad ? `wf-spotlight-${ad.assignment_id}` : '';
+  const readEnough = useReadingGate(Boolean(ad));
 
   useEffect(() => {
-    if (!ad) return;
+    if (!ad || !readEnough) return;
     try { if (sessionStorage.getItem(seenKey)) return; } catch {}
-    const timer = setTimeout(() => setPhase('in'), SHOW_AFTER_MS);
-    return () => clearTimeout(timer);
-  }, [ad, seenKey]);
+    setPhase('in');
+  }, [ad, seenKey, readEnough]);
 
   useEffect(() => {
     if (phase !== 'in' || !ad) return;
