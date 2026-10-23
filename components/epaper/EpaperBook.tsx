@@ -29,7 +29,7 @@ type Item =
   | { t: 'text'; story: EpaperFullStory; k: string; text: string; first: boolean; last: boolean; cont: boolean }
   | { t: 'half'; ad: EpaperAd | null };
 
-type FlowPage = { kind: 'flow'; front: boolean; section: EditionSection; html: string; lastStoryId: string | null; startsWithContinuation: boolean; endsMidStory: boolean };
+type FlowPage = { kind: 'flow'; front: boolean; section: EditionSection; html: string; lastStoryId: string | null; startsWithContinuation: boolean; endsMidStory: boolean; newsH: number };
 type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[] } | { kind: 'back' };
 
 /*
@@ -43,7 +43,6 @@ type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[]
 type AdBlock = { id: string; ads: EpaperAd[]; ratios: number[]; full: boolean; w: number; h: number; artH: number };
 
 const FLOW_W = 516;
-const AD_LABEL_H = 16;
 const AD_CTA_H = 27;
 const AD_MAX_ART_H = 260;
 
@@ -70,14 +69,15 @@ function img(src: string, alt: string, width: number, ratio?: [number, number]) 
 }
 
 function buildAdBlock(block: AdBlock): HTMLElement {
+  // No shared backdrop: each poster gets its own ruled frame, only as big as the poster.
   const box = el('aside', styles.adBlock);
-  box.style.width = `${block.w}px`;
   box.style.height = `${block.h}px`;
-  box.append(el('span', styles.adLabel, block.ads.length > 1 ? 'Advertisements' : `${block.ads[0].isElectionAd ? 'Election advertisement' : 'Advertisement'}${block.ads[0].advertiser ? ` · ${block.ads[0].advertiser}` : ''}`));
-  const row = el('div', styles.adBlockRow);
+  box.setAttribute('aria-label', block.ads.length > 1 ? 'Advertisements' : 'Advertisement');
   block.ads.forEach((ad, i) => {
-    const fig = el('figure', styles.adBlockItem);
+    const fig = el('figure', styles.adFrame);
+    fig.style.width = `${Math.round(block.artH * block.ratios[i]) + AD_FRAME}px`;
     fig.dataset.adAssignment = ad.assignmentId;
+    fig.append(el('span', styles.adFrameLabel, ad.isElectionAd ? 'Election advertisement' : 'Advertisement'));
     const a = el(ad.href ? 'a' : 'div', styles.adBlockArt) as HTMLAnchorElement;
     if (ad.href) { a.href = ad.href; a.target = '_blank'; a.rel = 'sponsored noopener'; }
     const im = img(ad.image, ad.alt, 900);
@@ -86,10 +86,9 @@ function buildAdBlock(block: AdBlock): HTMLElement {
     a.append(im);
     fig.append(a);
     if (ad.cta && ad.href) { const c = el('a', styles.adBlockCta, `${ad.cta} →`) as HTMLAnchorElement; c.href = ad.href; c.target = '_blank'; c.rel = 'sponsored noopener'; fig.append(c); }
-    if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, block.ads.length > 1 ? `Election advertisement. ${ad.promoterStatement}` : ad.promoterStatement));
-    row.append(fig);
+    if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, ad.promoterStatement));
+    box.append(fig);
   });
-  box.append(row);
   return box;
 }
 
@@ -99,21 +98,17 @@ function buildAdBlock(block: AdBlock): HTMLElement {
  * printed paper separates advertising from news: one poster is centred in the
  * box, two posters share it side by side.
  */
-const AD_BOX_PAD = 8; // inside the frame, all round
-const AD_BOX_CHROME = AD_LABEL_H + AD_BOX_PAD * 2 + 2; // label, padding, 1px frame top and bottom
+const AD_FRAME = 12; // 5px padding + 1px rule, each side
+const AD_FRAME_LABEL_H = 14;
+const AD_GAP = 14;
 function makeBlock(ads: EpaperAd[], ratios: number[]): AdBlock {
-  const hasCta = ads.some(a => a.cta);
+  const hasCta = ads.some(a => a.cta && a.href);
   const hasPromoter = ads.some(a => a.isElectionAd && a.promoterStatement);
-  const extra = AD_BOX_CHROME + (hasCta ? AD_CTA_H : 0) + (hasPromoter ? 16 : 0);
-  const inner = FLOW_W - AD_BOX_PAD * 2 - 2;
-  if (ads.length > 1) {
-    const each = (inner - 12 * (ads.length - 1)) / ads.length;
-    const artH = Math.round(Math.min(AD_MAX_ART_H, ...ratios.map(r => each / r)));
-    return { id: ads.map(a => a.assignmentId).join('+'), ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
-  }
-  const r = ratios[0];
-  const artH = Math.round(Math.min(r >= 1.3 ? 260 : AD_MAX_ART_H, inner / r));
-  return { id: ads[0].assignmentId, ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
+  const extra = AD_FRAME + AD_FRAME_LABEL_H + (hasCta ? AD_CTA_H : 0) + (hasPromoter ? 22 : 0);
+  const each = (FLOW_W - AD_GAP * (ads.length - 1)) / ads.length - AD_FRAME;
+  const cap = ads.length === 1 && ratios[0] >= 1.3 ? 240 : AD_MAX_ART_H;
+  const artH = Math.round(Math.min(cap, ...ratios.map(r => each / r)));
+  return { id: ads.map(a => a.assignmentId).join('+'), ads, ratios, full: true, w: FLOW_W, h: artH + extra, artH };
 }
 
 function artRatio(src: string): Promise<number> {
@@ -338,7 +333,7 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
       H = front ? FRONT_FLOW_H : PAGE_FLOW_H;
       block = front ? null : targets.find(t => t.at <= pages.length && !placedBlocks.has(t.block.id))?.block || null;
       if (block) placedBlocks.add(block.id);
-      Htop = block ? H - block.h - 10 : H;
+      Htop = block ? H - block.h - 18 : H; // room for the news box rule and a gap above the ads
       flow = el('div', styles.flow);
       flow.style.height = `${H}px`;
       flow.dataset.front = front ? '1' : '';
@@ -351,8 +346,12 @@ function paginate(edition: Edition, host: HTMLElement, blocks: AdBlock[]): { pag
     }, 0);
     const close = (endsMidStory: boolean) => {
       if (!flow.children.length) { if (block) placedBlocks.delete(block.id); return; }
+      // The news sits in its own ruled box: down to the ad (or our panel), or to the end of the text.
+      const house = flow.querySelector(`.${styles.houseHalfIn}`);
+      const textEnd = Array.from(flow.children).filter(c => c !== house).reduce((m, c) => Math.max(m, (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight), 0);
+      const newsH = block ? Htop : house ? H - 260 : Math.min(H, Math.ceil(textEnd));
       if (block) flow.append(buildAdBlock(block));
-      pages.push({ kind: 'flow', front: flow.dataset.front === '1', section, html: flow.innerHTML, lastStoryId, startsWithContinuation, endsMidStory });
+      pages.push({ kind: 'flow', front: flow.dataset.front === '1', section, html: flow.innerHTML, lastStoryId, startsWithContinuation, endsMidStory, newsH });
     };
 
     // Move to the next page of this desk. On the desk's last page, a story that
@@ -567,7 +566,10 @@ function Folio({ n, label, note, edition }: { n: number; label: string; note?: s
 function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: FlowPage; n: number; edition: Edition; contents: Array<{ title: string; page: number }>; nextOf: number | null; prevOf: number | null }) {
   const continuesTitle = page.endsMidStory && page.lastStoryId ? page.section.stories.find(s => s.id === page.lastStoryId)?.title : null;
   const note = continuesTitle && nextOf ? `“${continuesTitle.length > 48 ? `${continuesTitle.slice(0, 46)}…` : continuesTitle}” continues on page ${nextOf}` : undefined;
-  const flow = <div className={styles.flow} style={{ height: page.front ? FRONT_FLOW_H : PAGE_FLOW_H }} dangerouslySetInnerHTML={{ __html: page.html }}/>;
+  const flow = <div className={styles.flowWrap}>
+    <div aria-hidden="true" className={`${styles.newsFrame} ${page.front ? styles.newsFrameFront : ''}`} style={{ height: page.newsH + 14 }}/>
+    <div className={styles.flow} style={{ height: page.front ? FRONT_FLOW_H : PAGE_FLOW_H }} dangerouslySetInnerHTML={{ __html: page.html }}/>
+  </div>;
 
   if (page.front) {
     return <div className={`${styles.page} ${styles.front}`}>
