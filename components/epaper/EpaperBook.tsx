@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type { Edition, EditionSection, EpaperAd, EpaperFullStory, EditionSummary } from '@/lib/epaper';
 import { resizedImage } from '@/lib/image-url';
 import { EpaperViewer, PAGE_H, PAGE_W } from './EpaperViewer';
+import { StoryReader, type ReaderStory } from './StoryReader';
 import styles from './Epaper.module.css';
 
 /*
@@ -896,9 +897,32 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
     return () => { cancelled = true; };
   }, [edition, shelf]);
 
+  // Story view: a tapped headline opens the story as a phone-sized article over the page.
+  const readerStories = useMemo<ReaderStory[]>(() => {
+    const seen = new Set<string>();
+    const list: ReaderStory[] = [];
+    edition.sections.forEach((sec, i) => {
+      for (const st of sec.stories) if (!seen.has(st.slug)) { seen.add(st.slug); list.push({ slug: st.slug, title: st.title, section: i === 0 ? 'Front page' : sec.title, image: st.image }); }
+    });
+    for (const st of edition.moreStories) if (!seen.has(st.slug)) { seen.add(st.slug); list.push({ slug: st.slug, title: st.title, section: 'Also this edition', image: null }); }
+    return list;
+  }, [edition]);
+  const [reading, setReading] = useState<string | null>(null);
+  const openStory = (e: ReactMouseEvent) => {
+    const a = (e.target as HTMLElement).closest?.('a[href^="/"]') as HTMLAnchorElement | null;
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const slug = (a.getAttribute('href') || '').slice(1).split(/[?#]/)[0];
+    if (!readerStories.some(st => st.slug === slug)) return;
+    e.preventDefault();
+    setReading(slug);
+  };
+
   return <>
     {/* Off-screen measuring room: same width and styles as a real page. */}
     <div aria-hidden="true" className={styles.measure} style={{ width: PAGE_W, height: PAGE_H }}><div className={styles.page}><div ref={hostRef}/></div></div>
-    {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} shareHref={edition.href}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
+    <div onClickCapture={openStory}>
+      {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} shareHref={edition.href}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
+    </div>
+    <StoryReader stories={readerStories} openSlug={reading} onClose={() => setReading(null)} editionLabel={`${edition.title} · ${edition.coverage}`}/>
   </>;
 }

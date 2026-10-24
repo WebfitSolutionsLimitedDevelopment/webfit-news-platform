@@ -362,3 +362,4 @@
 .sudokuMini span{min-height:0;font:500 5.6px/1 'WN Body',Arial,sans-serif;border-color:#d0c9ba}
 .sudokuMini span[data-c="2"],.sudokuMini span[data-c="5"]{border-right-width:1px;border-right-color:#151515}
 .sudokuMini span[data-r="2"],.sudokuMini span[data-r="5"]{border-bottom-width:1px;border-bottom-color:#151515}
+.shareStrong{font-weight:700!important;color:#0b6b35!important}

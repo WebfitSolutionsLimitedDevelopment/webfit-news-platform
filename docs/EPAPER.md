@@ -44,3 +44,8 @@ Migration `supabase/migrations/20261007_auto_categorise_and_epaper.sql`:
 - The first run backfills every uncategorised story (282 when this was written).
 - To tune: edit `category_rules.keywords` / `weight`. To preview a story's scores: `select * from score_article_categories('<article id>');`
 - To undo auto categories: `delete from article_categories where assigned_by = 'auto';` and `select cron.unschedule('auto-categorise-stories');`
+
+## Story view, page pictures and advertiser reports (Oct 2026)
+- **Story view** (`components/epaper/StoryReader.tsx`): tapping a headline on any page opens the full story as a phone-sized article over the e-paper (text sizes A/A/A, remembered; swipe or Previous/Next for the next story in the edition; Esc or × back to the page; WhatsApp share and "Open on webfitnews.com"). Text comes from `/api/epaper/story/<slug>` (published stories only, cached 5 minutes). Ctrl/⌘-click still opens the website.
+- **This page as a picture** (Share menu in `EpaperViewer.tsx`): makes a PNG of the page being read (`html-to-image`, loaded only when used) and hands it to the phone's share sheet (pick WhatsApp), or on a computer downloads it and opens WhatsApp with the link. Photos that can't be read become blank rather than stopping the picture.
+- **Advertiser report**: `https://webfitnews.com/ad-report/<ad_campaigns.report_token>`, one private link per campaign, from `ad_campaign_report()` (security definer; totals for that campaign only: seen, opened full size, clicks, click rate, website vs e-paper, by position, week by week, phones vs computers). Not indexed. Get links with: `select advertiser_name, campaign_name, 'https://webfitnews.com/ad-report/' || report_token from ad_campaigns;`

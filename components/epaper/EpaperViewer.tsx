@@ -253,12 +253,53 @@ export function EpaperViewer({ pages, title, shareHref }: { pages: Page[]; title
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, [shareOpen]);
-  const share = async () => {
+  // The menu opens everywhere now, so phones also get "this page as a picture".
+  const share = () => setShareOpen(o => !o);
+  const shareLinkNative = async () => {
+    setShareOpen(false);
     const url = shareUrl();
-    if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+    if (navigator.share) {
       try { await navigator.share({ title, text: shareText, url }); return; } catch (e) { if ((e as Error)?.name === 'AbortError') return; }
     }
-    setShareOpen(o => !o);
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`, '_blank', 'noopener');
+  };
+
+  // The page being read, as a picture (PNG), for WhatsApp: people forward pictures far more than links.
+  // On phones it goes straight to the share sheet (pick WhatsApp); on computers it downloads and opens WhatsApp with the link.
+  const [picturing, setPicturing] = useState(false);
+  const sharePicture = async () => {
+    setShareOpen(false);
+    const el = stageRef.current?.querySelector(`[data-page="${index}"]`) as HTMLElement | null;
+    if (!el || picturing) return;
+    setPicturing(true);
+    setShareNote('Making a picture of this page…');
+    const url = shareUrl();
+    const text = `${title}, page ${index + 1}. Read the whole paper: ${url}`;
+    try {
+      const { toBlob } = await import('html-to-image');
+      const blob = await toBlob(el, {
+        width: PAGE_W, height: PAGE_H, pixelRatio: 2, backgroundColor: '#ffffff',
+        style: { transform: 'none', transformOrigin: '0 0' },
+        // A photo that can't be read (another site without permission) becomes blank rather than stopping the picture.
+        imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+      });
+      if (!blob) throw new Error('no picture');
+      const file = new File([blob], `webfit-news-epaper-page-${index + 1}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], text, title }); setShareNote(null); return; } catch (e) { if ((e as Error)?.name === 'AbortError') { setShareNote(null); return; } }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      setShareNote('Picture saved to your downloads. Attach it in WhatsApp.');
+    } catch {
+      setShareNote('Couldn’t make the picture. Sharing the link instead.');
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    } finally {
+      setPicturing(false);
+      setTimeout(() => setShareNote(null), 4000);
+    }
   };
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(shareUrl()); setShareNote('Link copied'); }
@@ -279,7 +320,7 @@ export function EpaperViewer({ pages, title, shareHref }: { pages: Page[]; title
   const renderPage = (i: number | undefined, extra = '') => {
     if (i === undefined || i < 0 || i >= count) return <div className={`${styles.sheet} ${styles.sheetBlank} ${extra}`} style={pageBox}/>;
     return <div className={`${styles.sheet} ${extra}`} style={pageBox} aria-label={`Page ${i + 1}: ${pages[i].label}`}>
-      <div className={styles.sheetInner} style={{ width: PAGE_W, height: PAGE_H, transform: `scale(${s})` }}>{pages[i].node}</div>
+      <div className={styles.sheetInner} data-page={i} style={{ width: PAGE_W, height: PAGE_H, transform: `scale(${s})` }}>{pages[i].node}</div>
     </div>;
   };
 
@@ -349,7 +390,9 @@ export function EpaperViewer({ pages, title, shareHref }: { pages: Page[]; title
       <span className={styles.shareWrap} data-share>
         <button type="button" className={styles.shareButton} onClick={share} aria-expanded={shareOpen} aria-haspopup="true">Share ↗</button>
         {shareOpen ? <span className={styles.shareMenu} role="menu">
-          <a role="menuitem" href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl()}`)}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>WhatsApp</a>
+          <button type="button" role="menuitem" onClick={sharePicture} className={styles.shareStrong}>This page as a picture (WhatsApp)</button>
+          <a role="menuitem" href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl()}`)}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>WhatsApp link</a>
+          {typeof navigator !== 'undefined' && 'share' in navigator ? <button type="button" role="menuitem" onClick={shareLinkNative}>More apps…</button> : null}
           <a role="menuitem" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl())}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>Facebook</a>
           <a role="menuitem" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl())}&text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener" onClick={() => setShareOpen(false)}>X</a>
           <a role="menuitem" href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl()}`)}`} onClick={() => setShareOpen(false)}>Email</a>
