@@ -5,6 +5,7 @@ import type { Edition, EditionSection, EpaperAd, EpaperFullStory, EditionSummary
 import { resizedImage } from '@/lib/image-url';
 import { EpaperViewer, PAGE_H, PAGE_W } from './EpaperViewer';
 import { StoryReader, type ReaderStory } from './StoryReader';
+import { Puzzles } from './Puzzles';
 import styles from './Epaper.module.css';
 
 /*
@@ -744,7 +745,10 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
       </section>
       {almanac.sudoku ? <section aria-label="Weekly sudoku" className={styles.sudokuBox}>
         <h3 className={styles.almanacTitle}>Sudoku <span>Medium</span></h3>
-        <SudokuGrid cells={almanac.sudoku.puzzle} className={styles.sudoku}/>
+        <button type="button" className={styles.sudokuPlay} onClick={() => window.dispatchEvent(new CustomEvent('wf-open-puzzles', { detail: 'sudoku' }))} aria-label="Play this sudoku on screen">
+          <SudokuGrid cells={almanac.sudoku.puzzle} className={styles.sudoku}/>
+          <span>Tap to play on screen</span>
+        </button>
         <div className={styles.sudokuLast}>
           <p className={styles.sudokuHow}>Fill every row, column and 3×3 box with the numbers 1 to 9.<br/><b>{almanac.sudoku.lastSolution ? 'Last week’s solution:' : 'Solution in next week’s edition.'}</b></p>
           {almanac.sudoku.lastSolution ? <SudokuGrid cells={almanac.sudoku.lastSolution} className={styles.sudokuMini}/> : null}
@@ -910,6 +914,14 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
   const [reading, setReading] = useState<string | null>(null);
   const [listenAll, setListenAll] = useState(false);
   const canListen = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const [puzzles, setPuzzles] = useState<null | 'sudoku' | 'words'>(null);
+  const hasPuzzles = Boolean(edition.almanac?.sudoku || edition.wordSearch);
+  // The "Play on screen" button printed by the sudoku on page 19 asks for the puzzles this way.
+  useEffect(() => {
+    const open = (e: Event) => setPuzzles(((e as CustomEvent).detail as 'sudoku' | 'words') || 'sudoku');
+    window.addEventListener('wf-open-puzzles', open);
+    return () => window.removeEventListener('wf-open-puzzles', open);
+  }, []);
   const openStory = (e: ReactMouseEvent) => {
     const a = (e.target as HTMLElement).closest?.('a[href^="/"]') as HTMLAnchorElement | null;
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
@@ -923,13 +935,15 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
   return <>
     {/* Off-screen measuring room: same width and styles as a real page. */}
     <div aria-hidden="true" className={styles.measure} style={{ width: PAGE_W, height: PAGE_H }}><div className={styles.page}><div ref={hostRef}/></div></div>
-    {pages && canListen && readerStories.length ? <div className={styles.listenBar}>
-      <button type="button" onClick={() => { setListenAll(true); setReading(readerStories[0].slug); }}>🎧 Listen to this edition</button>
-      <span>Reads every story aloud, one after another. Tap a headline to read or listen to one story.</span>
+    {pages && (canListen || hasPuzzles) ? <div className={styles.listenBar}>
+      {canListen && readerStories.length ? <button type="button" onClick={() => { setListenAll(true); setReading(readerStories[0].slug); }}>🎧 Listen to this edition</button> : null}
+      {hasPuzzles ? <button type="button" className={styles.puzzleButton} onClick={() => setPuzzles('sudoku')}>🧩 Puzzles</button> : null}
+      <span>Tap a headline to read or listen to one story.</span>
     </div> : null}
     <div onClickCapture={openStory}>
       {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} shareHref={edition.href}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
     </div>
+    {puzzles ? <Puzzles editionKey={edition.key} sudoku={edition.almanac?.sudoku?.puzzle || null} wordSearch={edition.wordSearch} start={puzzles} onClose={() => setPuzzles(null)}/> : null}
     <StoryReader stories={readerStories} openSlug={reading} autoplay={listenAll} onClose={() => { setReading(null); setListenAll(false); }} editionLabel={`${edition.title} · ${edition.coverage}`}/>
   </>;
 }

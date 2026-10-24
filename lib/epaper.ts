@@ -3,6 +3,7 @@ import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { getLiveAds, type LiveAd } from '@/lib/ads';
 import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
 import { buildAlmanac, type Almanac } from '@/lib/epaper-almanac';
+import { buildWordSearch, pickWords, type WordSearch } from '@/lib/epaper-puzzles';
 
 /**
  * Webfit News e-paper.
@@ -364,6 +365,8 @@ export type Edition = EditionInfo & {
   halfPageAds: EpaperAd[];
   /** The "Stars & Week Ahead" page (weekly editions only): rashifal, what's on, this week in history, for the week after release. */
   almanac: Almanac | null;
+  /** The weekly word search (weekly editions only), from the words in this edition's stories. */
+  wordSearch: WordSearch | null;
 };
 
 function toEpaperAd(ad: LiveAd): EpaperAd | null {
@@ -481,6 +484,10 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
     sharedPageAds: [...(ads[EPAPER_SHARED_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
     almanac,
+    wordSearch: isWeekly(info.key) ? buildWordSearch(info.key, pickWords(
+      sections.flatMap(sec => sec.stories.map(st => st.title)),
+      sections.flatMap(sec => sec.stories.flatMap(st => st.blocks.map(b => b.t))),
+    )) : null,
   };
 });
 
