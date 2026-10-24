@@ -35,11 +35,11 @@ export const WEEKLY_FROM = '2026-10-22';
 /** A weekly edition is released at this hour, NZ time, on the Thursday after it ends. */
 const RELEASE_HOUR = 6;
 /** Words printed per desk page, and per story. Tuned so each desk fills about one page. */
-const PAGE_WORDS = 400;
+const PAGE_WORDS = 560;
 /** Story pages to aim for (with the front, back and advertising pages: 20, see TOTAL_PAGES in EpaperBook). */
 const STORY_PAGES = 17;
-const LEAD_WORDS = 260;
-const STORY_WORDS = 130;
+const LEAD_WORDS = 420;
+const STORY_WORDS = 240;
 const MIN_STORY_WORDS = 60;
 /** The front-page story is printed up to this length, so it fits on the front page. */
 const FRONT_WORDS = 280;

@@ -1,3 +1,18 @@
+/* Newspaper type, self-hosted (public/fonts/epaper): condensed headlines, a clean text face, a display serif for names.
+   EpaperBook waits for these before measuring, so the layout is worked out with the real letter widths. */
+@font-face{font-family:'WN Head';font-style:normal;font-weight:500;font-display:block;src:url(/fonts/epaper/oswald-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Head';font-style:normal;font-weight:500;font-display:block;src:url(/fonts/epaper/oswald-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'WN Head';font-style:normal;font-weight:600;font-display:block;src:url(/fonts/epaper/oswald-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Head';font-style:normal;font-weight:600;font-display:block;src:url(/fonts/epaper/oswald-latin-ext-600-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'WN Body';font-style:normal;font-weight:400;font-display:block;src:url(/fonts/epaper/roboto-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Body';font-style:normal;font-weight:400;font-display:block;src:url(/fonts/epaper/roboto-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'WN Body';font-style:normal;font-weight:700;font-display:block;src:url(/fonts/epaper/roboto-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Body';font-style:normal;font-weight:700;font-display:block;src:url(/fonts/epaper/roboto-latin-ext-700-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'WN Body';font-style:italic;font-weight:400;font-display:block;src:url(/fonts/epaper/roboto-latin-400-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Display';font-style:italic;font-weight:700;font-display:block;src:url(/fonts/epaper/playfair-display-latin-700-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Display';font-style:italic;font-weight:800;font-display:block;src:url(/fonts/epaper/playfair-display-latin-800-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Display';font-style:normal;font-weight:800;font-display:block;src:url(/fonts/epaper/playfair-display-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
 /* ------------------------------------------------------------------ viewer */
 
 .viewer{position:relative;background:#e9e6df;border-radius:14px;padding:10px 10px 6px;margin:0 auto}
@@ -84,13 +99,13 @@
 .setting{display:flex;align-items:center;justify-content:center;min-height:420px;background:#e9e6df;border-radius:14px;color:#4b4740;font:600 15px/1.4 Arial,Helvetica,sans-serif}
 
 /* running head */
-.pageHead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;height:62px;border-bottom:2px dotted #c8232c;margin-bottom:12px;flex:none}
-.pageNo{font:300 34px/1 Arial,Helvetica,sans-serif;color:#9a958b;border-right:1px solid #d9d3c5;padding-right:12px}
+.pageHead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;height:62px;border-bottom:3px dotted #c8232c;margin-bottom:12px;flex:none}
+.pageNo{font:500 40px/1 'WN Head',Arial,sans-serif;color:#a8a39a;border-right:2px solid #e2ddd3;padding-right:12px;letter-spacing:-.02em}
 .pageSection{display:flex;flex-direction:column;gap:3px;min-width:0}
-.pageSection strong{font:italic 700 26px/1 Georgia,'Times New Roman',serif;color:#c8232c;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pageSection span{font:700 8.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#1f2a6b}
+.pageSection strong{font:italic 800 32px/1.05 'WN Display',Georgia,serif;color:#c8232c;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pageSection span{font:700 10px/1 'WN Body',Arial,sans-serif;letter-spacing:.02em;text-transform:none;color:#1a1a1a}
 .pageBrand{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-.pageBrandName{display:flex;align-items:center;gap:5px;font:700 17px/1 Georgia,'Times New Roman',serif;letter-spacing:-.02em;white-space:nowrap}
+.pageBrandName{display:flex;align-items:center;gap:5px;font:800 17px/1 'WN Display',Georgia,serif;letter-spacing:-.02em;white-space:nowrap}
 .pageBrandName img{width:20px;height:20px}
 .pageBrand .pageBrandName span{font:inherit;letter-spacing:inherit;text-transform:none;color:#1f2a6b}
 .pageBrandName b{color:#c8232c;font-style:italic}
@@ -101,18 +116,21 @@
 .folio span:nth-child(2){flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* the text flow: three balanced columns */
-.flow{position:relative;width:516px;overflow:hidden;flex:none;display:flow-root;font-size:9.6px;line-height:1.42}
+.flow{position:relative;width:516px;overflow:hidden;flex:none;display:flow-root;font:9.4px/1.4 'WN Body',Arial,Helvetica,sans-serif;color:#1d1d1b}
 .band{display:flex;gap:0;width:516px;overflow:hidden}
 .col{flex:0 0 auto;width:167px;overflow:hidden;display:flow-root;text-align:justify;hyphens:auto;-webkit-hyphens:auto}
-.col+.col{margin-left:7px;padding-left:7px;border-left:1px solid #e3ded3}
+.col+.col{margin-left:7px;padding-left:7px;border-left:0}
 .bandEnd{margin-bottom:4px}
 .it{margin:0}
-.head{padding:9px 0 7px;border-top:2px solid #151515;margin-top:6px;text-align:left}
+.head{padding:10px 0 8px;border-top:1px solid #c9c3b6;margin-top:8px;text-align:left}
 .head:first-child{border-top:0;margin-top:0;padding-top:0}
-.kick{display:block;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#c8232c;margin-bottom:4px}
-.headTitle{margin:0;font:700 19px/1.08 Georgia,'Times New Roman',serif;letter-spacing:-.015em;color:#111;hyphens:manual}
-.headLead .headTitle{font-size:26px;line-height:1.04}
-.by{display:block;margin-top:5px;font:600 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#7a7468}
+.kick{display:none;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#c8232c;margin-bottom:4px}
+.headTitle{margin:0;font:600 22px/1.04 'WN Head','Arial Narrow',Arial,sans-serif;letter-spacing:-.01em;color:#1a1a1a;hyphens:manual}
+.headTitle a{color:inherit;text-decoration:none}
+.headLead .headTitle{font-size:38px;line-height:1;letter-spacing:-.015em;text-align:center}
+.headLead .by{text-align:center}
+.headFront .headTitle{font-size:29px}
+.by{display:block;margin-top:5px;font:700 7.5px/1 'WN Body',Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#c8232c}
 .photo,.photoWide{margin:0 0 7px;overflow:hidden}
 .photoWide{margin-bottom:9px}
 .photo img,.photoWide img{display:block;width:100%;height:auto;object-fit:cover;object-position:50% 22%;background:#ece7db}
@@ -125,13 +143,13 @@
 .backMore li{break-inside:avoid;padding:5px 0;border-bottom:1px dotted #c9c1b0;font:700 11.5px/1.25 Georgia,'Times New Roman',serif}
 .backMore span{display:block;margin-top:6px;font:11px Arial,Helvetica,sans-serif;color:#6b665c}
 
-.tx_p{text-indent:1.1em}
+.tx_p{text-indent:.9em}
 .tx_p.cont,.tx_p.dropcap{text-indent:0}
-.tx_h{font:700 10.5px/1.25 Arial,Helvetica,sans-serif;color:#c8232c;padding:5px 0 2px;margin:0;text-align:left}
+.tx_h{font:600 12px/1.2 'WN Head','Arial Narrow',Arial,sans-serif;color:#c8232c;padding:6px 0 3px;margin:0;text-align:center}
 .tx_li{padding-left:.7em;text-indent:-.7em}
 .tx_quote{margin:0;padding:6px 0 6px 8px;border-left:2px solid #c8232c;font-style:italic;color:#2d2b27;text-align:left}
 .tx_row{font:9px/1.35 Arial,Helvetica,sans-serif;border-bottom:1px dotted #d0c9ba;padding:2px 0;text-align:left}
-.dropcap::first-letter{float:left;font:700 31px/.86 Georgia,'Times New Roman',serif;margin:2px 4px 0 0;color:#151515}
+.dropcap::first-letter{float:left;font:800 40px/.8 'WN Display',Georgia,serif;margin:3px 5px 0 0;color:#5a5650}
 .end::after{content:" ■";color:#c8232c;font-size:8px}
 
 /* half-page ad at the end of a section */
@@ -150,12 +168,12 @@
 .mastheadTop span:nth-child(2){color:#c8232c}
 .nameplate{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:2px 0}
 .globe{width:58px;min-width:58px;height:58px;display:block;object-fit:contain}
-.wordmark{min-width:0;font:700 48px/1 Georgia,'Times New Roman',serif;letter-spacing:-.03em;white-space:nowrap;text-align:center}
+.wordmark{min-width:0;font:800 56px/1 'WN Display',Georgia,serif;letter-spacing:-.03em;white-space:nowrap;text-align:center}
 .wordmark span{color:#1f2a6b}
 .wordmark b{color:#c8232c;font-style:italic}
 .nameplateSide{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid #151515;padding:6px 8px;font:600 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4b4740;white-space:nowrap}
 .nameplateSide strong{font:700 9px/1 Arial,Helvetica,sans-serif;color:#151515}
-.tagline{width:100%;text-align:center;border-top:1px solid #151515;padding-top:5px;font:italic 10.5px/1 Georgia,'Times New Roman',serif;color:#1f2a6b}
+.tagline{width:100%;text-align:center;border-top:0;padding-top:2px;font:700 italic 10.5px/1 'WN Display',Georgia,serif;color:#1f2a6b}
 .contentsBar{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;border-top:3px double #151515;border-bottom:1px solid #151515;padding:5px 0;font:600 8px/1.2 Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#3a3732}
 .contentsBar strong{color:#c8232c}
 .contentsBar b{color:#c8232c}

@@ -24,7 +24,7 @@ const PAGE_FLOW_H = 668;
 const HOUSE_HALF_LIMIT = 2;
 
 type Item =
-  | { t: 'head'; story: EpaperFullStory; lead: boolean }
+  | { t: 'head'; story: EpaperFullStory; lead: boolean; front?: boolean }
   | { t: 'photo'; story: EpaperFullStory; wide: boolean; front: boolean }
   | { t: 'text'; story: EpaperFullStory; k: string; text: string; first: boolean; last: boolean; cont: boolean }
   | { t: 'half'; ad: EpaperAd | null };
@@ -166,7 +166,8 @@ async function adBlocks(edition: Edition): Promise<AdBlock[]> {
 function build(item: Item): HTMLElement {
   switch (item.t) {
     case 'head': {
-      const box = el('div', `${styles.it} ${styles.head} ${item.lead ? styles.headLead : ''}`);
+      // headFront is a class on the headline itself (not a page ancestor), so it measures the same off-screen as on the page.
+      const box = el('div', `${styles.it} ${styles.head} ${item.lead ? styles.headLead : ''} ${item.front ? styles.headFront : ''}`);
       if (item.story.categoryName) box.append(el('span', styles.kick, item.story.categoryName));
       const h = el('h3', styles.headTitle);
       const a = el('a', '', item.story.title) as HTMLAnchorElement;
@@ -238,7 +239,7 @@ const MIN_TEXT_AFTER_HEAD = 50;
  * Only photos taller than the limit lose a strip, and objectPosition keeps
  * the top (faces) in view. Unknown size → 16:9 / 4:3.
  */
-const PHOTO_LIMITS = { front: [1.75, 2.6], wide: [1.5, 2.6], narrow: [0.9, 1.8] } as const;
+const PHOTO_LIMITS = { front: [2.1, 2.8], wide: [1.5, 2.6], narrow: [0.9, 1.8] } as const;
 function photoRatio(natural: number | null | undefined, kind: keyof typeof PHOTO_LIMITS) {
   const [min, max] = PHOTO_LIMITS[kind];
   const r = natural && Number.isFinite(natural) ? natural : kind === 'narrow' ? 4 / 3 : 16 / 9;
@@ -246,7 +247,7 @@ function photoRatio(natural: number | null | undefined, kind: keyof typeof PHOTO
 }
 
 function storyItems(story: EpaperFullStory, isSectionLead: boolean, isFront: boolean): Item[] {
-  const items: Item[] = [{ t: 'head', story, lead: isSectionLead }];
+  const items: Item[] = [{ t: 'head', story, lead: isSectionLead, front: isFront }];
   if (story.image) items.push({ t: 'photo', story, wide: isSectionLead || isFront, front: isFront });
   const blocks = story.blocks.length ? story.blocks : [{ k: 'p', t: 'Read this story at webfitnews.com.' }];
   blocks.forEach((b, i) => items.push({ t: 'text', story, k: b.k, text: b.t, first: i === 0, last: i === blocks.length - 1, cont: false }));
@@ -419,8 +420,10 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
           const textBlocks = story.blocks.filter(bk => !/^Read the full story at /.test(bk.t));
           // Front page: drop one paragraph at a time and keep the photo. Elsewhere: halve it.
           const keep = isFront ? Math.max(1, textBlocks.length - tries) : Math.max(1, Math.floor(textBlocks.length / (2 ** tries)));
-          if (Htop - used() >= 150 && tries <= (isFront ? textBlocks.length : 4)) {
-            const short: EpaperFullStory = { ...story, image: tries > 1 && !isFront ? null : story.image, blocks: [...textBlocks.slice(0, keep), { k: 'p' as const, t: `Read the full story at webfitnews.com/${story.slug}` }] };
+          // Last resort on the front: one paragraph and no photo, so the front never goes out without its story.
+          if (Htop - used() >= 150 && tries <= (isFront ? textBlocks.length + 1 : 4)) {
+            const dropPhoto = isFront ? tries > textBlocks.length : tries > 1;
+            const short: EpaperFullStory = { ...story, image: dropPhoto ? null : story.image, blocks: [...textBlocks.slice(0, keep), { k: 'p' as const, t: `Read the full story at webfitnews.com/${story.slug}` }] };
             queue.splice(firstIdx, 0, ...storyItems(short, isFront, isFront));
           }
           return 'skip' as const;
@@ -437,6 +440,13 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     let guard = 0;
     while (queue.length && guard++ < 5000) {
       let item = queue[0];
+      // Page already has its main story and one more: the next story starts a new page (or, on the desk's last page, waits for the back-page list).
+      // Counted from the page itself, so a story taken out again (shortened on a desk's last page) doesn't count.
+      if (item.t === 'head' && !isFront && flow.querySelectorAll(`:scope > .${styles.head}`).length >= MAX_STORIES_PER_PAGE) {
+        if (pageNo + 1 >= quota) break;
+        close(false); pageNo += 1; open(false);
+        continue;
+      }
       // Like a printed weekly: every page opens with one main story, big headline across the top
       // and its photo across all three columns. Stories after it on the same page stay smaller.
       if (item.t === 'head' && !isFront && !pageLeadDone) {
@@ -461,14 +471,15 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
         const needsText = item.t === 'head';
         // A narrow photo follows in the first column: keep room for it plus a few lines.
         const narrowPhotoNext = queue[group.length]?.t === 'photo';
-        const minAfter = narrowPhotoNext ? 175 : MIN_TEXT_AFTER_HEAD;
+        // The front story keeps a real block of text under its photo (the ad strip sits below it).
+        const minAfter = narrowPhotoNext ? 175 : isFront ? 90 : MIN_TEXT_AFTER_HEAD;
         let fits = !overflows(flow) && used() <= Htop && (!needsText || Htop - used() >= minAfter);
         if (!fits && group.length > 1) {
           // Headline + wide photo too tall for the space (e.g. above an ad): make the photo frame shorter.
           // The image fills the frame (object-fit: cover) with the top kept, so nothing is chopped off mid-face.
           const photo = nodes[1].querySelector('img') as HTMLImageElement | null;
           const room = Math.floor(Htop - (used() - nodes[1].offsetHeight) - minAfter - 12);
-          if (photo && room >= (isFront ? 120 : 150)) {
+          if (photo && room >= (isFront ? 100 : 150)) {
             photo.style.aspectRatio = 'auto';
             photo.style.height = `${room}px`;
             fits = !overflows(flow) && used() <= Htop && Htop - used() >= minAfter;
@@ -580,7 +591,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     // leave a hole, but only when our small "advertise here" panel can fill most of the space instead.
     // On a tail page with just a few lines of text, the paid ad stays: otherwise most of the page is blank.
     const endBlock = block as AdBlock | null;
-    if (endBlock && Htop - used() > 120 && H - used() <= 420) { placedBlocks.delete(endBlock.id); block = null; Htop = H; }
+    if (endBlock && !isFront && Htop - used() > 120 && H - used() <= 420) { placedBlocks.delete(endBlock.id); block = null; Htop = H; }
     // Space left after the section's last story: our own "advertise here" panel (never on a page that already has an ad).
     if (!block && houseHalves < HOUSE_HALF_LIMIT && pages.length >= AD_FREE_PAGES) {
       const node = build({ t: 'half', ad: null });
@@ -598,10 +609,14 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
 
 /** Page 2 is news only: no paid ads, no "advertise here" panels. (The front page has its own ad strip.) */
 const AD_FREE_PAGES = 2;
+/** Fonts used inside the pages (Epaper.module.css), loaded before the layout is measured. */
+const EPAPER_FONTS = ["600 22px 'WN Head'", "500 40px 'WN Head'", "400 9.4px 'WN Body'", "700 9.4px 'WN Body'", "italic 400 9.4px 'WN Body'", "italic 800 32px 'WN Display'", "800 40px 'WN Display'"];
+/** Like a printed weekly: a page carries its main story and at most one more. The rest go to the back-page list. */
+const MAX_STORIES_PER_PAGE = 2;
 /** Every edition is this many pages, like the printed community weeklies. */
 export const TOTAL_PAGES = 20;
 /** Height of the poster art in the front page's ad strip (inside pages allow up to AD_MAX_ART_H). */
-const FRONT_AD_ART_H = 210;
+const FRONT_AD_ART_H = 190;
 
 function assemble(flow: FlowPage[], unplaced: AdBlock[]): BookPage[] {
   const out: BookPage[] = [...flow];
@@ -766,7 +781,8 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      try { await document.fonts?.ready; } catch {}
+      // The newspaper fonts must be loaded before measuring, or the text is laid out with the wrong widths.
+      try { await Promise.all(EPAPER_FONTS.map(f => document.fonts.load(f))); await document.fonts?.ready; } catch {}
       const host = hostRef.current;
       if (!host || cancelled) return;
       const blocks = await adBlocks(edition);
