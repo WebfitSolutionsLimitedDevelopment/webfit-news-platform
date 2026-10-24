@@ -724,7 +724,7 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
       <section aria-label="What's on">
         <h3 className={styles.almanacTitle}>What’s on</h3>
         {almanac.events.length ? <ul className={styles.almanacList}>
-          {almanac.events.map(e => <li key={e.date + e.title}><b>{e.label}</b> {e.title}{e.note ? <em> {e.note}</em> : null}</li>)}
+          {almanac.events.map(e => <li key={e.date + e.title} className={e.local ? styles.almanacLocal : undefined}><b>{e.label}</b> {e.title}{e.note ? <em> {e.note}</em> : null}</li>)}
         </ul> : <p className={styles.almanacEmpty}>No public holidays or major festivals this week.</p>}
       </section>
       <section aria-label="This week in history">

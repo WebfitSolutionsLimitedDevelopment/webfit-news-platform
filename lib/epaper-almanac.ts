@@ -1,4 +1,5 @@
 import * as Astro from 'astronomy-engine';
+import { createPublicClient } from '@/lib/supabase-public';
 
 /*
  * The e-paper's "Stars & Week Ahead" page, built automatically for the week
@@ -9,15 +10,17 @@ import * as Astro from 'astronomy-engine';
  *     at noon New Zealand time. Each reading is built from the houses the planets
  *     occupy counted from that rashi, plus the days the Moon favours it (chandrabala)
  *     and the Moon's 8th-house days to take care (chandrashtama).
- *   - What's on: New Zealand public holidays (worked out by rule) and the main
- *     community festivals (FESTIVALS: India dates, checked against Drik Panchang listings).
+ *   - What's on: local NZ community events from the epaper_events table (add a row in Supabase:
+ *     start_date, end_date, title, place, time_text, note), New Zealand public holidays (worked out
+ *     by rule) and the main community festivals (FESTIVALS: India dates, checked against Drik Panchang listings).
  *   - This week in history: Wikipedia's "On this day" feed, preferring New Zealand
  *     and India, cached for a week. If Wikipedia can't be reached the section is left out.
  */
 
 /** born: the birthdays whose Sun sits in this sign (Vedic dates, e.g. "13 Feb – 13 Mar"), so readers can find their sign. */
 export type RashiReading = { key: string; name: string; english: string; symbol: string; born: string; text: string; goodDays: string; careDays: string };
-export type AlmanacEvent = { date: string; label: string; title: string; note?: string };
+/** local: an NZ community event from epaper_events (shown first, with place and time). */
+export type AlmanacEvent = { date: string; label: string; title: string; note?: string; local?: boolean };
 export type HistoryItem = { date: string; label: string; year: number; text: string };
 export type Almanac = { from: string; to: string; range: string; moon: string[]; rashis: RashiReading[]; events: AlmanacEvent[]; history: HistoryItem[]; births: HistoryItem[] };
 
@@ -210,6 +213,23 @@ function events(from: string, to: string): AlmanacEvent[] {
     .map(([date, title, note]) => ({ date, label: dayLabel(date), title, note }));
 }
 
+/** Local NZ community events (epaper_events) that overlap the week. */
+async function localEvents(from: string, to: string): Promise<AlmanacEvent[]> {
+  try {
+    const supabase = await createPublicClient();
+    const { data, error } = await supabase.from('epaper_events').select('start_date,end_date,title,place,time_text,note')
+      .eq('is_published', true).lte('start_date', to).gte('end_date', from).order('start_date').limit(8);
+    if (error) return [];
+    return (data || []).map((e: any) => ({
+      date: e.start_date,
+      label: e.end_date && e.end_date !== e.start_date ? `${dayLabel(e.start_date)} – ${dayLabel(e.end_date)}` : dayLabel(e.start_date),
+      title: e.title,
+      note: [e.place, e.time_text, e.note].filter(Boolean).join(' · ') || undefined,
+      local: true,
+    }));
+  } catch { return []; }
+}
+
 /** Festivals coming up in the fortnight after this week, so the page always has something to look forward to. */
 function comingSoon(to: string): AlmanacEvent[] {
   return events(addDays(to, 1), addDays(to, 21)).slice(0, 4);
@@ -254,8 +274,9 @@ async function history(from: string): Promise<{ history: HistoryItem[]; births: 
 export async function buildAlmanac(from: string): Promise<Almanac> {
   const to = addDays(from, 6);
   const { rashis, moon } = readings(from);
-  const thisWeek = events(from, to);
-  const { history: past, births } = await history(from);
+  const [local, { history: past, births }] = await Promise.all([localEvents(from, to), history(from)]);
+  // Local NZ events first (they're what readers can go to), then holidays and festivals by date.
+  const thisWeek = [...local, ...events(from, to)];
   return {
     from, to,
     range: `${fmt(from, { weekday: 'long', day: 'numeric', month: 'long' })} to ${fmt(to, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
