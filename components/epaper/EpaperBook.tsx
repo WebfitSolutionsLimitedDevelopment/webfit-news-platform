@@ -369,6 +369,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     let Htop = H; // headlines, wide photos and columns 2–3 stay above this line
     let startsWithContinuation = false;
     let lastStoryId: string | null = null;
+    let pageLeadDone = false; // the first story to start on a page is that page's main story
 
     const open = (continuation: boolean) => {
       const front = !frontUsed;
@@ -382,6 +383,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
       flow.dataset.front = front ? '1' : '';
       host.replaceChildren(flow);
       startsWithContinuation = continuation;
+      pageLeadDone = false;
     };
     const used = () => Array.from(flow.children).reduce((sum, c) => {
       const cs = getComputedStyle(c as HTMLElement);
@@ -434,7 +436,17 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     open(false);
     let guard = 0;
     while (queue.length && guard++ < 5000) {
-      const item = queue[0];
+      let item = queue[0];
+      // Like a printed weekly: every page opens with one main story, big headline across the top
+      // and its photo across all three columns. Stories after it on the same page stay smaller.
+      if (item.t === 'head' && !isFront && !pageLeadDone) {
+        pageLeadDone = true;
+        if (!item.lead) {
+          item = queue[0] = { ...item, lead: true };
+          const ph = queue[1];
+          if (ph?.t === 'photo' && ph.story.id === item.story.id && !ph.wide) queue[1] = { ...ph, wide: true };
+        }
+      }
       if (item.t === 'head') {
         if (pageNo >= quota) break; // spilled past the quota finishing a story: start nothing new
         snap = { children: flow.children.length, page: pageNo, storyId: item.story.id };
