@@ -19,7 +19,7 @@ import styles from './Epaper.module.css';
  * finished HTML of each page is then shown by the viewer, which only scales it.
  */
 
-const FRONT_FLOW_H = 560;
+const FRONT_FLOW_H = 596;
 const PAGE_FLOW_H = 668;
 const HOUSE_HALF_LIMIT = 2;
 
@@ -30,7 +30,7 @@ type Item =
   | { t: 'half'; ad: EpaperAd | null };
 
 type FlowPage = { kind: 'flow'; front: boolean; section: EditionSection; html: string; lastStoryId: string | null; startsWithContinuation: boolean; endsMidStory: boolean; newsH: number };
-type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[] } | { kind: 'back' };
+type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[] } | { kind: 'almanac' } | { kind: 'back' };
 
 /*
  * Paid ads sit inside news pages, the way a printed paper does it: the ad takes
@@ -194,6 +194,7 @@ function build(item: Item): HTMLElement {
       if (item.first && !item.cont) cls.push(styles.dropcap);
       if (item.cont) cls.push(styles.cont);
       if (item.last) cls.push(styles.end);
+      if (/^Read the full story at /.test(item.text)) cls.push(styles.readMore);
       return el(tag, cls.join(' '), item.k === 'li' ? `• ${item.text}` : item.text);
     }
     case 'half': {
@@ -614,15 +615,17 @@ const EPAPER_FONTS = ["600 22px 'WN Head'", "500 40px 'WN Head'", "400 9.4px 'WN
 /** Like a printed weekly: a page carries its main story and at most one more. The rest go to the back-page list. */
 const MAX_STORIES_PER_PAGE = 2;
 /** Every edition is this many pages, like the printed community weeklies. */
-export const TOTAL_PAGES = 20;
+export const TOTAL_PAGES = 21;
 /** Height of the poster art in the front page's ad strip (inside pages allow up to AD_MAX_ART_H). */
 const FRONT_AD_ART_H = 190;
 
-function assemble(flow: FlowPage[], unplaced: AdBlock[]): BookPage[] {
+function assemble(flow: FlowPage[], unplaced: AdBlock[], almanac: boolean): BookPage[] {
   const out: BookPage[] = [...flow];
   // Only if there were fewer news pages than ads (a thin edition): the rest share a page before the back page.
   const rest = unplaced.flatMap(b => b.ads);
   for (let i = 0; i < rest.length; i += 2) out.push({ kind: 'shared', ads: rest.slice(i, i + 2) });
+  // Every weekly edition: "Stars & Week Ahead" (rashifal, what's on, this week in history) before the back page.
+  if (almanac) out.push({ kind: 'almanac' });
   out.push({ kind: 'back' });
   // Our own "Advertise with Webfit News" page closes the paper.
   out.push({ kind: 'house' });
@@ -689,6 +692,51 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
     </header>
     {flow}
     <Folio n={n} label={page.section.title} note={note} edition={edition}/>
+  </div>;
+}
+
+/** Page 19: weekly rashifal, what's on and this week in history (built in lib/epaper-almanac.ts). */
+function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition; almanac: NonNullable<Edition['almanac']> }) {
+  return <div className={`${styles.page} ${styles.almanac}`}>
+    <header className={styles.pageHead}>
+      <span className={styles.pageNo}>{String(n).padStart(2, '0')}</span>
+      <div className={styles.pageSection}>
+        <strong>Stars &amp; Week Ahead</strong>
+        <span>{almanac.range}</span>
+      </div>
+      <div className={styles.pageBrand}>
+        <div className={styles.pageBrandName}><img src="/icon-192.png" alt=""/><span>Webfit</span> <b>News</b></div>
+        <span>{edition.dateline}</span>
+      </div>
+    </header>
+    <section className={styles.rashiSection} aria-label="Weekly rashifal">
+      <h3 className={styles.almanacTitle}>Weekly rashifal <span>For {almanac.range}, New Zealand time</span></h3>
+      <div className={styles.rashiGrid}>
+        {almanac.rashis.map(r => <article key={r.key} className={styles.rashi}>
+          <h4><b aria-hidden="true">{r.symbol}</b> {r.name} <span>{r.english}</span></h4>
+          <p>{r.text}</p>
+          <p className={styles.rashiDays}><strong>Good days:</strong> {r.goodDays}{r.careDays ? <> · <strong>Take care:</strong> {r.careDays}</> : null}</p>
+        </article>)}
+      </div>
+      <p className={styles.moonLine}><strong>Moon this week:</strong> {almanac.moon.join(', ')}.</p>
+    </section>
+    <div className={styles.almanacCols}>
+      <section aria-label="What's on">
+        <h3 className={styles.almanacTitle}>What’s on</h3>
+        {almanac.events.length ? <ul className={styles.almanacList}>
+          {almanac.events.map(e => <li key={e.date + e.title}><b>{e.label}</b> {e.title}{e.note ? <em> {e.note}</em> : null}</li>)}
+        </ul> : <p className={styles.almanacEmpty}>No public holidays or major festivals this week.</p>}
+      </section>
+      <section aria-label="This week in history">
+        <h3 className={styles.almanacTitle}>This week in history</h3>
+        {almanac.history.length ? <ul className={styles.almanacList}>
+          {almanac.history.slice(0, 4).map(h => <li key={h.date}><b>{h.label} {h.year}</b> {h.text}</li>)}
+          {almanac.births.slice(0, 2).map(h => <li key={`b${h.date}`}><b>Born {h.label} {h.year}</b> {h.text}</li>)}
+        </ul> : <p className={styles.almanacEmpty}>Back next week.</p>}
+      </section>
+    </div>
+    <p className={styles.almanacNote}>Rashifal worked out from the planets’ positions for this week (Vedic, Lahiri), for entertainment. Festival dates are Indian calendar dates. History: Wikipedia.</p>
+    <Folio n={n} label="Stars & Week Ahead" edition={edition}/>
   </div>;
 }
 
@@ -789,11 +837,13 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       if (cancelled) return;
       // Aim for exactly TOTAL_PAGES. Desk pages are filled to a quota, but a desk can end early or a
       // story can run one page over, so lay out again with the quota corrected (at most 4 passes).
-      let newsPages = TOTAL_PAGES - 3; // the front, the back page and our advertising page are the other 3
+      const hasAlmanac = Boolean(edition.almanac);
+      // The front, the Stars & Week Ahead page, the back page and our advertising page are the other pages.
+      let newsPages = TOTAL_PAGES - (hasAlmanac ? 4 : 3);
       let best: { flow: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[]; total: number } | null = null;
       for (let pass = 0; pass < 4 && !cancelled; pass += 1) {
         const r = paginate(edition, host, blocks, newsPages);
-        const total = assemble(r.pages, r.unplaced).length;
+        const total = assemble(r.pages, r.unplaced, hasAlmanac).length;
         const better = !best || (total <= TOTAL_PAGES && (best.total > TOTAL_PAGES || total > best.total)) || (best.total > TOTAL_PAGES && total < best.total);
         if (better) best = { flow: r.pages, dropped: r.dropped, unplaced: r.unplaced, total };
         if (total === TOTAL_PAGES) break;
@@ -804,7 +854,7 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       if (cancelled || !best) return;
       const { flow, dropped, unplaced } = best;
       host.replaceChildren();
-      const book = assemble(flow, unplaced);
+      const book = assemble(flow, unplaced, hasAlmanac);
 
       // Page numbers for contents and "continued" notes.
       const firstPageOfSection = new Map<EditionSection, number>();
@@ -821,6 +871,7 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
           return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1}/> };
         }
         if (p.kind === 'house') return { key: `p${n}`, label: 'Advertise with us', node: <HousePageView n={n} edition={edition}/> };
+        if (p.kind === 'almanac' && edition.almanac) return { key: `p${n}`, label: 'Stars & Week Ahead', node: <AlmanacPageView n={n} edition={edition} almanac={edition.almanac}/> };
         if (p.kind === 'shared') return { key: `p${n}`, label: 'Marketplace', node: <SharedAdPageView ads={p.ads} n={n} edition={edition}/> };
         return { key: `p${n}`, label: 'Back page', node: <BackPageView n={n} edition={edition} shelf={shelf} extra={dropped}/> };
       });

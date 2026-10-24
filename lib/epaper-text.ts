@@ -23,7 +23,8 @@ function toText(html: string) {
 }
 
 /** "By Webfit News | 7 October 2026" style lines repeat what the page already shows. */
-const DATELINE = /^(?:by\s+[^|]{2,60}\|\s*)?(?:[^|]{2,40}\|\s*)?(?:updated\s+)?\d{1,2}\s+[a-z]+\s+\d{4}$/i;
+// Also "By Webfit News | Election 2026 | Analysis | 24 October 2026": up to three labels between the byline and the date.
+const DATELINE = /^(?:by\s+[^|]{2,60}\|\s*)?(?:[^|]{2,40}\|\s*){0,3}(?:updated\s+)?\d{1,2}\s+[a-z]+\s+\d{4}$/i;
 const BYLINE_ONLY = /^by\s+webfit news$/i;
 
 export function htmlToBlocks(html: string | null | undefined, title = ''): TextBlock[] {

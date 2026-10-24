@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { createPublicClient as createClient } from '@/lib/supabase-public';
 import { getLiveAds, type LiveAd } from '@/lib/ads';
 import { htmlToBlocks, type TextBlock } from '@/lib/epaper-text';
+import { buildAlmanac, type Almanac } from '@/lib/epaper-almanac';
 
 /**
  * Webfit News e-paper.
@@ -361,6 +362,8 @@ export type Edition = EditionInfo & {
   /** Highest priority first; paired two to a page. */
   sharedPageAds: EpaperAd[];
   halfPageAds: EpaperAd[];
+  /** The "Stars & Week Ahead" page (weekly editions only): rashifal, what's on, this week in history, for the week after release. */
+  almanac: Almanac | null;
 };
 
 function toEpaperAd(ad: LiveAd): EpaperAd | null {
@@ -398,7 +401,10 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
   // A key can be any edition since launch (the archive, or a preview of the one being filled); no key means the one /epaper opens.
   const info: EditionInfo | null = key ? editionInfo(key) : pickFeatured(listEditions());
   if (!info) return null;
-  const [inWindow, ads] = await Promise.all([getWindowStories(info.fromIso, info.toIso), getLiveAds()]);
+  const [inWindow, ads, almanac] = await Promise.all([
+    getWindowStories(info.fromIso, info.toIso), getLiveAds(),
+    isWeekly(info.key) ? buildAlmanac(info.releaseDay).catch(() => null) : Promise.resolve(null),
+  ]);
   const stories = inWindow.filter(inEdition(info));
 
   // Full text for this edition's stories only.
@@ -474,6 +480,7 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
     fullPageAds: [...(ads[EPAPER_FULL_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     sharedPageAds: [...(ads[EPAPER_SHARED_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
+    almanac,
   };
 });
 
