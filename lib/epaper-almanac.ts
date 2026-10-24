@@ -22,7 +22,9 @@ export type RashiReading = { key: string; name: string; english: string; symbol:
 /** local: an NZ community event from epaper_events (shown first, with place and time). */
 export type AlmanacEvent = { date: string; label: string; title: string; note?: string; local?: boolean };
 export type HistoryItem = { date: string; label: string; year: number; text: string };
-export type Almanac = { from: string; to: string; range: string; moon: string[]; rashis: RashiReading[]; events: AlmanacEvent[]; history: HistoryItem[]; births: HistoryItem[] };
+/** puzzle: 81 cells, 0 = blank (one solution only). lastSolution: last week's answers (null for the first puzzle). */
+export type Sudoku = { puzzle: number[]; givens: number; lastSolution: number[] | null };
+export type Almanac = { from: string; to: string; range: string; moon: string[]; rashis: RashiReading[]; events: AlmanacEvent[]; history: HistoryItem[]; births: HistoryItem[]; sudoku: Sudoku };
 
 const RASHIS = [
   ['mesha', 'Mesha', 'Aries', '♈'], ['vrishabha', 'Vrishabha', 'Taurus', '♉'], ['mithuna', 'Mithuna', 'Gemini', '♊'],
@@ -90,18 +92,6 @@ const SATURN = [
   'Saturn asks for patience with a partner.', 'Saturn says go slow on health and risks.', 'Saturn tests faith; keep your word.',
   'Saturn brings hard but useful work.', 'Saturn brings slow but solid gains.', 'Saturn asks you to cut waste and rest.',
 ];
-const VENUS = [
-  'Charm is high; relationships feel easy.', 'A good week for money and family meals.', 'Creative hobbies and short outings bring joy.',
-  'Home comforts and family time feel good.', 'Romance and fun are favoured.', 'Avoid overindulgence; keep relationships simple.',
-  'Love and partnerships are warm.', 'Keep money and secrets private.', 'A pleasant trip or kind gesture lifts you.',
-  'Good taste helps at work.', 'Friends bring happy news and gifts.', 'Pleasure and spending may run ahead of the budget.',
-];
-const MARS = [
-  'Energy is high; act, but avoid rushing.', 'Watch harsh words over money.', 'Bold moves and sport go well.',
-  'Avoid arguments at home.', 'Keep a cool head with children.', 'You beat competition and clear old problems.',
-  'Avoid quarrels with your partner.', 'Drive and cook carefully.', 'Stand up for your beliefs, politely.',
-  'Drive at work brings results.', 'Effort turns into gains.', 'Avoid hidden costs and late nights.',
-];
 // Moon from the rashi: 1, 3, 6, 7, 10, 11 are good days (chandrabala); 8 is a day to take care (chandrashtama).
 const GOOD_MOON = new Set([1, 3, 6, 7, 10, 11]);
 const house = (planetSign: number, rashi: number) => ((planetSign - rashi + 12) % 12) + 1;
@@ -140,10 +130,9 @@ function readings(from: string): { rashis: RashiReading[]; moon: string[] } {
     const jup = h('Jupiter'), sat = h('Saturn');
     // The stronger of Jupiter's help or Saturn's pressure this week gets the second line.
     const second = [2, 5, 7, 9, 11].includes(jup) ? JUPITER[jup - 1] : [12, 1, 2, 8, 4].includes(sat) ? SATURN[sat - 1] : JUPITER[jup - 1];
-    const third = [3, 6, 11].includes(h('Mars')) ? MARS[h('Mars') - 1] : VENUS[h('Venus') - 1];
     const good = days.filter((_, i) => GOOD_MOON.has(house(moonByDay[i], r))).map(shortDay);
     const care = days.filter((_, i) => house(moonByDay[i], r) === 8).map(shortDay);
-    return { key, name, english, symbol, born: born[r], text: `${SUN[h('Sun') - 1]} ${second} ${third}`, goodDays: good.join(', ') || 'none this week', careDays: care.join(', ') };
+    return { key, name, english, symbol, born: born[r], text: `${SUN[h('Sun') - 1]} ${second}`, goodDays: good.join(', ') || 'none this week', careDays: care.join(', ') };
   });
 
   // When the Moon changes rashi during the week (checked every hour).
@@ -268,6 +257,63 @@ async function history(from: string): Promise<{ history: HistoryItem[]; births: 
   };
 }
 
+/* --------------------------------------------------------------- weekly sudoku */
+
+/** First week with a printed puzzle; last week's solution is shown from the week after. */
+const SUDOKU_FROM = '2026-10-29';
+const GIVENS = 30; // medium: about 30 numbers filled in
+
+function seeded(key: string): () => number { // mulberry32 seeded from the week's date
+  let h = 2166136261;
+  for (const c of `webfit-sudoku-${key}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => { h += 0x6d2b79f5; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const shuffle = <T,>(a: T[], rnd: () => number) => { for (let i = a.length - 1; i > 0; i -= 1) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ok = (g: number[], i: number, v: number) => {
+  const r = Math.floor(i / 9), c = i % 9, br = r - (r % 3), bc = c - (c % 3);
+  for (let k = 0; k < 9; k += 1) if (g[r * 9 + k] === v || g[k * 9 + c] === v || g[(br + Math.floor(k / 3)) * 9 + bc + (k % 3)] === v) return false;
+  return true;
+};
+function fill(g: number[], rnd: () => number): boolean {
+  const i = g.indexOf(0);
+  if (i < 0) return true;
+  for (const v of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9], rnd)) { if (ok(g, i, v)) { g[i] = v; if (fill(g, rnd)) return true; g[i] = 0; } }
+  return false;
+}
+/** Number of solutions, stopping at 2 (all we need to know). */
+function count(g: number[], limit = 2): number {
+  const i = g.indexOf(0);
+  if (i < 0) return 1;
+  let n = 0;
+  for (let v = 1; v <= 9 && n < limit; v += 1) if (ok(g, i, v)) { g[i] = v; n += count(g, limit - n); g[i] = 0; }
+  return n;
+}
+/** The same puzzle every time for a given week (so the solution can be printed the week after). */
+function makeSudoku(key: string): { puzzle: number[]; solution: number[] } {
+  const rnd = seeded(key);
+  const solution = Array(81).fill(0);
+  fill(solution, rnd);
+  const puzzle = [...solution];
+  let filled = 81;
+  for (const i of shuffle(Array.from({ length: 81 }, (_, k) => k), rnd)) {
+    if (filled <= GIVENS) break;
+    // Every row, column and box keeps at least two numbers, so the grid looks like a proper newspaper puzzle.
+    const r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+    const inRow = puzzle.filter((v, k) => v && Math.floor(k / 9) === r).length;
+    const inCol = puzzle.filter((v, k) => v && k % 9 === c).length;
+    const inBox = puzzle.filter((v, k) => v && Math.floor(Math.floor(k / 9) / 3) * 3 + Math.floor((k % 9) / 3) === b).length;
+    if (inRow <= 2 || inCol <= 2 || inBox <= 2) continue;
+    const keep = puzzle[i]; puzzle[i] = 0;
+    if (count([...puzzle]) !== 1) puzzle[i] = keep; else filled -= 1;
+  }
+  return { puzzle, solution };
+}
+function weeklySudoku(from: string): Sudoku {
+  const { puzzle } = makeSudoku(from);
+  const last = addDays(from, -7);
+  return { puzzle, givens: puzzle.filter(Boolean).length, lastSolution: last >= SUDOKU_FROM ? makeSudoku(last).solution : null };
+}
+
 /* --------------------------------------------------------------- the page */
 
 /** Everything for the week starting `from` (a NZ date, the edition's release day). */
@@ -283,5 +329,6 @@ export async function buildAlmanac(from: string): Promise<Almanac> {
     moon, rashis,
     events: thisWeek.length >= 3 ? thisWeek : [...thisWeek, ...comingSoon(to).map(e => ({ ...e, note: e.note ? `Coming up · ${e.note}` : 'Coming up' }))],
     history: past, births,
+    sudoku: weeklySudoku(from),
   };
 }

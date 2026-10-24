@@ -695,7 +695,14 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
   </div>;
 }
 
-/** Page 19: weekly rashifal, what's on and this week in history (built in lib/epaper-almanac.ts). */
+/** A 9×9 grid; 0 = empty square. Thicker lines mark the 3×3 boxes. */
+function SudokuGrid({ cells, className }: { cells: number[]; className: string }) {
+  return <div className={className} role="img" aria-label="Sudoku grid">
+    {cells.map((v, i) => <span key={i} data-c={i % 9} data-r={Math.floor(i / 9)}>{v || ''}</span>)}
+  </div>;
+}
+
+/** Page 19: weekly horoscope, what's on, this week in history and the weekly sudoku (built in lib/epaper-almanac.ts). */
 function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition; almanac: NonNullable<Edition['almanac']> }) {
   return <div className={`${styles.page} ${styles.almanac}`}>
     <header className={styles.pageHead}>
@@ -730,10 +737,18 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
       <section aria-label="This week in history">
         <h3 className={styles.almanacTitle}>This week in history</h3>
         {almanac.history.length ? <ul className={styles.almanacList}>
-          {almanac.history.slice(0, 4).map(h => <li key={h.date}><b>{h.label} {h.year}</b> {h.text}</li>)}
-          {almanac.births.slice(0, 2).map(h => <li key={`b${h.date}`}><b>Born {h.label} {h.year}</b> {h.text}</li>)}
+          {almanac.history.slice(0, 3).map(h => <li key={h.date}><b>{h.label} {h.year}</b> {h.text}</li>)}
+          {almanac.births.slice(0, 1).map(h => <li key={`b${h.date}`}><b>Born {h.label} {h.year}</b> {h.text}</li>)}
         </ul> : <p className={styles.almanacEmpty}>Back next week.</p>}
       </section>
+      {almanac.sudoku ? <section aria-label="Weekly sudoku" className={styles.sudokuBox}>
+        <h3 className={styles.almanacTitle}>Sudoku <span>Medium</span></h3>
+        <SudokuGrid cells={almanac.sudoku.puzzle} className={styles.sudoku}/>
+        <div className={styles.sudokuLast}>
+          <p className={styles.sudokuHow}>Fill every row, column and 3×3 box with the numbers 1 to 9.<br/><b>{almanac.sudoku.lastSolution ? 'Last week’s solution:' : 'Solution in next week’s edition.'}</b></p>
+          {almanac.sudoku.lastSolution ? <SudokuGrid cells={almanac.sudoku.lastSolution} className={styles.sudokuMini}/> : null}
+        </div>
+      </section> : null}
     </div>
     <p className={styles.almanacNote}>Horoscope (rashifal) worked out from the planets’ real positions this week, Vedic system, for entertainment. Birthday dates are Vedic, about three weeks later than Western star-sign dates. Festival dates are Indian calendar dates. History: Wikipedia.</p>
     <Folio n={n} label="Stars & Week Ahead" edition={edition}/>
