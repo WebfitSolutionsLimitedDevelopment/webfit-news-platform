@@ -367,7 +367,22 @@ export type Edition = EditionInfo & {
   almanac: Almanac | null;
   /** The weekly word search (weekly editions only), from the words in this edition's stories. */
   wordSearch: WordSearch | null;
+  /**
+   * Front page extras. teasers: three "Inside this week" stories (the editor's picks from epaper_front,
+   * otherwise the strongest story from three other desks). note: the editor's weekly note for page 2.
+   * edited: the editor chose the lead or teasers (otherwise automatic).
+   */
+  front: { teasers: Array<{ slug: string; title: string; image: string | null; section: string }>; note: { text: string; author: string | null } | null; edited: boolean };
 };
+
+type FrontRow = { lead_article_id: string | null; teaser_article_ids: string[] | null; editor_note: string | null; note_author: string | null };
+async function getFrontRow(key: string): Promise<FrontRow | null> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from('epaper_front').select('lead_article_id,teaser_article_ids,editor_note,note_author').eq('edition_key', key).maybeSingle();
+    return (data as FrontRow) || null;
+  } catch { return null; }
+}
 
 function toEpaperAd(ad: LiveAd): EpaperAd | null {
   const image = ad.desktop_image || ad.poster_image || ad.mobile_image;
@@ -404,9 +419,10 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
   // A key can be any edition since launch (the archive, or a preview of the one being filled); no key means the one /epaper opens.
   const info: EditionInfo | null = key ? editionInfo(key) : pickFeatured(listEditions());
   if (!info) return null;
-  const [inWindow, ads, almanac] = await Promise.all([
+  const [inWindow, ads, almanac, frontRow] = await Promise.all([
     getWindowStories(info.fromIso, info.toIso), getLiveAds(),
     isWeekly(info.key) ? buildAlmanac(info.releaseDay).catch(() => null) : Promise.resolve(null),
+    getFrontRow(info.key),
   ]);
   const stories = inWindow.filter(inEdition(info));
 
@@ -421,7 +437,9 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
   const full = (s: EpaperStory): EpaperFullStory => ({ ...s, author: bodies.get(s.id)?.author || null, blocks: htmlToBlocks(bodies.get(s.id)?.html, s.title) });
 
   const ranked = [...stories].sort(byImportance);
-  const lead = ranked[0];
+  // The editor's choice of lead story (epaper_front), if it is in this edition; otherwise the strongest story.
+  const chosenLead = frontRow?.lead_article_id ? stories.find(st => st.id === frontRow.lead_article_id) : undefined;
+  const lead = chosenLead || ranked[0];
 
   // Trim a story to a word limit, ending on a whole paragraph where possible, plus a link.
   const words = (t: string) => t.split(' ').filter(Boolean).length;
@@ -484,6 +502,25 @@ export const getEdition = cache(async (key?: string): Promise<Edition | null> =>
     sharedPageAds: [...(ads[EPAPER_SHARED_PAGE_SLOT] || [])].sort((x, y) => (y.priority || 0) - (x.priority || 0)).map(toEpaperAd).filter(Boolean) as EpaperAd[],
     halfPageAds: rotate((ads[EPAPER_HALF_PAGE_SLOT] || []).map(toEpaperAd).filter(Boolean) as EpaperAd[], info.lastDay + info.key),
     almanac,
+    front: (() => {
+      const printed = sections.slice(1).flatMap(sec => sec.stories.map(st => ({ st, section: sec.title })));
+      const pick = (ids: string[]) => ids.map(id => printed.find(x => x.st.id === id)).filter(Boolean) as typeof printed;
+      let teasers = pick(frontRow?.teaser_article_ids || []);
+      if (teasers.length < 3) {
+        // Fill up with the strongest story from desks not already teased.
+        for (const sec of sections.slice(1)) {
+          if (teasers.length >= 3) break;
+          const top = [...sec.stories].sort(byImportance)[0];
+          if (top && !teasers.some(t => t.st.id === top.id || t.section === sec.title)) teasers.push({ st: top, section: sec.title });
+        }
+      }
+      const note = frontRow?.editor_note?.trim();
+      return {
+        teasers: teasers.slice(0, 3).map(t => ({ slug: t.st.slug, title: t.st.title, image: t.st.image, section: t.section })),
+        note: note ? { text: note, author: frontRow?.note_author?.trim() || null } : null,
+        edited: Boolean(chosenLead || frontRow?.teaser_article_ids?.length),
+      };
+    })(),
     wordSearch: isWeekly(info.key) ? buildWordSearch(info.key, pickWords(
       sections.flatMap(sec => sec.stories.map(st => st.title)),
       sections.flatMap(sec => sec.stories.flatMap(st => st.blocks.map(b => b.t))),

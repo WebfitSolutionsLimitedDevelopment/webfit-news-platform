@@ -21,7 +21,7 @@ import styles from './Epaper.module.css';
  * finished HTML of each page is then shown by the viewer, which only scales it.
  */
 
-const FRONT_FLOW_H = 596;
+const FRONT_FLOW_H = 534; // leaves room for the "Inside this week" teasers under the masthead
 const PAGE_FLOW_H = 668;
 const HOUSE_HALF_LIMIT = 2;
 
@@ -29,7 +29,8 @@ type Item =
   | { t: 'head'; story: EpaperFullStory; lead: boolean; front?: boolean }
   | { t: 'photo'; story: EpaperFullStory; wide: boolean; front: boolean }
   | { t: 'text'; story: EpaperFullStory; k: string; text: string; first: boolean; last: boolean; cont: boolean }
-  | { t: 'half'; ad: EpaperAd | null };
+  | { t: 'half'; ad: EpaperAd | null }
+  | { t: 'note'; text: string; author: string | null };
 
 type FlowPage = { kind: 'flow'; front: boolean; section: EditionSection; html: string; lastStoryId: string | null; startsWithContinuation: boolean; endsMidStory: boolean; newsH: number };
 type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[] } | { kind: 'almanac' } | { kind: 'back' };
@@ -199,6 +200,16 @@ function build(item: Item): HTMLElement {
       if (/^Read the full story at /.test(item.text)) cls.push(styles.readMore);
       return el(tag, cls.join(' '), item.k === 'li' ? `• ${item.text}` : item.text);
     }
+    case 'note': {
+      // The editor's weekly note, boxed across the top of page 2.
+      const box = el('aside', `${styles.it} ${styles.editorNote}`);
+      box.append(el('span', styles.editorNoteLabel, 'From the editor'));
+      const body = el('div', styles.editorNoteBody);
+      item.text.split(/\n{2,}|\r?\n/).map(t => t.trim()).filter(Boolean).forEach(t => body.append(el('p', '', t)));
+      box.append(body);
+      if (item.author) box.append(el('span', styles.editorNoteSign, `— ${item.author}`));
+      return box;
+    }
     case 'half': {
       if (!item.ad) {
         const box = el('div', `${styles.it} ${styles.halfSlot} ${styles.houseHalfIn}`);
@@ -257,7 +268,7 @@ function storyItems(story: EpaperFullStory, isSectionLead: boolean, isFront: boo
   return items;
 }
 
-const isSpan = (it: Item) => it.t === 'head' || it.t === 'half' || (it.t === 'photo' && it.wide);
+const isSpan = (it: Item) => it.t === 'head' || it.t === 'half' || it.t === 'note' || (it.t === 'photo' && it.wide);
 const overflows = (node: HTMLElement) => node.scrollHeight > node.clientHeight + 1;
 
 type Flowed = { band: HTMLElement; rest: Item[]; endsStory: boolean };
@@ -364,6 +375,8 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     let snap: { children: number; page: number; storyId: string } | null = null;
     const isFront = sIndex === 0;
     const queue: Item[] = [];
+    // The editor's note opens the first news page after the front.
+    if (sIndex === 1 && edition.front?.note) queue.push({ t: 'note', text: edition.front.note.text, author: edition.front.note.author });
     section.stories.forEach((story, i) => queue.push(...storyItems(story, i === 0, isFront)));
 
     let frontUsed = !isFront;
@@ -509,7 +522,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
         if (fits || flow.children.length === nodes.length) {
           if (!fits) nodes.forEach(n => { n.style.maxHeight = `${Math.max(60, Htop - 120)}px`; n.style.overflow = 'hidden'; });
           queue.splice(0, group.length);
-          if (item.t !== 'half') lastStoryId = item.story.id;
+          if ('story' in item) lastStoryId = item.story.id;
           continue;
         }
         nodes.forEach(n => n.remove());
@@ -644,7 +657,7 @@ function Folio({ n, label, note, edition }: { n: number; label: string; note?: s
   </div>;
 }
 
-function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: FlowPage; n: number; edition: Edition; contents: Array<{ title: string; page: number }>; nextOf: number | null; prevOf: number | null }) {
+function FlowPageView({ page, n, edition, contents, nextOf, prevOf, teaserPages }: { page: FlowPage; n: number; edition: Edition; contents: Array<{ title: string; page: number }>; nextOf: number | null; prevOf: number | null; teaserPages?: Map<string, number> }) {
   const continuesTitle = page.endsMidStory && page.lastStoryId ? page.section.stories.find(s => s.id === page.lastStoryId)?.title : null;
   const note = continuesTitle && nextOf ? `“${continuesTitle.length > 48 ? `${continuesTitle.slice(0, 46)}…` : continuesTitle}” continues on page ${nextOf}` : undefined;
   const flow = <div className={styles.flowWrap}>
@@ -674,6 +687,15 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf }: { page: Fl
           <strong>Inside</strong>
           {contents.slice(1, 9).map(c => <span key={c.title}>{c.title} <b>{c.page}</b></span>)}
         </div>
+        {edition.front?.teasers?.length ? <nav className={styles.teasers} aria-label="Inside this week">
+          {edition.front.teasers.map(t => <a key={t.slug} href={`/${t.slug}`} className={styles.teaser}>
+            {t.image ? <img src={resizedImage(t.image, 160, 70)} alt=""/> : <span className={styles.teaserNoImg}/>}
+            <span className={styles.teaserText}>
+              <em>{t.section}{teaserPages?.get(t.slug) ? ` · Page ${teaserPages.get(t.slug)}` : ''}</em>
+              <b>{t.title}</b>
+            </span>
+          </a>)}
+        </nav> : null}
       </header>
       {flow}
       <Folio n={n} label="Front page" note={note} edition={edition}/>
@@ -884,11 +906,17 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       const nextFlow = (i: number) => flowIndexes.find(x => x > i) ?? null;
       const prevFlow = (i: number) => [...flowIndexes].reverse().find(x => x < i) ?? null;
 
+      // Which page each front-page teaser is printed on.
+      const teaserPages = new Map<string, number>();
+      for (const t of edition.front?.teasers || []) {
+        const at = book.findIndex((p, i) => i > 0 && p.kind === 'flow' && p.html.includes(`href="/${t.slug}"`));
+        if (at > 0) teaserPages.set(t.slug, at + 1);
+      }
       const rendered = book.map((p, i) => {
         const n = i + 1;
         if (p.kind === 'flow') {
           const nx = nextFlow(i); const pv = prevFlow(i);
-          return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1}/> };
+          return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1} teaserPages={teaserPages}/> };
         }
         if (p.kind === 'house') return { key: `p${n}`, label: 'Advertise with us', node: <HousePageView n={n} edition={edition}/> };
         if (p.kind === 'almanac' && edition.almanac) return { key: `p${n}`, label: 'Stars & Week Ahead', node: <AlmanacPageView n={n} edition={edition} almanac={edition.almanac}/> };
