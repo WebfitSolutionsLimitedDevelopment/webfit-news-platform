@@ -611,7 +611,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
 /** Page 2 is news only: no paid ads, no "advertise here" panels. (The front page has its own ad strip.) */
 const AD_FREE_PAGES = 2;
 /** Fonts used inside the pages (Epaper.module.css), loaded before the layout is measured. */
-const EPAPER_FONTS = ["600 22px 'WN Head'", "500 40px 'WN Head'", "400 9.4px 'WN Body'", "700 9.4px 'WN Body'", "italic 400 9.4px 'WN Body'", "italic 800 32px 'WN Display'", "800 40px 'WN Display'"];
+const EPAPER_FONTS = ["700 29px 'WN Section'", "600 22px 'WN Head'", "500 40px 'WN Head'", "400 9.4px 'WN Body'", "700 9.4px 'WN Body'", "italic 400 9.4px 'WN Body'", "italic 800 32px 'WN Display'", "800 40px 'WN Display'"];
 /** Like a printed weekly: a page carries its main story and at most one more. The rest go to the back-page list. */
 const MAX_STORIES_PER_PAGE = 2;
 /** Every edition is this many pages, like the printed community weeklies. */

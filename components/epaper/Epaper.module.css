@@ -12,6 +12,8 @@
 @font-face{font-family:'WN Display';font-style:italic;font-weight:700;font-display:block;src:url(/fonts/epaper/playfair-display-latin-700-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'WN Display';font-style:italic;font-weight:800;font-display:block;src:url(/fonts/epaper/playfair-display-latin-800-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'WN Display';font-style:normal;font-weight:800;font-display:block;src:url(/fonts/epaper/playfair-display-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Section';font-style:normal;font-weight:700;font-display:block;src:url(/fonts/epaper/libre-caslon-text-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'WN Section';font-style:normal;font-weight:700;font-display:block;src:url(/fonts/epaper/libre-caslon-text-latin-ext-700-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 
 /* ------------------------------------------------------------------ viewer */
 
@@ -102,8 +104,8 @@
 .pageHead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;height:62px;border-bottom:3px dotted #c8232c;margin-bottom:12px;flex:none}
 .pageNo{font:500 40px/1 'WN Head',Arial,sans-serif;color:#a8a39a;border-right:2px solid #e2ddd3;padding-right:12px;letter-spacing:-.02em}
 .pageSection{display:flex;flex-direction:column;gap:3px;min-width:0}
-.pageSection strong{font:italic 800 32px/1.05 'WN Display',Georgia,serif;color:#c8232c;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pageSection span{font:700 10px/1 'WN Body',Arial,sans-serif;letter-spacing:.02em;text-transform:none;color:#1a1a1a}
+.pageSection strong{font:700 29px/1.05 'WN Section',Georgia,'Times New Roman',serif;color:#1f2a6b;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pageSection span{font:700 8.5px/1 'WN Body',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c8232c;margin-top:3px}
 .pageBrand{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .pageBrandName{display:flex;align-items:center;gap:5px;font:800 17px/1 'WN Display',Georgia,serif;letter-spacing:-.02em;white-space:nowrap}
 .pageBrandName img{width:20px;height:20px}
