@@ -322,9 +322,11 @@
 .rashiSection{flex:none}
 .rashiGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .rashi{border:1px solid #d9d3c5;border-top:3px solid #1f2a6b;padding:5px 6px 4px;min-height:0;overflow:hidden;background:#fdfcf9}
-.rashi h4{margin:0 0 3px;font:600 12px/1 'WN Head','Arial Narrow',Arial,sans-serif;color:#1a1a1a;white-space:nowrap}
+.rashi h4{margin:0 0 3px;font:600 12px/1 'WN Head','Arial Narrow',Arial,sans-serif;color:#1a1a1a;white-space:nowrap;display:flex;justify-content:space-between;align-items:baseline;gap:4px}
+.rashiName{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rashiBorn{flex:none;font:700 6.9px/1 'WN Body',Arial,sans-serif;color:#fff;background:#1f2a6b;border-radius:2px;padding:2px 3px;letter-spacing:-.01em}
 .rashi h4 b{color:#c8232c;font-weight:400;font-family:'Segoe UI Symbol','Apple Symbols',sans-serif}
-.rashi h4 span{font:400 8px/1 'WN Body',Arial,sans-serif;color:#6b665c;margin-left:2px}
+.rashiName>span{font:400 7.4px/1 'WN Body',Arial,sans-serif;color:#6b665c;margin-left:2px}
 .rashi p{margin:0;font:400 7.9px/1.32 'WN Body',Arial,sans-serif;color:#1d1d1b}
 .rashiDays{margin-top:3px!important;font-size:7.4px!important;color:#3a3732!important}
 .rashiDays strong{color:#1f2a6b}

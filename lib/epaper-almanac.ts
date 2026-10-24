@@ -15,7 +15,8 @@ import * as Astro from 'astronomy-engine';
  *     and India, cached for a week. If Wikipedia can't be reached the section is left out.
  */
 
-export type RashiReading = { key: string; name: string; english: string; symbol: string; text: string; goodDays: string; careDays: string };
+/** born: the birthdays whose Sun sits in this sign (Vedic dates, e.g. "13 Feb – 13 Mar"), so readers can find their sign. */
+export type RashiReading = { key: string; name: string; english: string; symbol: string; born: string; text: string; goodDays: string; careDays: string };
 export type AlmanacEvent = { date: string; label: string; title: string; note?: string };
 export type HistoryItem = { date: string; label: string; year: number; text: string };
 export type Almanac = { from: string; to: string; range: string; moon: string[]; rashis: RashiReading[]; events: AlmanacEvent[]; history: HistoryItem[]; births: HistoryItem[] };
@@ -102,12 +103,35 @@ const MARS = [
 const GOOD_MOON = new Set([1, 3, 6, 7, 10, 11]);
 const house = (planetSign: number, rashi: number) => ((planetSign - rashi + 12) % 12) + 1;
 
+/**
+ * Which birthdays fall in each sign (Vedic, sidereal Sun sign), worked out from the Sun's real
+ * entry into each sign that year. About three weeks later than Western star-sign dates.
+ */
+function bornRanges(year: number): string[] {
+  const out: string[] = Array(12).fill('');
+  const label = (d: string) => fmt(d, { day: 'numeric', month: 'short' });
+  let start = `${year - 1}-12-01`;
+  let cur = signOf('Sun', nzTime(start, 12));
+  const starts: Array<[number, string]> = [];
+  for (let d = addDays(start, 1); d <= `${year + 1}-01-31`; d = addDays(d, 1)) {
+    const s = signOf('Sun', nzTime(d, 12));
+    if (s !== cur) { starts.push([s, d]); cur = s; }
+  }
+  starts.forEach(([s, d], i) => {
+    const next = starts[i + 1];
+    // Later entries win, so every range comes from the same run of dates and none overlap.
+    if (next) out[s] = `${label(d)} – ${label(addDays(next[1], -1))}`;
+  });
+  return out;
+}
+
 function readings(from: string): { rashis: RashiReading[]; moon: string[] } {
   const mid = nzTime(addDays(from, 3), 12);
   const at = Object.fromEntries((['Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Rahu'] as Planet[]).map(p => [p, signOf(p, mid)])) as Record<Planet, number>;
   const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
   const moonByDay = days.map(d => signOf('Moon', nzTime(d, 12)));
 
+  const born = bornRanges(Number(from.slice(0, 4)));
   const rashis = RASHIS.map(([key, name, english, symbol], r) => {
     const h = (p: Planet) => house(at[p], r);
     const jup = h('Jupiter'), sat = h('Saturn');
@@ -116,7 +140,7 @@ function readings(from: string): { rashis: RashiReading[]; moon: string[] } {
     const third = [3, 6, 11].includes(h('Mars')) ? MARS[h('Mars') - 1] : VENUS[h('Venus') - 1];
     const good = days.filter((_, i) => GOOD_MOON.has(house(moonByDay[i], r))).map(shortDay);
     const care = days.filter((_, i) => house(moonByDay[i], r) === 8).map(shortDay);
-    return { key, name, english, symbol, text: `${SUN[h('Sun') - 1]} ${second} ${third}`, goodDays: good.join(', ') || 'none this week', careDays: care.join(', ') };
+    return { key, name, english, symbol, born: born[r], text: `${SUN[h('Sun') - 1]} ${second} ${third}`, goodDays: good.join(', ') || 'none this week', careDays: care.join(', ') };
   });
 
   // When the Moon changes rashi during the week (checked every hour).

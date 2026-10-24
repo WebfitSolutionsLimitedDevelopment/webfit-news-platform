@@ -709,11 +709,11 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
         <span>{edition.dateline}</span>
       </div>
     </header>
-    <section className={styles.rashiSection} aria-label="Weekly rashifal">
-      <h3 className={styles.almanacTitle}>Weekly rashifal <span>For {almanac.range}, New Zealand time</span></h3>
+    <section className={styles.rashiSection} aria-label="Weekly horoscope">
+      <h3 className={styles.almanacTitle}>Weekly horoscope <span>Find your sign by your birthday. Know your moon sign (janma rashi)? Read that one.</span></h3>
       <div className={styles.rashiGrid}>
         {almanac.rashis.map(r => <article key={r.key} className={styles.rashi}>
-          <h4><b aria-hidden="true">{r.symbol}</b> {r.name} <span>{r.english}</span></h4>
+          <h4><span className={styles.rashiName}><b aria-hidden="true">{r.symbol}</b> {r.english} <span>{r.name}</span></span>{r.born ? <span className={styles.rashiBorn}>{r.born}</span> : null}</h4>
           <p>{r.text}</p>
           <p className={styles.rashiDays}><strong>Good days:</strong> {r.goodDays}{r.careDays ? <> · <strong>Take care:</strong> {r.careDays}</> : null}</p>
         </article>)}
@@ -735,7 +735,7 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
         </ul> : <p className={styles.almanacEmpty}>Back next week.</p>}
       </section>
     </div>
-    <p className={styles.almanacNote}>Rashifal worked out from the planets’ positions for this week (Vedic, Lahiri), for entertainment. Festival dates are Indian calendar dates. History: Wikipedia.</p>
+    <p className={styles.almanacNote}>Horoscope (rashifal) worked out from the planets’ real positions this week, Vedic system, for entertainment. Birthday dates are Vedic, about three weeks later than Western star-sign dates. Festival dates are Indian calendar dates. History: Wikipedia.</p>
     <Folio n={n} label="Stars & Week Ahead" edition={edition}/>
   </div>;
 }
