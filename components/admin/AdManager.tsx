@@ -260,7 +260,7 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
 
     <section className="admin-card">
       <div className="admin-card-head"><h2>Campaigns</h2><span className="admin-note">Only active campaigns show on the site.</span></div>
-      {campaigns.length ? <div className="admin-table-wrap"><table><thead><tr><th>Advertiser</th><th>Campaign</th><th>Status</th><th>Dates</th><th>Change status</th></tr></thead><tbody>{campaigns.map(c => <tr key={c.id}><td>{c.advertiser_name}</td><td>{c.campaign_name}</td><td><span className={`status-badge status-${c.status}`}>{c.status}</span></td><td>{fmtDate(c.starts_at)} to {fmtDate(c.ends_at)}</td><td><select aria-label={`Status for ${c.campaign_name}`} defaultValue={c.status} onChange={e => setCampaignStatus(c.id, e.target.value)} disabled={busy}><option>draft</option><option>active</option><option>paused</option><option>ended</option></select></td></tr>)}</tbody></table></div> : <div className="admin-empty">No campaigns yet. Start with step 01 above.</div>}
+      {campaigns.length ? <div className="admin-table-wrap"><table><thead><tr><th>Advertiser</th><th>Campaign</th><th>Status</th><th>Dates</th><th>Change status</th><th>Advertiser report</th></tr></thead><tbody>{campaigns.map(c => <tr key={c.id}><td>{c.advertiser_name}</td><td>{c.campaign_name}</td><td><span className={`status-badge status-${c.status}`}>{c.status}</span></td><td>{fmtDate(c.starts_at)} to {fmtDate(c.ends_at)}</td><td><select aria-label={`Status for ${c.campaign_name}`} defaultValue={c.status} onChange={e => setCampaignStatus(c.id, e.target.value)} disabled={busy}><option>draft</option><option>active</option><option>paused</option><option>ended</option></select></td><td><ReportLink campaign={c}/></td></tr>)}</tbody></table></div> : <div className="admin-empty">No campaigns yet. Start with step 01 above.</div>}
     </section>
 
     <section className="admin-card">
@@ -270,3 +270,21 @@ export default function AdManager({ campaigns, slots, creatives, assignments, pe
     </details>
   </div>;
 }
+
+/**
+ * The advertiser's private report link (/ad-report/<report_token>): copy it, open it, or send it on WhatsApp.
+ * Anyone with the link sees that campaign's figures only.
+ */
+function ReportLink({ campaign }: { campaign: { report_token?: string | null; advertiser_name?: string | null; campaign_name?: string | null } }) {
+  const [copied, setCopied] = useState(false);
+  if (!campaign.report_token) return <small>Not available</small>;
+  const url = `https://webfitnews.com/ad-report/${campaign.report_token}`;
+  const message = `Hi, here is your Webfit News advertising report for ${campaign.campaign_name || 'your campaign'}. It updates live: ${url}`;
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { window.prompt('Copy this link', url); } };
+  return <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+    <button type="button" className={styles.reportBtn} onClick={copy}>{copied ? 'Copied' : 'Copy link'}</button>
+    <a className={styles.reportBtn} href={url} target="_blank" rel="noopener">Open</a>
+    <a className={styles.reportBtn} href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener">WhatsApp</a>
+  </span>;
+}
+

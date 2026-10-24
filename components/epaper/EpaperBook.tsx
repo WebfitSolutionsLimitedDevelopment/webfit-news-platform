@@ -908,21 +908,28 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
     return list;
   }, [edition]);
   const [reading, setReading] = useState<string | null>(null);
+  const [listenAll, setListenAll] = useState(false);
+  const canListen = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const openStory = (e: ReactMouseEvent) => {
     const a = (e.target as HTMLElement).closest?.('a[href^="/"]') as HTMLAnchorElement | null;
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
     const slug = (a.getAttribute('href') || '').slice(1).split(/[?#]/)[0];
     if (!readerStories.some(st => st.slug === slug)) return;
     e.preventDefault();
+    setListenAll(false);
     setReading(slug);
   };
 
   return <>
     {/* Off-screen measuring room: same width and styles as a real page. */}
     <div aria-hidden="true" className={styles.measure} style={{ width: PAGE_W, height: PAGE_H }}><div className={styles.page}><div ref={hostRef}/></div></div>
+    {pages && canListen && readerStories.length ? <div className={styles.listenBar}>
+      <button type="button" onClick={() => { setListenAll(true); setReading(readerStories[0].slug); }}>🎧 Listen to this edition</button>
+      <span>Reads every story aloud, one after another. Tap a headline to read or listen to one story.</span>
+    </div> : null}
     <div onClickCapture={openStory}>
       {pages ? <EpaperViewer pages={pages} title={`Webfit News e-paper · ${edition.title} · ${edition.coverage}`} shareHref={edition.href}/> : <div className={styles.setting} role="status">Setting this week’s pages…</div>}
     </div>
-    <StoryReader stories={readerStories} openSlug={reading} onClose={() => setReading(null)} editionLabel={`${edition.title} · ${edition.coverage}`}/>
+    <StoryReader stories={readerStories} openSlug={reading} autoplay={listenAll} onClose={() => { setReading(null); setListenAll(false); }} editionLabel={`${edition.title} · ${edition.coverage}`}/>
   </>;
 }

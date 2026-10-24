@@ -23,3 +23,8 @@
 .pager{position:sticky;bottom:0;display:flex;justify-content:space-between;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e6e1d6;margin-top:auto}
 .pager button{flex:1;min-height:44px;border-radius:999px;border:1px solid #d9d3c5;background:#fff;font:700 14px/1 Arial,Helvetica,sans-serif;color:#1f2a6b;cursor:pointer}
 .pager button:disabled{opacity:.4;cursor:default}
+.listen{min-height:36px;padding:0 14px;border-radius:999px;border:0;background:#c8232c;color:#fff;font:700 14px/1 Arial,Helvetica,sans-serif;cursor:pointer;flex:none}
+.listenGroup{display:flex;gap:4px;flex:none}
+.listenSmall{min-width:36px;height:36px;border-radius:999px;border:1px solid #d9d3c5;background:#fff;color:#1f2a6b;font:700 12px/1 Arial,Helvetica,sans-serif;cursor:pointer}
+.reading{background:#fff4e0;box-shadow:-8px 0 0 #fff4e0,8px 0 0 #fff4e0;border-radius:2px}
+@media (max-width:420px){.sizes button:nth-child(2){display:none}.where{font-size:11px}}

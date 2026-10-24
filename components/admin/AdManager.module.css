@@ -108,3 +108,5 @@
   .adRow { grid-template-columns: 72px minmax(0, 1fr); }
   .adThumb { width: 72px; height: 72px; }
 }
+.reportBtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border:1px solid #1f2a6b;border-radius:999px;background:#fff;color:#1f2a6b;font:700 12px/1 Arial,Helvetica,sans-serif;cursor:pointer;text-decoration:none;white-space:nowrap}
+.reportBtn:hover{background:#1f2a6b;color:#fff}
