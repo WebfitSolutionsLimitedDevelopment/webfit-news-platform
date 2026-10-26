@@ -43,10 +43,11 @@ type BookPage = FlowPage | { kind: 'house' } | { kind: 'shared'; ads: EpaperAd[]
  * One ad block per page, spread through the news pages. The only full-page ad
  * is our own "Advertise with Webfit News" page on page 2.
  */
-type AdBlock = { id: string; ads: EpaperAd[]; ratios: number[]; full: boolean; w: number; h: number; artH: number };
+/** forFront: the front page's strip of business posters (reserved before the inside pages are paired up). */
+type AdBlock = { id: string; ads: EpaperAd[]; ratios: number[]; full: boolean; w: number; h: number; artH: number; forFront?: boolean };
 
 const FLOW_W = 516;
-const AD_MAX_ART_H = 340;
+const AD_MAX_ART_H = 300; // two tall portrait posters side by side stop here, leaving room for the page's story
 
 const dateLabel = (iso: string) => new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }).format(new Date(iso));
 
@@ -150,6 +151,19 @@ async function adBlocks(edition: Edition): Promise<AdBlock[]> {
   const ratios = await Promise.all(all.map(a => artRatio(a.image)));
   const used = new Set<number>();
   const out: AdBlock[] = [];
+  // The front page strip comes first: up to three business posters (never election ads), shared-page
+  // bookings first, then the rest by priority. Reserved before pairing, so election bookings paired
+  // with business posters can't leave the front with only one ad.
+  const front: number[] = [];
+  for (const ad of [...edition.sharedPageAds, ...edition.fullPageAds, ...edition.halfPageAds]) {
+    if (front.length >= 3) break;
+    const i = all.indexOf(ad);
+    if (i >= 0 && !ad.isElectionAd && ratios[i] < 1.3) front.push(i);
+  }
+  if (front.length) {
+    front.forEach(i => used.add(i));
+    out.push({ ...makeBlock(front.map(i => all[i]), front.map(i => ratios[i]), FRONT_AD_ART_H), forFront: true });
+  }
   all.forEach((ad, i) => {
     if (used.has(i)) return;
     used.add(i);
@@ -160,6 +174,7 @@ async function adBlocks(edition: Edition): Promise<AdBlock[]> {
   });
   // Keep election ads apart: never on facing pages, so no two in neighbouring blocks.
   for (let i = 1; i < out.length; i += 1) {
+    if (out[i].forFront || out[i - 1].forFront) continue;
     if (!political(out[i]) || !political(out[i - 1])) continue;
     const k = out.findIndex((b, x) => x > i && !political(b));
     if (k > 0) [out[i], out[k]] = [out[k], out[i]];
@@ -336,16 +351,8 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
   let houseHalves = 0;
   // The front page carries a strip of up to three posters at its foot, taken from the most important
   // non-election bookings (election ads stay off the front, next to whatever the lead story is).
-  const frontPicks: number[] = [];
-  let frontCount = 0;
-  allBlocks.forEach((b, i) => {
-    const real = b.ads.filter(a => a.assignmentId !== 'house').length;
-    const portrait = b.ratios.every(r => r < 1.3);
-    if (!b.ads.some(a => a.isElectionAd) && portrait && frontCount + real <= 3) { frontPicks.push(i); frontCount += real; }
-  });
-  const frontAds = frontPicks.flatMap(i => allBlocks[i].ads.map((a, k) => ({ a, r: allBlocks[i].ratios[k] }))).filter(x => x.a.assignmentId !== 'house');
-  const frontBlock = frontAds.length ? makeBlock(frontAds.map(x => x.a), frontAds.map(x => x.r), FRONT_AD_ART_H) : null;
-  const blocks = allBlocks.filter((_, i) => !frontPicks.includes(i));
+  const frontBlock = allBlocks.find(b => b.forFront) || null; // reserved in adBlocks()
+  const blocks = allBlocks.filter(b => !b.forFront);
   // Which news page each other ad block aims for: spread evenly over the desk pages.
   // Pages 1 to AD_FREE_PAGES (after the front) are news only; ads are spread over the news pages after them.
   const adPages = NEWS_PAGES + 1 - AD_FREE_PAGES;
@@ -516,9 +523,17 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
           queue.splice(at, 0, photo);
           fits = true;
         }
+        const pageAd = block as AdBlock | null;
+        // A wide photo won't fit above this page's ad: run the photo in a column instead of pushing the ad
+        // on (tall poster pairs, such as two portrait election posters, otherwise never find a page).
+        const ph = queue[1];
+        if (!fits && pageAd && !isFront && group.length > 1 && ph?.t === 'photo' && ph.wide) {
+          nodes.forEach(n => n.remove());
+          queue[1] = { ...ph, wide: false };
+          continue;
+        }
         // A story that opens a page but has no room for any text above this page's ad:
         // move the ad on to the next page rather than leave a headline with no story under it.
-        const pageAd = block as AdBlock | null;
         if (!fits && needsText && flow.children.length === nodes.length && pageAd && !isFront) {
           placedBlocks.delete(pageAd.id);
           block = null;
@@ -625,7 +640,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
   });
   const dropped = edition.sections.flatMap(sec => sec.stories).filter(st => !placed.has(st.id)).map(st => ({ title: st.title, slug: st.slug }));
   const unplaced = blocks.filter(b => !placedBlocks.has(b.id));
-  if (frontBlock && !placedBlocks.has(frontBlock.id)) unplaced.unshift(...frontPicks.map(i => allBlocks[i]));
+  if (frontBlock && !placedBlocks.has(frontBlock.id)) unplaced.unshift(frontBlock);
   return { pages, dropped, unplaced };
 }
 
