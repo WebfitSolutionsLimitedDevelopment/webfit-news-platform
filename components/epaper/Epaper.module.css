@@ -168,6 +168,9 @@
 .front .masthead{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px}
 .mastheadTop{position:relative;z-index:1;background:#fff;white-space:nowrap;width:100%;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #151515;padding-bottom:5px;font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#4b4740}
 .mastheadTop span:nth-child(2){color:#c8232c}
+/* Never push the last item off the page: the first two can shorten with …, the issue number always shows in full. */
+.mastheadTop span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mastheadTop span:last-child{flex:none}
 .nameplate{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:2px 0}
 .globe{width:58px;min-width:58px;height:58px;display:block;object-fit:contain}
 .wordmark{min-width:0;font:800 56px/1 'WN Display',Georgia,serif;letter-spacing:-.03em;white-space:nowrap;text-align:center}

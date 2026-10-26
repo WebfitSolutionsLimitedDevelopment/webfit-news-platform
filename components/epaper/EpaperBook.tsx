@@ -690,8 +690,9 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf, teaserPages 
     return <div className={`${styles.page} ${styles.front}`}>
       <header className={styles.masthead}>
         <div className={styles.mastheadTop}>
-          <span>{edition.dateline} · Weekly, every Thursday</span>
-          <span>{edition.released ? edition.title : edition.isLive ? `Preview · out ${edition.dateline}` : edition.title}</span>
+          {/* Kept short so all three fit across the page: the date already says when it comes out. */}
+          <span>{edition.dateline} · Weekly</span>
+          <span>{edition.released ? 'Every Thursday' : edition.isLive ? 'Preview edition' : edition.title}</span>
           <span>Vol. 1 · No. {edition.number} · Free</span>
         </div>
         <div className={styles.nameplate}>
