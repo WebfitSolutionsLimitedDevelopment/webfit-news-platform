@@ -143,6 +143,8 @@ function artRatio(src: string): Promise<number> {
  * foot to itself; portrait posters are paired two to a page (never two election
  * ads together), and a poster left over is paired with our own "advertise here" panel.
  */
+const political = (b: AdBlock) => b.ads.some(a => a.isElectionAd);
+
 async function adBlocks(edition: Edition): Promise<AdBlock[]> {
   const all = [...edition.fullPageAds, ...edition.sharedPageAds, ...edition.halfPageAds];
   const ratios = await Promise.all(all.map(a => artRatio(a.image)));
@@ -157,7 +159,6 @@ async function adBlocks(edition: Edition): Promise<AdBlock[]> {
     else out.push(makeBlock([ad, HOUSE_AD], [ratios[i], ratios[i]]));
   });
   // Keep election ads apart: never on facing pages, so no two in neighbouring blocks.
-  const political = (b: AdBlock) => b.ads.some(a => a.isElectionAd);
   for (let i = 1; i < out.length; i += 1) {
     if (!political(out[i]) || !political(out[i - 1])) continue;
     const k = out.findIndex((b, x) => x > i && !political(b));
@@ -350,6 +351,9 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
   const adPages = NEWS_PAGES + 1 - AD_FREE_PAGES;
   const targets = blocks.slice(0, adPages).map((b, i) => ({ block: b, at: AD_FREE_PAGES + Math.floor((i * adPages) / Math.min(blocks.length, adPages)) }));
   const placedBlocks = new Set<string>();
+  // Pages that went out carrying an election ad: the next page never carries another one
+  // (every election poster is paired with a business poster, so the block order alone can't keep them apart).
+  const electionPages = new Set<number>();
   const placed = new Set<string>();
   const shortTries = new Map<string, number>();
 
@@ -392,7 +396,8 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
       const front = !frontUsed;
       frontUsed = true;
       H = front ? FRONT_FLOW_H : PAGE_FLOW_H;
-      block = front ? frontBlock : targets.find(t => t.at <= pages.length && !placedBlocks.has(t.block.id))?.block || null;
+      const afterElection = electionPages.has(pages.length - 1);
+      block = front ? frontBlock : targets.find(t => t.at <= pages.length && !placedBlocks.has(t.block.id) && !(afterElection && political(t.block)))?.block || null;
       if (block) placedBlocks.add(block.id);
       Htop = block ? H - block.h - 18 : H; // room for the news box rule and a gap above the ads
       flow = el('div', styles.flow);
@@ -413,6 +418,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
       const textEnd = Array.from(flow.children).filter(c => c !== house).reduce((m, c) => Math.max(m, (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight), 0);
       const newsH = block ? Htop : house ? H - 260 : Math.min(H, Math.ceil(textEnd));
       if (block) flow.append(buildAdBlock(block));
+      if (block && political(block)) electionPages.add(pages.length);
       pages.push({ kind: 'flow', front: flow.dataset.front === '1', section, html: flow.innerHTML, lastStoryId, startsWithContinuation, endsMidStory, newsH });
     };
 
