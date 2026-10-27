@@ -54,7 +54,7 @@ async function loadArticleBySlug(slug: string) {
   // error throws rather than returning null, so a database hiccup is never cached
   // as a 404.
   const supabase = await createClient();
-  const articleFields = '*,author:author_id(name,slug,bio,title),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit,width,height),article_categories(category:category_id(id,name,slug))';
+  const articleFields = '*,author:author_id(name,slug,bio,title,avatar_url),media:media!articles_featured_media_id_fkey(public_url,alt_text,caption,credit,width,height),article_categories(category:category_id(id,name,slug))';
 
   const { data, error } = await supabase.from('articles')
     .select(articleFields)

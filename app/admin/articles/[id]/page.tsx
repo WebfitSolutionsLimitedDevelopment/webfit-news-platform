@@ -8,7 +8,7 @@ export default async function EditArticle({params}:{params:Promise<{id:string}>}
   const [{data:article},{data:categories},{data:authors},{data:revisions}]=await Promise.all([
     supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).maybeSingle(),
     supabase.from('categories').select('id,name').eq('is_active',true).order('name'),
-    supabase.from('authors').select('id,name').eq('is_active',true).order('name'),
+    supabase.from('authors').select('id,name,title,avatar_url').eq('is_active',true).order('name'),
     supabase.from('article_revisions').select('id,title,created_at').eq('article_id',id).order('created_at',{ascending:false}).limit(20)
   ]);
   if(!article)notFound();

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { topicForStory } from '@/lib/topics';
 import Link from 'next/link';
+import { AuthorByline } from '@/components/AuthorByline';
 import { notFound, redirect } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
@@ -167,7 +168,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <div className="article-kicker">{displayType}</div>
           <h1>{displayTitle}</h1>
           {article.subtitle?<p className="standfirst">{article.subtitle}</p>:null}
-          <div className="article-meta"><span>By {article.author?.slug?<Link href={`/author/${article.author.slug}`} rel="author">{article.author.name}</Link>:<Link href="/about">Webfit News</Link>}</span>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
+          <div className="article-meta article-meta-byline"><AuthorByline author={article.author}/>{article.published_at?<time dateTime={article.published_at}>{new Date(article.published_at).toLocaleString('en-NZ',{dateStyle:'long',timeStyle:'short',timeZone:'Pacific/Auckland'})}</time>:null}</div>
           {topic?<Link className="article-topic" href={`/topics/${topic.slug}`}><span>Part of our coverage</span><strong>{topic.name}</strong><small>{topic.articleNote} →</small></Link>:null}
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>

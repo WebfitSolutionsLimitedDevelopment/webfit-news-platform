@@ -201,7 +201,7 @@ export default function ArticleWorkspace({
   initialCategoryIds=[],initialPrimaryCategoryId='',
   initialTags=[],initialMedia=null,defaultAuthorId=''
 }:{
-  categories:Option[];authors:Option[];article?:any;revisions?:Revision[];
+  categories:Option[];authors:Array<Option&{title?:string|null;avatar_url?:string|null}>;article?:any;revisions?:Revision[];
   initialCategoryIds?:string[];initialPrimaryCategoryId?:string;initialTags?:string[];initialMedia?:Media|null;
   /** The signed-in user's own author profile, used as the byline on new stories. */
   defaultAuthorId?:string;
@@ -876,7 +876,11 @@ export default function ArticleWorkspace({
         <section className={styles.card}><header className={styles.cardHead}><div><span>PUBLISHING</span><h2>Publish settings</h2></div></header>
           <label className={styles.field}>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="draft">Draft</option><option value="in_review">In review</option><option value="scheduled">Scheduled</option><option value="published">Published</option>{isEdit&&<option value="archived">Archived</option>}</select></label>
           <label className={styles.field}>Article type<select value={articleType} onChange={e=>setArticleType(e.target.value)}>{types.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-          <label className={styles.field}>Author<select value={form.author_id} onChange={e=>update('author_id',e.target.value)}><option value="">Webfit News</option>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>{!form.author_id&&<small>Stories credited to “Webfit News” carry no reporter byline. {defaultAuthorId?'':<>Link your login to your profile in <a href="/admin/authors">Authors</a> to fill this in automatically.</>}</small>}</label>
+          <label className={styles.field}>Author<select value={form.author_id} onChange={e=>update('author_id',e.target.value)}><option value="">Webfit News</option>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>{!form.author_id&&<small>Stories credited to “Webfit News” carry no reporter byline. {defaultAuthorId?'':<>Link your login to your profile in <a href="/admin/authors">Authors</a> to fill this in automatically.</>}</small>}
+            {(()=>{const a=authors.find(x=>x.id===form.author_id);if(!a)return null;return <span style={{display:'flex',alignItems:'center',gap:9,marginTop:8,fontWeight:400}}>
+              <span style={{flex:'none',width:34,height:34,borderRadius:'50%',overflow:'hidden',display:'grid',placeItems:'center',background:'#1f2a6b',color:'#fff',fontSize:12,fontWeight:700}}>{a.avatar_url?<img src={a.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:a.name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]!.toUpperCase()).join('')}</span>
+              <span style={{display:'flex',flexDirection:'column',lineHeight:1.2}}><strong style={{fontSize:13}}>{a.name}</strong><small style={{color:'#6b7280'}}>{a.title?.trim()||'Reporter'}{a.avatar_url?'':' · no photo yet'} · <a href="/admin/authors">edit</a></small></span>
+            </span>})()}</label>
           <label className={styles.field}>Publish date<input type="datetime-local" value={form.published_at} onChange={e=>update('published_at',e.target.value)}/></label>
           {status==='scheduled'&&<label className={styles.field}>Schedule for<input type="datetime-local" value={form.scheduled_at} onChange={e=>update('scheduled_at',e.target.value)}/></label>}
         </section>
