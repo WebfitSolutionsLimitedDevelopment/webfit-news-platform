@@ -6,7 +6,7 @@ import './analytics.css';
 /**
  * Webfit News' own readership numbers, from the page_views table
  * (recorded by components/ReadTracker.tsx through /api/track).
- * Counting started on 27 October 2026; nothing before that exists.
+ * Counting started on 28 October 2026 (9:18am NZ); nothing before that exists.
  */
 
 const PERIODS = {
@@ -103,10 +103,15 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const { supabase, profile } = await requireAdmin();
 
   const { from, to } = range(period);
-  const [{ data, error }, storyResult] = await Promise.all([
+  const [{ data, error }, storyResult, firstResult] = await Promise.all([
     supabase.rpc('readership_report', { p_from: from.toISOString(), p_to: to.toISOString(), p_article: storyId }),
     storyId ? supabase.from('articles').select('id,title,slug,published_at,view_count').eq('id', storyId).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from('page_views').select('occurred_at').order('occurred_at', { ascending: true }).limit(1).maybeSingle(),
   ]);
+  // Counting began when the tracker went live; periods that reach back before that only hold data from then on.
+  const firstAt = (firstResult as { data: { occurred_at: string } | null }).data?.occurred_at || null;
+  const startedLabel = firstAt ? new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }).format(new Date(firstAt)) : null;
+  const beforeStart = !firstAt || from < new Date(firstAt);
   const story = (storyResult as { data: { id: string; title: string; slug: string; published_at: string | null; view_count: number | null } | null }).data;
   const report = (data || null) as Report | null;
   const t = report?.totals;
@@ -134,6 +139,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </div>
     </section> : null}
 
+    {beforeStart ? <section className="story-analytics-alert">{startedLabel
+      ? <>Counting started on {startedLabel}. Nothing before that was recorded, so {PERIODS[period].toLowerCase()} only includes visits from then on{period === 'yesterday' ? ' (none yet)' : ''}.</>
+      : <>No visits recorded yet.</>}</section> : null}
+
     {!allowed ? <section className="story-analytics-alert">Analytics is available to super admins and editors.</section> : null}
     {error ? <section className="story-analytics-warning">Could not load analytics: {error.message}</section> : null}
 
@@ -155,7 +164,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <div className="story-analytics-trend-track"><span style={{ height: `${(x.views / trendMax) * 100}%` }}/></div>
           <small>{trendLabel(x.t)}</small>
         </div>)}
-      </div> : <p className="readership-empty">No visits counted yet for this period. Counting started on 27 October 2026.</p>}
+      </div> : <p className="readership-empty">No visits counted for this period.</p>}
     </section>
 
     {!story ? <section className="admin-card story-analytics-card">
@@ -182,6 +191,6 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       {!story ? <Bars title="What people opened" rows={report?.kinds || []} label={k => KIND_LABEL[k] || k}/> : null}
     </div>
 
-    <p className="readership-footnote">Counted on webfitnews.com since 27 October 2026. Search engines and other bots are left out; newsroom staff reading the public site are included. Readers are told about this in the privacy policy.</p>
+    <p className="readership-footnote">Counted on webfitnews.com since {startedLabel || 'the tracker went live'}. Search engines and other bots are left out; newsroom staff reading the public site are included. Readers are told about this in the privacy policy.</p>
   </AdminShell>;
 }
