@@ -4,6 +4,7 @@ import './admin-mobile.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ThirdPartyScripts } from '../components/ThirdPartyScripts';
+import { ReadTracker } from '../components/ReadTracker';
 import { getSiteUrl } from '../lib/env';
 import { getPublicSiteSettings } from '../lib/public-settings';
 
@@ -120,6 +121,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(siteStructuredData).replace(/</g,'\\u003c')}}/>
 
       <ThirdPartyScripts/>
+      <ReadTracker/>
 
       <Script id="sw-register" strategy="afterInteractive">
         {`

@@ -26,7 +26,7 @@ export async function getArticlesAdmin(filters:ArticleAdminFilters={}) {
   const pageSize=Math.min(100,Math.max(10,Number(filters.pageSize||30)));
   const from=(page-1)*pageSize;
   const to=from+pageSize-1;
-  let query=supabase.from('articles').select('id,title,slug,status,article_type,published_at,scheduled_at,updated_at,author:author_id(name),media:featured_media_id(public_url)',{count:'exact'});
+  let query=supabase.from('articles').select('id,title,slug,status,article_type,published_at,scheduled_at,updated_at,view_count,author:author_id(name),media:featured_media_id(public_url)',{count:'exact'});
   if(filters.status && filters.status!=='all') query=query.eq('status',filters.status as any);
   if(filters.type && filters.type!=='all') query=query.eq('article_type',filters.type as any);
   if(filters.q?.trim()) {

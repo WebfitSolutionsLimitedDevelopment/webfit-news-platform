@@ -1,365 +1,187 @@
 import Link from 'next/link';
 import { AdminHeader, AdminShell } from '../../../components/admin/AdminShell';
 import { requireAdmin } from '../../../lib/admin-auth';
-import {
-  ANALYTICS_PERIODS,
-  getStoryAnalytics,
-  type AnalyticsPeriodKey,
-} from '../../../lib/story-analytics';
 import './analytics.css';
 
-type PublishRangeKey = 'all' | 'today' | 'yesterday' | '7d' | '30d' | 'custom';
+/**
+ * Webfit News' own readership numbers, from the page_views table
+ * (recorded by components/ReadTracker.tsx through /api/track).
+ * Counting started on 27 October 2026; nothing before that exists.
+ */
 
-type ArticleRow = {
-  id: string;
-  title: string;
-  slug: string;
-  published_at: string | null;
+const PERIODS = {
+  today: 'Today',
+  yesterday: 'Yesterday',
+  '7d': 'Last 7 days',
+  '30d': 'Last 30 days',
+  '90d': 'Last 90 days',
+} as const;
+type PeriodKey = keyof typeof PERIODS;
+
+type Named = { name: string; views: number };
+type StoryRow = { id: string; title: string; slug: string; published_at: string | null; views: number; readers: number; reads: number; avgSeconds: number; topSource: string | null };
+type Report = {
+  totals: { views: number; readers: number; returning: number; articleViews: number; reads: number; avgSeconds: number; mobile: number; epaper: number };
+  trend: Array<{ t: string; views: number; readers: number }>;
+  articles: StoryRow[];
+  sources: Named[];
+  devices: Named[];
+  countries: Named[];
+  kinds: Named[];
+  referrers: Named[];
+  live: number;
 };
 
-type SearchParams = Promise<{
-  period?: string;
-  published?: string;
-  date?: string;
-  story?: string;
-}>;
-
-const PUBLISH_RANGES: Record<PublishRangeKey, string> = {
-  all: 'All published stories',
-  today: 'Published today',
-  yesterday: 'Published yesterday',
-  '7d': 'Published in last 7 days',
-  '30d': 'Published in last 30 days',
-  custom: 'Published on a date',
+const SOURCE_LABEL: Record<string, string> = {
+  google: 'Google', facebook: 'Facebook / Instagram', whatsapp: 'WhatsApp', newsletter: 'Newsletter',
+  direct: 'Direct (typed, app, bookmarks)', internal: 'From another Webfit page', 'other search': 'Other search engines',
+  'other social': 'Other social (X, LinkedIn, Reddit)', 'other sites': 'Other websites',
 };
+const KIND_LABEL: Record<string, string> = { article: 'Stories', home: 'Homepage', epaper: 'E-paper', section: 'Section pages', other: 'Other pages' };
+const COUNTRY = new Intl.DisplayNames(['en-NZ'], { type: 'region' });
 
-function compact(value: number) {
-  return new Intl.NumberFormat('en-NZ', {
-    notation: value >= 10000 ? 'compact' : 'standard',
-    maximumFractionDigits: 1,
-  }).format(value);
+const n = (v: number) => new Intl.NumberFormat('en-NZ').format(v || 0);
+const pct = (part: number, whole: number) => (whole ? `${Math.round((part / whole) * 100)}%` : '–');
+const duration = (s: number) => (!s ? '–' : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`);
+
+/** Midnight in Auckland for a YYYY-MM-DD date, as a real instant (handles NZDT/NZST). */
+function aucklandMidnight(key: string) {
+  const guess = new Date(`${key}T00:00:00Z`);
+  const offset = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', timeZoneName: 'longOffset' })
+    .formatToParts(guess).find(p => p.type === 'timeZoneName')?.value || 'GMT+12:00';
+  const m = offset.match(/GMT([+-])(\d{2}):(\d{2})/);
+  const minutes = m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : 720;
+  return new Date(guess.getTime() - minutes * 60000);
 }
-
-function normalizePath(value: string) {
-  const path = (value || '/').split('?')[0].split('#')[0];
-  const trimmed = path.length > 1 ? path.replace(/\/+$/, '') : path;
-  if (trimmed.startsWith('/article/')) return `/${trimmed.slice('/article/'.length)}`;
-  return trimmed || '/';
+function todayKey() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
-
-function aucklandDateKey(value: Date | string) {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Pacific/Auckland',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const map = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  return `${map.year}-${map.month}-${map.day}`;
+function shift(key: string, days: number) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days, 12)).toISOString().slice(0, 10);
 }
-
-function shiftDateKey(key: string, days: number) {
-  const [year, month, day] = key.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days, 12)).toISOString().slice(0, 10);
-}
-
-function gaDateKey(key: string) {
-  return key.replaceAll('-', '');
-}
-
-function periodDateKeys(period: AnalyticsPeriodKey, today: string) {
-  if (period === 'yesterday') return [gaDateKey(shiftDateKey(today, -1))];
-  const days = period === 'today' ? 1 : period === '7d' ? 7 : period === '90d' ? 90 : 28;
-  return Array.from({ length: days }, (_, index) => gaDateKey(shiftDateKey(today, index - days + 1)));
-}
-
-function formatGaDate(value: string) {
-  if (!/^\d{8}$/.test(value)) return value;
-  const year = Number(value.slice(0, 4));
-  const month = Number(value.slice(4, 6));
-  const day = Number(value.slice(6, 8));
-  return new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short' }).format(new Date(Date.UTC(year, month - 1, day, 12)));
-}
-
-function formatPublished(value: string | null) {
-  if (!value) return 'Unknown';
-  return new Intl.DateTimeFormat('en-NZ', {
-    timeZone: 'Pacific/Auckland',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
-function inPublishRange(article: ArticleRow, range: PublishRangeKey, customDate: string, today: string) {
-  if (range === 'all') return true;
-  if (!article.published_at) return false;
-  const published = aucklandDateKey(article.published_at);
-  if (range === 'today') return published === today;
-  if (range === 'yesterday') return published === shiftDateKey(today, -1);
-  if (range === '7d') return published >= shiftDateKey(today, -6) && published <= today;
-  if (range === '30d') return published >= shiftDateKey(today, -29) && published <= today;
-  return published === customDate;
-}
-
-function aggregate<T extends { path: string; views: number }>(
-  rows: T[],
-  allowedPaths: Set<string>,
-  key: (row: T) => string
-) {
-  const totals = new Map<string, number>();
-  for (const row of rows) {
-    if (!allowedPaths.has(normalizePath(row.path))) continue;
-    const label = key(row);
-    totals.set(label, (totals.get(label) || 0) + row.views);
+function range(period: PeriodKey) {
+  const today = todayKey();
+  const tomorrow = aucklandMidnight(shift(today, 1));
+  switch (period) {
+    case 'today': return { from: aucklandMidnight(today), to: tomorrow };
+    case 'yesterday': return { from: aucklandMidnight(shift(today, -1)), to: aucklandMidnight(today) };
+    case '7d': return { from: aucklandMidnight(shift(today, -6)), to: tomorrow };
+    case '90d': return { from: aucklandMidnight(shift(today, -89)), to: tomorrow };
+    default: return { from: aucklandMidnight(shift(today, -29)), to: tomorrow };
   }
-  return [...totals.entries()]
-    .map(([label, views]) => ({ label, views }))
-    .sort((a, b) => b.views - a.views);
+}
+function trendLabel(t: string) {
+  if (t.includes('T')) return `${Number(t.slice(11, 13))}:00`;
+  const [y, m, d] = t.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short' }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+function published(value: string | null) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', day: 'numeric', month: 'short' }).format(new Date(value));
 }
 
-export default async function AnalyticsPage({ searchParams }: { searchParams: SearchParams }) {
+function Bars({ title, note, rows, label }: { title: string; note?: string; rows: Named[]; label?: (name: string) => string }) {
+  const max = Math.max(1, ...rows.map(r => r.views));
+  const total = rows.reduce((s, r) => s + r.views, 0);
+  return <section className="admin-card story-analytics-card">
+    <div className="story-analytics-card-head"><div><h2>{title}</h2>{note ? <p>{note}</p> : null}</div></div>
+    {rows.length ? <div className="readership-bars">
+      {rows.map(r => <div key={r.name} className="readership-bar">
+        <span>{label ? label(r.name) : r.name}</span>
+        <div><i style={{ width: `${Math.max(2, (r.views / max) * 100)}%` }}/></div>
+        <strong>{n(r.views)}</strong><small>{pct(r.views, total)}</small>
+      </div>)}
+    </div> : <p className="readership-empty">No visits counted yet for this period.</p>}
+  </section>;
+}
+
+export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ period?: string; story?: string }> }) {
   const params = await searchParams;
-  const period = (params.period && params.period in ANALYTICS_PERIODS ? params.period : '28d') as AnalyticsPeriodKey;
-  const published = (params.published && params.published in PUBLISH_RANGES ? params.published : 'all') as PublishRangeKey;
-  const today = aucklandDateKey(new Date());
-  const customDate = /^\d{4}-\d{2}-\d{2}$/.test(params.date || '') ? params.date! : today;
+  const period = (params.period && params.period in PERIODS ? params.period : '7d') as PeriodKey;
+  const storyId = params.story && /^[0-9a-f-]{36}$/i.test(params.story) ? params.story : null;
+  const { supabase, profile } = await requireAdmin();
 
-  const { supabase } = await requireAdmin();
-  const [{ data: articleData, error: articleError }, analytics] = await Promise.all([
-    supabase
-      .from('articles')
-      .select('id,title,slug,published_at')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(2000),
-    getStoryAnalytics(period),
+  const { from, to } = range(period);
+  const [{ data, error }, storyResult] = await Promise.all([
+    supabase.rpc('readership_report', { p_from: from.toISOString(), p_to: to.toISOString(), p_article: storyId }),
+    storyId ? supabase.from('articles').select('id,title,slug,published_at,view_count').eq('id', storyId).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const story = (storyResult as { data: { id: string; title: string; slug: string; published_at: string | null; view_count: number | null } | null }).data;
+  const report = (data || null) as Report | null;
+  const t = report?.totals;
+  const trendMax = Math.max(1, ...(report?.trend || []).map(x => x.views));
+  const allowed = ['super_admin', 'editor'].includes(profile.role);
+  const query = (p: PeriodKey) => `/admin/analytics?period=${p}${storyId ? `&story=${storyId}` : ''}`;
 
-  if (articleError) throw articleError;
+  return <AdminShell active="Analytics">
+    <AdminHeader
+      title={story ? 'Story analytics' : 'Analytics'}
+      description="Webfit News' own readership numbers, counted on our site and stored in our own database. Google Analytics keeps working alongside it."
+      actions={<a className="admin-secondary" href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer">Open Google Analytics ↗</a>}
+    />
 
-  const allArticles = (articleData || []) as ArticleRow[];
-  const filteredArticles = allArticles.filter((article) => inPublishRange(article, published, customDate, today));
-  const filteredBySlug = new Map(filteredArticles.map((article) => [article.slug, article]));
-  const selectedArticle = params.story ? filteredBySlug.get(params.story) : undefined;
+    <nav className="readership-periods" aria-label="Period">
+      {(Object.keys(PERIODS) as PeriodKey[]).map(p => <Link key={p} href={query(p)} className={p === period ? 'is-active' : ''}>{PERIODS[p]}</Link>)}
+      <span className="readership-live"><i/> {n(report?.live || 0)} reading now</span>
+    </nav>
 
-  const pagePerformance = new Map<string, { views: number; users: number }>();
-  for (const page of analytics.pages) {
-    const path = normalizePath(page.path);
-    const existing = pagePerformance.get(path) || { views: 0, users: 0 };
-    existing.views += page.views;
-    existing.users += page.users;
-    pagePerformance.set(path, existing);
-  }
+    {story ? <section className="admin-card readership-story-head">
+      <div><small>Story · published {published(story.published_at)}</small><h2>{story.title}</h2></div>
+      <div className="readership-story-links">
+        <a href={`/${story.slug}`} target="_blank" rel="noopener noreferrer">View story ↗</a>
+        <Link href={`/admin/analytics?period=${period}`}>← All stories</Link>
+      </div>
+    </section> : null}
 
-  const storyRows = filteredArticles
-    .map((article) => {
-      const performance = pagePerformance.get(normalizePath(`/${article.slug}`)) || { views: 0, users: 0 };
-      return { ...article, ...performance };
-    })
-    .sort((a, b) => b.views - a.views || String(b.published_at || '').localeCompare(String(a.published_at || '')));
+    {!allowed ? <section className="story-analytics-alert">Analytics is available to super admins and editors.</section> : null}
+    {error ? <section className="story-analytics-warning">Could not load analytics: {error.message}</section> : null}
 
-  const scopedArticles = selectedArticle ? [selectedArticle] : filteredArticles;
-  const allowedPaths = new Set(scopedArticles.map((article) => normalizePath(`/${article.slug}`)));
+    <section className="story-analytics-metrics readership-metrics">
+      <article><span>Page views</span><strong>{n(t?.views || 0)}</strong><small>{PERIODS[period]}</small></article>
+      <article><span>Readers</span><strong>{n(t?.readers || 0)}</strong><small>different people (browsers)</small></article>
+      <article><span>Returning readers</span><strong>{pct(t?.returning || 0, t?.readers || 0)}</strong><small>had visited before</small></article>
+      <article><span>Stories read</span><strong>{n(t?.reads || 0)}</strong><small>{pct(t?.reads || 0, t?.articleViews || 0)} of story views (30s+ or 75% scrolled)</small></article>
+      <article><span>Average reading time</span><strong>{duration(t?.avgSeconds || 0)}</strong><small>per story view</small></article>
+      <article><span>On phones</span><strong>{pct(t?.mobile || 0, t?.views || 0)}</strong><small>of page views</small></article>
+      {!story ? <article><span>E-paper opens</span><strong>{n(t?.epaper || 0)}</strong><small>edition page views</small></article> : null}
+      {story ? <article><span>All-time views</span><strong>{n(story.view_count || 0)}</strong><small>since counting began</small></article> : null}
+    </section>
 
-  const trendTotals = new Map<string, number>();
-  for (const row of analytics.trend) {
-    if (!allowedPaths.has(normalizePath(row.path))) continue;
-    trendTotals.set(row.date, (trendTotals.get(row.date) || 0) + row.views);
-  }
-  const trend = periodDateKeys(period, today).map((date) => ({ date, views: trendTotals.get(date) || 0 }));
-  const trendMax = Math.max(1, ...trend.map((item) => item.views));
+    <section className="admin-card story-analytics-card">
+      <div className="story-analytics-card-head"><div><h2>{period === 'today' || period === 'yesterday' ? 'Views by hour' : 'Views by day'}</h2><p>Auckland time.</p></div></div>
+      {report?.trend?.length ? <div className="story-analytics-trend">
+        {report.trend.map(x => <div className="story-analytics-trend-item" key={x.t} title={`${trendLabel(x.t)}: ${n(x.views)} views, ${n(x.readers)} readers`}>
+          <div className="story-analytics-trend-track"><span style={{ height: `${(x.views / trendMax) * 100}%` }}/></div>
+          <small>{trendLabel(x.t)}</small>
+        </div>)}
+      </div> : <p className="readership-empty">No visits counted yet for this period. Counting started on 27 October 2026.</p>}
+    </section>
 
-  const channels = aggregate<(typeof analytics.channels)[number]>(analytics.channels, allowedPaths, (row) => row.channel).slice(0, 8);
-  const sources = aggregate<(typeof analytics.sources)[number]>(analytics.sources, allowedPaths, (row) => row.source).slice(0, 10);
-  const countries = aggregate<(typeof analytics.countries)[number]>(analytics.countries, allowedPaths, (row) => row.country).slice(0, 12);
-  const channelMax = Math.max(1, ...channels.map((item) => item.views));
-  const countryMax = Math.max(1, ...countries.map((item) => item.views));
+    {!story ? <section className="admin-card story-analytics-card">
+      <div className="story-analytics-card-head"><div><h2>Top stories</h2><p>Click a story to see its own numbers. &ldquo;Read&rdquo; means the reader stayed 30 seconds or scrolled 75% of the page.</p></div></div>
+      {report?.articles?.length ? <div className="admin-table-wrap"><table className="readership-table">
+        <thead><tr><th>#</th><th>Story</th><th>Views</th><th>Readers</th><th>Read</th><th>Avg time</th><th>Main source</th></tr></thead>
+        <tbody>{report.articles.map((a, i) => <tr key={a.id}>
+          <td>{i + 1}</td>
+          <td><Link href={`/admin/analytics?period=${period}&story=${a.id}`}><strong>{a.title}</strong></Link><small>{published(a.published_at)}</small></td>
+          <td>{n(a.views)}</td>
+          <td>{n(a.readers)}</td>
+          <td>{pct(a.reads, a.views)}</td>
+          <td>{duration(a.avgSeconds)}</td>
+          <td>{a.topSource ? SOURCE_LABEL[a.topSource] || a.topSource : '–'}</td>
+        </tr>)}</tbody>
+      </table></div> : <p className="readership-empty">No story views counted yet for this period.</p>}
+    </section> : null}
 
-  const scopedStoryRows = selectedArticle
-    ? storyRows.filter((row) => row.slug === selectedArticle.slug)
-    : storyRows;
-  const totalViews = scopedStoryRows.reduce((sum, row) => sum + row.views, 0);
-  const topStory = storyRows[0];
-  const selectedPerformance = selectedArticle
-    ? pagePerformance.get(normalizePath(`/${selectedArticle.slug}`)) || { views: 0, users: 0 }
-    : null;
-  const averageViews = scopedStoryRows.length ? totalViews / scopedStoryRows.length : 0;
+    <div className="story-analytics-grid">
+      <Bars title="Where readers come from" rows={report?.sources || []} label={s => SOURCE_LABEL[s] || s}/>
+      <Bars title="Websites sending readers" note="Outside sites only." rows={report?.referrers || []}/>
+      <Bars title="Devices" rows={report?.devices || []} label={d => d === 'mobile' ? 'Phone' : d === 'tablet' ? 'Tablet' : d === 'desktop' ? 'Computer' : 'Unknown'}/>
+      <Bars title="Countries" rows={report?.countries || []} label={c => { try { return c === '??' ? 'Unknown' : COUNTRY.of(c) || c; } catch { return c; } }}/>
+      {!story ? <Bars title="What people opened" rows={report?.kinds || []} label={k => KIND_LABEL[k] || k}/> : null}
+    </div>
 
-  const filterQuery = new URLSearchParams({ period, published, date: customDate });
-  const clearStoryHref = `/admin/analytics?${filterQuery.toString()}`;
-  const contextLabel = selectedArticle ? `Selected story: ${selectedArticle.title}` : PUBLISH_RANGES[published];
-
-  return (
-    <AdminShell active="Analytics">
-      <AdminHeader
-        title="Story Analytics"
-        description="See which Webfit News stories are being read, where readers come from, and which traffic channels are working."
-        actions={<a className="admin-secondary" href={analytics.analyticsUrl} target="_blank" rel="noreferrer">Open Google Analytics</a>}
-      />
-
-      <section className="admin-card story-analytics-filter-card">
-        <form method="get" className="story-analytics-filters">
-          <label>
-            <span>Views period</span>
-            <select name="period" defaultValue={period}>
-              {(Object.keys(ANALYTICS_PERIODS) as AnalyticsPeriodKey[]).map((key) => (
-                <option value={key} key={key}>{ANALYTICS_PERIODS[key]}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Stories</span>
-            <select name="published" defaultValue={published}>
-              {(Object.keys(PUBLISH_RANGES) as PublishRangeKey[]).map((key) => (
-                <option value={key} key={key}>{PUBLISH_RANGES[key]}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Specific publish date</span>
-            <input type="date" name="date" defaultValue={customDate} />
-          </label>
-          {selectedArticle ? <input type="hidden" name="story" value={selectedArticle.slug} /> : null}
-          <button className="admin-primary" type="submit">Apply filters</button>
-          <Link className="admin-secondary" href="/admin/analytics">Reset</Link>
-        </form>
-        <div className="story-analytics-filter-note">
-          <span><strong>Reporting:</strong> {analytics.periodLabel}</span>
-          <span><strong>Story set:</strong> {contextLabel}</span>
-          {selectedArticle ? <Link href={clearStoryHref}>Clear story drill-down</Link> : null}
-        </div>
-      </section>
-
-      {!analytics.configured ? (
-        <section className="story-analytics-alert">
-          <strong>GA4 reporting is not available.</strong>
-          <span>{analytics.error || 'Check the server-side Google Analytics reporting configuration.'}</span>
-        </section>
-      ) : null}
-
-      {analytics.warnings.length ? (
-        <section className="story-analytics-warning">
-          <strong>Some analytics breakdowns could not be loaded.</strong>
-          <span>{analytics.warnings.join(' | ')}</span>
-        </section>
-      ) : null}
-
-      <section className="story-analytics-metrics">
-        <article><span>Story views</span><strong>{compact(totalViews)}</strong><small>{selectedArticle ? 'Selected story' : analytics.periodLabel}</small></article>
-        <article><span>Stories in filter</span><strong>{scopedStoryRows.length}</strong><small>{PUBLISH_RANGES[published]}</small></article>
-        {selectedArticle ? (
-          <article><span>Readers</span><strong>{compact(selectedPerformance?.users || 0)}</strong><small>Unique users for this page</small></article>
-        ) : (
-          <article><span>Average views</span><strong>{compact(Math.round(averageViews))}</strong><small>Per story in this filter</small></article>
-        )}
-        <article><span>Countries</span><strong>{countries.length}</strong><small>Top countries with story traffic</small></article>
-      </section>
-
-      <section className="story-analytics-grid story-analytics-grid-wide">
-        <div className="admin-card story-analytics-card">
-          <div className="story-analytics-card-head">
-            <div><h2>Traffic trend</h2><p>{selectedArticle ? selectedArticle.title : 'All stories in the current story filter'}</p></div>
-            <strong>{compact(totalViews)} views</strong>
-          </div>
-          {trend.length ? (
-            <div className="story-analytics-trend" aria-label="Story view trend">
-              {trend.map((item) => (
-                <div className="story-analytics-trend-item" key={item.date} title={`${formatGaDate(item.date)}: ${item.views} views`}>
-                  <div className="story-analytics-trend-track"><span style={{ height: `${Math.max(item.views ? 5 : 1, (item.views / trendMax) * 100)}%` }} /></div>
-                  <small>{formatGaDate(item.date)}</small>
-                </div>
-              ))}
-            </div>
-          ) : <p className="story-analytics-empty">No traffic in this period.</p>}
-        </div>
-
-        <div className="admin-card story-analytics-card story-analytics-top-story">
-          <div className="story-analytics-card-head"><div><h2>{selectedArticle ? 'Selected story' : 'Top story'}</h2><p>By page views in this reporting period</p></div></div>
-          {selectedArticle ? (
-            <>
-              <h3>{selectedArticle.title}</h3>
-              <div className="story-analytics-big-number">{compact(selectedPerformance?.views || 0)} <span>views</span></div>
-              <p>Published {formatPublished(selectedArticle.published_at)}</p>
-              <a className="admin-secondary" href={`/${selectedArticle.slug}`} target="_blank" rel="noreferrer">Open story</a>
-            </>
-          ) : topStory ? (
-            <>
-              <h3>{topStory.title}</h3>
-              <div className="story-analytics-big-number">{compact(topStory.views)} <span>views</span></div>
-              <p>Published {formatPublished(topStory.published_at)}</p>
-              <Link className="admin-secondary" href={`/admin/analytics?${filterQuery.toString()}&story=${encodeURIComponent(topStory.slug)}`}>Inspect story</Link>
-            </>
-          ) : <p className="story-analytics-empty">No published stories match this filter.</p>}
-        </div>
-      </section>
-
-      <section className="story-analytics-grid">
-        <div className="admin-card story-analytics-card">
-          <div className="story-analytics-card-head"><div><h2>Traffic channels</h2><p>Direct, social, search, referral and other channels</p></div></div>
-          {channels.length ? channels.map((item) => (
-            <div className="story-analytics-rank" key={item.label}>
-              <div><strong>{item.label}</strong><span>{compact(item.views)} views</span></div>
-              <div className="story-analytics-track"><span style={{ width: `${Math.max(2, (item.views / channelMax) * 100)}%` }} /></div>
-            </div>
-          )) : <p className="story-analytics-empty">No channel data for these stories.</p>}
-        </div>
-
-        <div className="admin-card story-analytics-card">
-          <div className="story-analytics-card-head"><div><h2>Top countries</h2><p>Country-level story traffic. City and device data are intentionally excluded for now.</p></div></div>
-          {countries.length ? countries.map((item) => (
-            <div className="story-analytics-rank" key={item.label}>
-              <div><strong>{item.label}</strong><span>{compact(item.views)} views</span></div>
-              <div className="story-analytics-track"><span style={{ width: `${Math.max(2, (item.views / countryMax) * 100)}%` }} /></div>
-            </div>
-          )) : <p className="story-analytics-empty">No country data for these stories.</p>}
-        </div>
-      </section>
-
-      <section className="admin-card story-analytics-card">
-        <div className="story-analytics-card-head">
-          <div><h2>Traffic sources</h2><p>Referrer/source and medium behind story traffic</p></div>
-          <small>{selectedArticle ? 'Selected story' : 'Current story filter'}</small>
-        </div>
-        {sources.length ? (
-          <div className="story-analytics-source-grid">
-            {sources.map((item, index) => (
-              <div key={item.label}><span>{index + 1}</span><strong>{item.label}</strong><b>{compact(item.views)}</b></div>
-            ))}
-          </div>
-        ) : <p className="story-analytics-empty">No source data for these stories.</p>}
-      </section>
-
-      <section className="admin-card story-analytics-card">
-        <div className="story-analytics-card-head">
-          <div><h2>Story performance</h2><p>Every published story in the current publish-date filter, including stories with zero measured views.</p></div>
-          <strong>{storyRows.length} stories</strong>
-        </div>
-        <div className="admin-table-wrap">
-          <table className="story-analytics-table">
-            <thead><tr><th>Story</th><th>Published</th><th>Views</th><th>Readers</th><th>Views / reader</th><th>Drill-down</th></tr></thead>
-            <tbody>
-              {storyRows.length ? storyRows.map((row) => (
-                <tr key={row.id} className={selectedArticle?.slug === row.slug ? 'is-selected' : ''}>
-                  <td><strong>{row.title}</strong><small>/{row.slug}/</small></td>
-                  <td>{formatPublished(row.published_at)}</td>
-                  <td><strong>{compact(row.views)}</strong></td>
-                  <td>{compact(row.users)}</td>
-                  <td>{row.users ? (row.views / row.users).toFixed(1) : '0.0'}</td>
-                  <td><Link className="admin-secondary" href={`/admin/analytics?${filterQuery.toString()}&story=${encodeURIComponent(row.slug)}`}>Inspect</Link></td>
-                </tr>
-              )) : <tr><td colSpan={6}>No published stories match this filter.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <p className="story-analytics-footnote">
-        Views come from the existing GA4 page-view stream. Repeated views are counted. Country and traffic-source data use GA4's aggregated reporting, and no new device or IP tracking was added for this dashboard.
-      </p>
-    </AdminShell>
-  );
+    <p className="readership-footnote">Counted on webfitnews.com since 27 October 2026. Search engines and other bots are left out; newsroom staff reading the public site are included. Readers are told about this in the privacy policy.</p>
+  </AdminShell>;
 }

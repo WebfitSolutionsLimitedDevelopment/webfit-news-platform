@@ -17,6 +17,7 @@ export default function PrivacyPolicyPage(){
 
       <h2>Analytics and advertising</h2>
       <p>We use services including Google Analytics to understand website usage and Google AdSense to support advertising. Those services may use cookies or similar technologies subject to their own policies and applicable consent requirements.</p>
+      <p>We also keep our own count of how our stories are read. When you open a page, your browser stores a random reader number (not your name, email address or IP address) so we can tell new readers from returning ones. With it we record the page you opened, the site or app that sent you, whether you are on a phone or computer, your country, how long the page was open and how far you scrolled. We use this only to understand which journalism is useful to readers, and you can clear it at any time by clearing this site&apos;s data in your browser.</p>
 
       <h2>Payments</h2>
       <p>Reader contributions are processed by Stripe. Payment card details are handled by Stripe and are not intended to be stored directly by Webfit News.</p>
