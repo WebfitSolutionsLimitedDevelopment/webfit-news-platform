@@ -23,3 +23,13 @@ export async function requirePublisher() {
   }
   return session;
 }
+
+/** Outside reporters: write their own stories and submit them; cannot publish. */
+export const WRITER_ROLES = ['contributor', 'journalist'] as const;
+export const isWriterRole = (role?: string | null) => role === 'contributor' || role === 'journalist';
+/** Super admins and editors: review, publish and send back. */
+export const isReviewerRole = (role?: string | null) => role === 'super_admin' || role === 'editor';
+/** Plain-English names for roles, used across the CMS. */
+export const ROLE_LABEL: Record<string, string> = {
+  super_admin: 'Super Admin', editor: 'Editor', contributor: 'Reporter', journalist: 'Reporter (staff)', ad_manager: 'Ad Manager',
+};

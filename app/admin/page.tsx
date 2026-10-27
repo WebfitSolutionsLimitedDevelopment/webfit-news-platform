@@ -31,6 +31,7 @@ export default async function AdminDashboard(){
   </div>;
 
   return <AdminShell active="Dashboard"><AdminHeader title="Newsroom Dashboard" description="Publish, curate and understand Webfit News from one place." actions={headerActions}/>
+    {d.inReview?<Link href="/admin/articles?status=in_review" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,margin:'0 0 16px',padding:'14px 18px',borderRadius:14,background:'#fff8e8',border:'1px solid #f0d28a',color:'#6f4b00',textDecoration:'none',fontWeight:700}}><span>{d.inReview} {d.inReview===1?'story is':'stories are'} waiting for your review</span><span>Review now →</span></Link>:null}
     <section className="admin-metrics">
       <div><span>Published today</span><strong>{d.publishedToday}</strong></div><div><span>In review</span><strong>{d.inReview}</strong></div><div><span>Drafts</span><strong>{d.drafts}</strong></div><div><span>Scheduled</span><strong>{d.scheduled}</strong></div><div><span>Total articles</span><strong>{d.articles}</strong></div><div><span>Media assets</span><strong>{d.media}</strong></div>
     </section>

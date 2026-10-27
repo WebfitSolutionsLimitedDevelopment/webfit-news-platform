@@ -26,14 +26,16 @@ export async function getArticlesAdmin(filters:ArticleAdminFilters={}) {
   const pageSize=Math.min(100,Math.max(10,Number(filters.pageSize||30)));
   const from=(page-1)*pageSize;
   const to=from+pageSize-1;
-  let query=supabase.from('articles').select('id,title,slug,status,article_type,published_at,scheduled_at,updated_at,view_count,author:author_id(name),media:featured_media_id(public_url)',{count:'exact'});
-  if(filters.status && filters.status!=='all') query=query.eq('status',filters.status as any);
+  let query=supabase.from('articles').select('id,title,slug,status,article_type,published_at,scheduled_at,updated_at,view_count,created_by,submitted_at,review_note,author:author_id(name),media:featured_media_id(public_url)',{count:'exact'});
+  if(filters.status==='returned') query=query.eq('status','draft').not('review_note','is',null);
+  else if(filters.status && filters.status!=='all') query=query.eq('status',filters.status as any);
   if(filters.type && filters.type!=='all') query=query.eq('article_type',filters.type as any);
   if(filters.q?.trim()) {
     const safe=filters.q.trim().replaceAll(',',' ');
     query=query.or(`title.ilike.%${safe}%,slug.ilike.%${safe}%`);
   }
-  const {data,error,count}=await query.order('updated_at',{ascending:false}).range(from,to);
+  // The review queue reads oldest first, so nothing waits too long.
+  const {data,error,count}=await (filters.status==='in_review'?query.order('submitted_at',{ascending:true,nullsFirst:false}):query.order('updated_at',{ascending:false})).range(from,to);
   if(error) throw error;
   return {items:data||[],count:count||0,page,pageSize,pages:Math.max(1,Math.ceil((count||0)/pageSize))};
 }

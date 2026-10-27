@@ -28,6 +28,10 @@ type RedirectRow = { source_path: string; destination_path: string; status_code:
 const REDIRECT_TTL_MS = 5 * 60 * 1000;
 let redirectCache: { rows: RedirectRow[]; loadedAt: number } | null = null;
 
+/** Reporters (submit stories for approval) and the CMS pages open to them. Keep in step with lib/admin-auth.ts. */
+const WRITER_ROLES = new Set(['contributor', 'journalist']);
+const WRITER_PATHS = /^\/admin\/(articles|media)(\/|$)/;
+
 async function loadRedirects(supabase: any): Promise<RedirectRow[]> {
   if (redirectCache && Date.now() - redirectCache.loadedAt < REDIRECT_TTL_MS) return redirectCache.rows;
   const { data, error } = await supabase
@@ -115,12 +119,23 @@ export async function proxy(request: NextRequest) {
   if (path === '/admin/login' && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_active')
+      .select('is_active,role')
       .eq('id', user.id)
       .maybeSingle();
     if (profile?.is_active) {
       const url = request.nextUrl.clone();
-      url.pathname = '/admin';
+      url.pathname = WRITER_ROLES.has(profile.role) ? '/admin/articles' : '/admin';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Outside reporters only get their own stories and the image library.
+  if (user && path !== '/admin/login' && !WRITER_PATHS.test(path)) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (profile && WRITER_ROLES.has(profile.role)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/articles';
       url.search = '';
       return NextResponse.redirect(url);
     }

@@ -7,6 +7,7 @@ import { after } from 'next/server';
 import { sanitizeArticleHtml } from '../../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../../lib/env';
+import { notifyReview } from '../../../../../lib/review-notify';
 
 const Patch = z.object({
   title:z.string().min(5).optional(),
@@ -31,7 +32,9 @@ const Patch = z.object({
   social_description:z.string().nullable().optional(),
   category_ids:z.array(z.string().uuid()).optional(),
   primary_category_id:z.string().uuid().nullable().optional(),
-  tag_names:z.array(z.string().trim().min(1)).optional()
+  tag_names:z.array(z.string().trim().min(1)).optional(),
+  /** Editor's comment when sending a story back to its reporter. */
+  review_note:z.string().trim().max(4000).nullable().optional()
 });
 
 async function ctx(){
@@ -60,8 +63,12 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(!p.success)return NextResponse.json({error:p.error.flatten()},{status:422});
   if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
   if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
+  const reviewer=['super_admin','editor'].includes(c.profile.role);
+  if(p.data.review_note!==undefined&&!reviewer)return NextResponse.json({error:'Only an editor can comment on a story.'},{status:403});
 
   const {data:before}=await c.supabase.from('articles').select('slug,status').eq('id',id).maybeSingle();
+  if(!before)return NextResponse.json({error:'Story not found, or it is waiting for review and cannot be changed.'},{status:404});
+  if(!reviewer&&before.status!=='draft')return NextResponse.json({error:before.status==='in_review'?'This story is with the editor. You can edit it again if it is sent back.':'This story is published. Ask an editor to change it.'},{status:409});
 
   const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
   const changes:any={...articleChanges};
@@ -116,6 +123,11 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
     const {data:full}=await c.supabase.from('articles').select('title,excerpt').eq('id',id).maybeSingle();
     if(full?.title) void sendPushToAllDevices(full.title, full.excerpt||'Read the full story on Webfit News.', `${getSiteUrl()}/${data.slug}`);
   }
+
+  // Review emails: submitted (to editors), sent back or published (to the reporter).
+  if(data.status==='in_review'&&before.status!=='in_review')after(()=>notifyReview(id,'submitted'));
+  if(before.status==='in_review'&&data.status==='draft')after(()=>notifyReview(id,'returned'));
+  if(before.status==='in_review'&&data.status==='published')after(()=>notifyReview(id,'published'));
 
   return NextResponse.json({article:data});
 }

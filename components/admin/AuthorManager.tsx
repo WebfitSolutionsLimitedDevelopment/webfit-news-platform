@@ -1,25 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { uploadAuthorPhoto } from '../../lib/author-photo';
 
 function slugify(value:string){return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
 
 const DEFAULT_TITLE='Reporter';
-
-/** Centre-crop to a square and shrink to 400×400, so every byline photo is small, sharp and round-ready. */
-async function squarePhoto(file:File):Promise<Blob>{
-  const url=URL.createObjectURL(file);
-  try{
-    const img=await new Promise<HTMLImageElement>((ok,fail)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>fail(new Error('That file is not a photo we can read. Try a JPG or PNG.'));i.src=url});
-    const side=Math.min(img.naturalWidth,img.naturalHeight);
-    // Portraits: keep the face, which is usually in the upper part of the picture.
-    const sx=(img.naturalWidth-side)/2;
-    const sy=img.naturalHeight>img.naturalWidth?Math.max(0,(img.naturalHeight-side)*0.2):(img.naturalHeight-side)/2;
-    const canvas=document.createElement('canvas');canvas.width=400;canvas.height=400;
-    const g=canvas.getContext('2d')!;g.imageSmoothingQuality='high';g.drawImage(img,sx,sy,side,side,0,0,400,400);
-    return await new Promise<Blob>((ok,fail)=>canvas.toBlob(b=>b?ok(b):fail(new Error('Could not prepare the photo.')),'image/jpeg',0.86));
-  }finally{URL.revokeObjectURL(url)}
-}
 
 function initials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]!.toUpperCase()).join('')}
 
@@ -49,14 +35,7 @@ function AuthorEditor({author,currentUserId,onDone}:{author:any;currentUserId:st
     if(!file)return;
     setUploading(true);setNote('');
     try{
-      const blob=await squarePhoto(file);
-      const form=new FormData();
-      form.append('file',new File([blob],`author-${author.slug||'photo'}.jpg`,{type:'image/jpeg'}));
-      form.append('alt_text',name||author.name||'Author photo');
-      const r=await fetch('/api/admin/media',{method:'POST',body:form});
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok||!d.media?.public_url)throw new Error(typeof d.error==='string'?d.error:'Upload failed. Try again.');
-      setAvatar(d.media.public_url);
+      setAvatar(await uploadAuthorPhoto(file,author.slug||'photo',name||author.name||'Author photo'));
       setNote('Photo uploaded. Press Save profile to use it.');
     }catch(e:any){setNote(e.message)}finally{setUploading(false)}
   }

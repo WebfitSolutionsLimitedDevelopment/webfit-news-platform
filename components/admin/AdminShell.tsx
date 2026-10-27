@@ -1,14 +1,23 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { LogoutButton } from './LogoutButton';
+import { createClient } from '../../lib/supabase-server';
+import { isWriterRole } from '../../lib/admin-auth';
 
-const groups=[
+type Group={label:string;items:ReadonlyArray<readonly [string,string]>};
+
+/** Outside reporters see only their own stories and the image library. */
+const writerGroups:Group[]=[
+  {label:'My work',items:[['My stories','/admin/articles'],['New story','/admin/articles/new'],['Media','/admin/media']]},
+];
+
+const groups:Group[]=[
   {label:'Editorial',items:[['Dashboard','/admin'],['Analytics','/admin/analytics'],['Articles','/admin/articles'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
   {label:'Revenue & formats',items:[['Advertisements','/admin/advertisements'],['Videos','/admin/videos'],['Digital Edition','/admin/digital-edition']]},
   {label:'Operations',items:[['Users','/admin/users'],['404 Monitor','/admin/404-monitor'],['Redirects','/admin/redirects'],['Archive Audit','/admin/migration'],['Launch Readiness','/admin/launch'],['Settings','/admin/settings']]}
-] as const;
+];
 
-function AdminMobileNav({active}:{active?:string}){
+function AdminMobileNav({active,groups}:{active?:string;groups:Group[]}){
   return <div className="admin-mobile-bar">
     <Link className="admin-mobile-brand" href="/admin">
       <img src="/webfit-news-logo-400.webp" alt="Webfit News"/>
@@ -28,9 +37,20 @@ function AdminMobileNav({active}:{active?:string}){
   </div>;
 }
 
-export function AdminShell({children,active}:{children:ReactNode;active?:string}){
+async function navFor():Promise<Group[]>{
+  try{
+    const supabase=await createClient();
+    const {data:{user}}=await supabase.auth.getUser();
+    if(!user)return groups;
+    const {data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
+    return isWriterRole(p?.role)?writerGroups:groups;
+  }catch{return groups}
+}
+
+export async function AdminShell({children,active}:{children:ReactNode;active?:string}){
+  const groups=await navFor();
   return <div className="admin-layout premium-admin">
-    <AdminMobileNav active={active}/>
+    <AdminMobileNav active={active} groups={groups}/>
     <aside className="admin-sidebar premium-sidebar">
       <Link className="admin-brand premium-admin-brand" href="/admin"><img src="/webfit-news-logo-400.webp" alt="Webfit News"/><div><span>WEBFIT</span><strong>NEWSROOM</strong></div></Link>
       <nav className="admin-nav-groups">{groups.map(group=><div className="admin-nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label,href])=><Link key={href} className={active===label?'active':''} href={href}>{label}</Link>)}</div>)}</nav>
