@@ -21,6 +21,32 @@ function redirectCandidates(pathname: string, search = '') {
   return [...new Set([exactWithQuery, ...normalizedWithQuery, ...pathCandidates])];
 }
 
+/**
+ * Pattern fixes for URLs that would otherwise 404:
+ * - links copied from social posts often carry invisible characters
+ *   (word joiner, object-replacement, zero-width space) after the slug;
+ * - WordPress nested category URLs (/category/news/new-zealand/page/3) map to
+ *   our flat sections (/category/new-zealand/page/3).
+ */
+const INVISIBLE_CHARS = /[\u200B-\u200D\u2060\uFEFF\uFFFC]/g;
+function legacyPathFix(pathname: string): string | null {
+  let decoded = pathname;
+  try { decoded = decodeURIComponent(pathname); } catch { return null; }
+  const cleaned = decoded.replace(INVISIBLE_CHARS, '').replace(/\s+$/, '');
+  if (cleaned !== decoded && cleaned.length > 1) return encodeURI(cleaned);
+
+  const segs = pathname.split('/').filter(Boolean);
+  if (segs[0] === 'category' && segs.length >= 3) {
+    const pageIndex = segs.indexOf('page');
+    const catSegs = pageIndex > 0 ? segs.slice(1, pageIndex) : segs.slice(1);
+    if (catSegs.length >= 2) {
+      const pageNumber = pageIndex > 0 ? segs[pageIndex + 1] : undefined;
+      return `/category/${catSegs[catSegs.length - 1]}${pageNumber && /^\d+$/.test(pageNumber) && pageNumber !== '1' ? `/page/${pageNumber}` : ''}`;
+    }
+  }
+  return null;
+}
+
 type RedirectRow = { source_path: string; destination_path: string; status_code: number | null };
 
 // The redirect table (about 750 old WordPress URLs) is loaded once and reused
@@ -57,6 +83,15 @@ export async function proxy(request: NextRequest) {
     // Drop the WordPress-era trailing slash in the same hop, instead of a second redirect.
     if (destination.pathname.length > 1) destination.pathname = destination.pathname.replace(/\/+$/, '') || '/';
     return NextResponse.redirect(destination, 308);
+  }
+
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    const fixed = legacyPathFix(request.nextUrl.pathname);
+    if (fixed && fixed !== request.nextUrl.pathname) {
+      const destination = request.nextUrl.clone();
+      destination.pathname = fixed;
+      return NextResponse.redirect(destination, 308);
+    }
   }
 
   let response = NextResponse.next({ request });

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { describeBodyImages } from '@/lib/alt-text';
 import { topicForStory } from '@/lib/topics';
 import Link from 'next/link';
 import { AuthorByline } from '@/components/AuthorByline';
@@ -99,7 +100,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const displayTitle=getPublicStoryTitle(article.title);
   const displayType=getPublicStoryTypeLabel(article.article_type,article.title);
   const resolvedContent=await resolveInlineArticleMedia(article.content_html||'');
-  const clean=responsiveBodyImages(sanitizeArticleHtml(resolvedContent));
+  const clean=describeBodyImages(responsiveBodyImages(sanitizeArticleHtml(resolvedContent)),getPublicStoryTitle(article.title));
   const speechText=articleHtmlToText(`${displayTitle}. ${article.subtitle||''}. ${clean}`);
 
   // Ad breaks: after paragraph 3 on stories with at least 5 paragraphs, and
