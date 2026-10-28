@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ThirdPartyScripts } from '../components/ThirdPartyScripts';
 import { ReadTracker } from '../components/ReadTracker';
+import { AppInstallPrompt } from '../components/AppInstallPrompt';
 import { getSiteUrl } from '../lib/env';
 import { getPublicSiteSettings } from '../lib/public-settings';
 
@@ -122,6 +123,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
       <ThirdPartyScripts/>
       <ReadTracker/>
+      <AppInstallPrompt/>
 
       <Script id="sw-register" strategy="afterInteractive">
         {`

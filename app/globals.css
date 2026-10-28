@@ -251,3 +251,16 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
 .author-byline-name{font-size:15px;font-weight:800;color:#111;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .author-byline-role{font-size:13px;color:#5b6370}
 .article-meta-byline time{font-size:13px;color:#5b6370}
+
+/* "Get the app" card for iPhone readers (components/AppInstallPrompt.tsx) */
+.app-prompt{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:2147483000;max-width:440px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;padding:14px 16px 14px 14px;background:#fff;color:#111;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.28);font-family:Arial,Helvetica,sans-serif;animation:app-prompt-in .35s ease-out}
+.app-prompt img{width:52px;height:52px;border-radius:12px;border:1px solid #e6e6e6}
+.app-prompt-copy{display:flex;flex-direction:column;gap:3px;padding-right:18px}
+.app-prompt-copy strong{font-size:16px;line-height:1.2}
+.app-prompt-copy span{font-size:13.5px;line-height:1.35;color:#4b5563}
+.app-prompt-actions{grid-column:1/-1;display:flex;gap:8px}
+.app-prompt-get{flex:1;text-align:center;background:#c8232c;color:#fff;border-radius:999px;padding:11px 14px;font-weight:700;font-size:15px;text-decoration:none}
+.app-prompt-later{background:#f1f2f4;border:0;border-radius:999px;padding:11px 16px;font-weight:700;font-size:15px;color:#111}
+.app-prompt-close{position:absolute;top:6px;right:8px;border:0;background:none;font-size:22px;line-height:1;color:#6b7280;padding:4px}
+@keyframes app-prompt-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.app-prompt{animation:none}}
