@@ -1,0 +1,11 @@
+.lead { margin: 0; font-size: 15px; line-height: 1.55; color: #3f4650; }
+.barWrap { position: relative; margin: 14px 0 6px; }
+.bar { display: flex; height: 22px; overflow: hidden; border-radius: 8px; background: #ece7dc; }
+.bar span { display: block; height: 100%; }
+.majority { position: absolute; top: -4px; height: 30px; width: 2px; background: #101317; }
+.parties { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; }
+.parties li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #eef0f2; font-size: 14px; }
+.partyName { flex: 1; font-weight: 700; }
+.partyPct { color: #667085; font-variant-numeric: tabular-nums; }
+.parties strong { min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { .parties { grid-template-columns: 1fr; } }

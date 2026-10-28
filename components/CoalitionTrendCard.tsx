@@ -1,10 +1,12 @@
 import { ElectionPollCard } from '@/components/ElectionPollPromo';
 import { HideAfter } from '@/components/HideAfter';
+import { LiveResultsCard } from '@/components/LiveResultsCard';
 import styles from './CoalitionTrendCard.module.css';
 
 /**
  * Live "How the race has moved" chart from the Webfit News reader poll,
- * shown at the end of every story until the end of 5 November 2026 NZ time.
+ * shown at the end of every story until the end of 4 November 2026 NZ time.
+ * From 5 November the official live results card takes its place.
  *
  * Data comes from poll.webfitnews.co.nz/api/public/coalition (percentages
  * only, no vote counts), cached for 5 minutes. If the feed is unavailable,
@@ -12,7 +14,8 @@ import styles from './CoalitionTrendCard.module.css';
  */
 
 const API_URL = process.env.COALITION_API_URL || 'https://poll.webfitnews.co.nz/api/public/coalition';
-const SHOW_UNTIL = Date.parse('2026-11-05T23:59:59+13:00');
+// Results card from the start of 5 November 2026 NZ time.
+const SHOW_UNTIL = Date.parse('2026-11-05T00:00:00+13:00');
 
 type Bloc = 'government' | 'opposition' | 'other';
 type TrendPoint = { date: string } & Record<Bloc, number>;
@@ -103,7 +106,7 @@ function TrendChart({ trend, compact }: { trend: TrendPoint[]; compact: boolean 
 }
 
 export async function CoalitionTrendCard() {
-  if (Date.now() >= SHOW_UNTIL) return <ElectionPollCard />;
+  if (Date.now() >= SHOW_UNTIL) return <LiveResultsCard />;
   const feed = await loadFeed();
   if (!feed) return <ElectionPollCard />;
 
@@ -115,7 +118,7 @@ export async function CoalitionTrendCard() {
         : 'Blocs level';
 
   return (
-    <HideAfter until={SHOW_UNTIL} fallback={<ElectionPollCard />}>
+    <HideAfter until={SHOW_UNTIL} fallback={<LiveResultsCard />}>
       <aside className={styles.card} aria-label="Election 2026 reader poll: how the blocs are tracking">
         <span className={styles.kicker}>Election 2026 · Reader poll</span>
         <h2 className={styles.title}>How the race has moved: {leader}</h2>
