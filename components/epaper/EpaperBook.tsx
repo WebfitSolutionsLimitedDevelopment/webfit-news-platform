@@ -346,7 +346,8 @@ function flowColumns(items: Item[], h: number, parent: HTMLElement, sideLimit = 
   return { band, rest: queue, endsStory: !queue.length && Boolean(lastPlaced && lastPlaced.t === 'text' && lastPlaced.last) };
 }
 
-function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEWS_PAGES: number): { pages: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[] } {
+/** extraFor: give this one desk (section index) one page more than its share, to land exactly on TOTAL_PAGES. */
+function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEWS_PAGES: number, extraFor?: number): { pages: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[] } {
   const pages: FlowPage[] = [];
   let houseHalves = 0;
   // The front page carries a strip of up to three posters at its foot, taken from the most important
@@ -379,6 +380,7 @@ function paginate(edition: Edition, host: HTMLElement, allBlocks: AdBlock[], NEW
     quotas[best] += 1;
     left -= 1;
   }
+  if (extraFor != null && extraFor > 0 && extraFor < quotas.length) quotas[extraFor] += 1;
 
   edition.sections.forEach((section, sIndex) => {
     const quota = quotas[sIndex];
@@ -905,15 +907,34 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       // The front, the Stars & Week Ahead page, the back page and our advertising page are the other pages.
       let newsPages = TOTAL_PAGES - (hasAlmanac ? 4 : 3);
       let best: { flow: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[]; total: number } | null = null;
-      for (let pass = 0; pass < 4 && !cancelled; pass += 1) {
-        const r = paginate(edition, host, blocks, newsPages);
+      const tryLayout = (n: number, extraFor?: number) => {
+        const r = paginate(edition, host, blocks, n, extraFor);
         const total = assemble(r.pages, r.unplaced, hasAlmanac).length;
         const better = !best || (total <= TOTAL_PAGES && (best.total > TOTAL_PAGES || total > best.total)) || (best.total > TOTAL_PAGES && total < best.total);
         if (better) best = { flow: r.pages, dropped: r.dropped, unplaced: r.unplaced, total };
-        if (total === TOTAL_PAGES) break;
-        newsPages += TOTAL_PAGES - total;
-        if (newsPages < 1) break;
+        return total;
+      };
+      const short = new Set<number>(); // page counts that came out under TOTAL_PAGES
+      let hit = false;
+      for (let pass = 0; pass < 4 && !cancelled; pass += 1) {
+        const total = tryLayout(newsPages);
+        if (total === TOTAL_PAGES) { hit = true; break; }
+        if (total < TOTAL_PAGES) short.add(newsPages);
+        const next = newsPages + TOTAL_PAGES - total;
+        if (next < 1 || (total > TOTAL_PAGES && short.has(next))) break; // see-saw (one page more jumps two): fine-tune below
+        newsPages = next;
         await new Promise(res => setTimeout(res, 0)); // let the page breathe between passes
+      }
+      // One page short with n pages but over with n + 1: keep n and give one desk a single extra page,
+      // trying the biggest desks first, until the paper lands exactly on TOTAL_PAGES.
+      if (!hit && short.size && !cancelled) {
+        const base = Math.max(...short);
+        const order = edition.sections.map((sec, i) => ({ i, n: sec.stories.length })).filter(x => x.i > 0).sort((a, b) => b.n - a.n);
+        for (const { i } of order) {
+          if (cancelled) break;
+          if (tryLayout(base, i) === TOTAL_PAGES) break;
+          await new Promise(res => setTimeout(res, 0));
+        }
       }
       if (cancelled || !best) return;
       const { flow, dropped, unplaced } = best;
