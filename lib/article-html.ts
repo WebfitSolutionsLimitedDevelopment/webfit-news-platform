@@ -1,3 +1,4 @@
+import { cleanPastedText } from './pasted-text';
 import sanitizeHtml from 'sanitize-html';
 
 const ARTICLE_TAGS = Array.from(new Set([
@@ -58,7 +59,8 @@ function dedupeInlineFiguresKeepLast(html: string) {
 }
 
 export function sanitizeArticleHtml(value: string) {
-  const clean = sanitizeHtml(value || '', {
+  // Pasted tool codes and "a| b" table lines first (lib/pasted-text.ts), then the usual allow-list.
+  const clean = sanitizeHtml(cleanPastedText(value || ''), {
     allowedTags: ARTICLE_TAGS,
     allowedAttributes: {
       '*': ['class','data-inline-instance'],

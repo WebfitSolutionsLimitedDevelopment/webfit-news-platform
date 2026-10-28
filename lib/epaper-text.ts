@@ -1,3 +1,4 @@
+import { cleanPastedText } from './pasted-text';
 /**
  * Turn story HTML into plain text blocks the e-paper can flow across columns and pages.
  * Images, embeds and scripts are dropped; tables become one line per row.
@@ -29,7 +30,8 @@ const BYLINE_ONLY = /^by\s+webfit news$/i;
 
 export function htmlToBlocks(html: string | null | undefined, title = ''): TextBlock[] {
   if (!html) return [];
-  let s = html
+  // Pasted tool codes and "a| b" table lines (lib/pasted-text.ts): codes removed, tables become rows below.
+  let s = cleanPastedText(html)
     .replace(/<(script|style|iframe|video|audio|figure|picture|noscript|svg|object)\b[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<img\b[^>]*>/gi, ' ');
 
