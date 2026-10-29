@@ -28,7 +28,7 @@ export function SubscribeForm() {
 
   if (state === 'sent') {
     return <div className={styles.notice} role="status">
-      <strong>Check your inbox.</strong> We’ve sent you a confirmation email. Tap the button in it to start getting the e-paper. (If it’s not there in a few minutes, look in spam or promotions.)
+      <strong>You’re subscribed.</strong> We’ve emailed you this week’s e-paper, and the new edition will arrive every Thursday morning. (If it’s not in your inbox in a few minutes, look in spam or promotions.) <a href="/epaper">Read it now →</a>
     </div>;
   }
 

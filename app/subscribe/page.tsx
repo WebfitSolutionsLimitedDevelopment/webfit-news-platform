@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 const STATUS: Record<string, { cls: string; text: string }> = {
   confirmed: { cls: styles.ok, text: 'You’re in. The next Webfit News e-paper will land in your inbox as soon as it’s out.' },
-  expired: { cls: styles.bad, text: 'That confirmation link has expired or isn’t valid. Enter your email below and we’ll send a fresh one.' },
+  expired: { cls: styles.bad, text: 'That link has expired. Enter your email below and you’ll be subscribed straight away.' },
   error: { cls: styles.bad, text: 'Something went wrong confirming your email. Please try again below.' },
 };
 
