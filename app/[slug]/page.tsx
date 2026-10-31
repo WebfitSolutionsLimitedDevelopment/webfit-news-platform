@@ -16,6 +16,7 @@ import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } fro
 import discovery from '@/components/ArticleDiscovery.module.css';
 import { AdSlot } from '@/components/AdSlot';
 import { CoalitionTrendCard } from '@/components/CoalitionTrendCard';
+import { ArticleFeedback } from '@/components/ArticleFeedback';
 import { RSS_ALTERNATE, SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
 import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
 import { responsiveImage, responsiveBodyImages } from '@/lib/image-url';
@@ -178,6 +179,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}
           </div>)}
+          <ArticleFeedback articleId={article.id}/>
           <CoalitionTrendCard/>
           <AdSlot slotKey="ARTICLE_BOTTOM" variant="inline"/>
           {cats.length?<div className="article-categories">{cats.map((c:any)=><Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>:null}

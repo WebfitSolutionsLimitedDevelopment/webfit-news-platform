@@ -12,7 +12,7 @@ const writerGroups:Group[]=[
 ];
 
 const groups:Group[]=[
-  {label:'Editorial',items:[['Dashboard','/admin'],['Analytics','/admin/analytics'],['Articles','/admin/articles'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
+  {label:'Editorial',items:[['Dashboard','/admin'],['Analytics','/admin/analytics'],['Reader feedback','/admin/feedback'],['Articles','/admin/articles'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
   {label:'Revenue & formats',items:[['Advertisements','/admin/advertisements'],['Videos','/admin/videos'],['Digital Edition','/admin/digital-edition']]},
   {label:'Operations',items:[['Users','/admin/users'],['404 Monitor','/admin/404-monitor'],['Redirects','/admin/redirects'],['Archive Audit','/admin/migration'],['Launch Readiness','/admin/launch'],['Settings','/admin/settings']]}
 ];
