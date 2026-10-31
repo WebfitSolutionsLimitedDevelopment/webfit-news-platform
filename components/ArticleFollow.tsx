@@ -3,7 +3,7 @@ import { Icon, type IconName } from './SocialIcons';
 
 const ITEMS: [string, string, IconName][] = [
   ['facebook', 'Webfit News on Facebook', 'facebook'],
-  ['facebook_profile', 'Webfit News Facebook profile', 'facebook'],
+  ['facebook_profile', 'Webfit News on Facebook (second page)', 'facebook'],
   ['instagram', 'Webfit News on Instagram', 'instagram'],
   ['youtube', 'Webfit News on YouTube', 'youtube'],
   ['linkedin', 'Webfit News on LinkedIn', 'linkedin'],

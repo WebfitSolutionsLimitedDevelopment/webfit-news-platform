@@ -99,7 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         logo:{'@type':'ImageObject',url:`${CANONICAL_SITE_URL}/webfit-news-logo.png`},
         description:'Independent New Zealand news, analysis, community reporting and practical New Zealand information guides.',
         areaServed:{'@type':'Country',name:'New Zealand'},
-        sameAs:['https://www.facebook.com/webfitnews','https://www.youtube.com/@webfitnews'],
+        sameAs:['https://www.facebook.com/webfitnewsnz','https://www.facebook.com/webfitnews','https://www.instagram.com/webfitnews','https://www.youtube.com/@webfitnews'],
         publishingPrinciples:`${CANONICAL_SITE_URL}/editorial-policy`,
         correctionsPolicy:`${CANONICAL_SITE_URL}/corrections`,
         ethicsPolicy:`${CANONICAL_SITE_URL}/editorial-policy`,

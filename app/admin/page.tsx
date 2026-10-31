@@ -2,7 +2,20 @@ import Link from 'next/link';
 import { AdminHeader, AdminShell, StatusBadge } from '../../components/admin/AdminShell';
 import { getAdminDashboard } from '../../lib/admin-data';
 import { getGoogleAnalyticsDashboard } from '../../lib/google-analytics';
+import { createClient } from '../../lib/supabase-server';
 import './dashboard-analytics.css';
+
+/** Last 7 days of "Was this article useful?" answers for the dashboard card. */
+async function getFeedbackSummary(){
+  try{
+    const supabase=await createClient();
+    const since=new Date(Date.now()-7*86400000).toISOString();
+    const {data,error}=await supabase.from('article_feedback').select('helpful,comment,updated_at,articles(title,slug)').gte('updated_at',since).order('updated_at',{ascending:false}).limit(2000);
+    if(error)return null;
+    const rows=(data||[]) as any[];
+    return {yes:rows.filter(r=>r.helpful).length,no:rows.filter(r=>!r.helpful).length,comments:rows.filter(r=>r.comment).slice(0,3)};
+  }catch{return null}
+}
 
 function compact(value:number){
   return new Intl.NumberFormat('en-NZ',{notation:value>=10000?'compact':'standard',maximumFractionDigits:1}).format(value);
@@ -21,7 +34,7 @@ function shortDate(value:string){
 }
 
 export default async function AdminDashboard(){
-  const [d,ga]=await Promise.all([getAdminDashboard(),getGoogleAnalyticsDashboard()]);
+  const [d,ga,fb]=await Promise.all([getAdminDashboard(),getGoogleAnalyticsDashboard(),getFeedbackSummary()]);
   const trendMax=Math.max(1,...ga.trend.map(point=>point.views));
   const deviceTotal=Math.max(1,ga.devices.reduce((sum,item)=>sum+item.users,0));
 
@@ -81,6 +94,10 @@ export default async function AdminDashboard(){
       </div>
     </section>
 
+    {fb?<section className="admin-card"><div className="admin-card-head"><h2>Reader feedback · last 7 days</h2><Link href="/admin/feedback">Open Reader feedback</Link></div>
+      <div className="admin-shortcuts"><Link href="/admin/feedback?range=7d"><strong>{fb.yes}</strong><span>👍 Found it useful</span></Link><Link href="/admin/feedback?range=7d"><strong>{fb.no}</strong><span>👎 Not useful</span></Link><Link href="/admin/feedback?range=7d"><strong>{fb.yes+fb.no?Math.round(fb.yes/(fb.yes+fb.no)*100)+'%':'–'}</strong><span>Useful rate</span></Link></div>
+      {fb.comments.length?<div className="schedule-list">{fb.comments.map((c:any,i:number)=><div className="schedule-item" key={i}><div><span>“{c.comment}”</span><small>{c.articles?.title||'(deleted story)'}</small></div><time>{new Date(c.updated_at).toLocaleString('en-NZ',{timeZone:'Pacific/Auckland',dateStyle:'medium',timeStyle:'short'})}</time></div>)}</div>:<p className="admin-note">No written comments this week. Readers who tap 👎 can say what was missing or wrong.</p>}
+    </section>:null}
     <section className="admin-two-col"><div className="admin-card"><h2>Newsroom shortcuts</h2><div className="admin-shortcuts"><Link href="/admin/articles?status=in_review"><strong>{d.inReview}</strong><span>Stories awaiting review</span></Link><Link href="/admin/articles?status=draft"><strong>{d.drafts}</strong><span>Draft stories</span></Link><Link href="/admin/media"><strong>{d.failedMedia}</strong><span>Media needing attention</span></Link><Link href="/admin/homepage"><strong>Home</strong><span>Curate homepage</span></Link></div></div>
       <div className="admin-card"><h2>Platform status</h2><div className="migration-check"><span>Own database</span><b>Ready</b></div><div className="migration-check"><span>Own newsroom CMS</span><b>Ready</b></div><div className="migration-check"><span>Scheduled publishing</span><b>Active</b></div><div className="migration-check"><span>Google Analytics</span><b>{ga.configured?'Connected':'Setup needed'}</b></div><p className="admin-note">Normal publishing runs from Webfit News CMS, Supabase and the Next.js frontend. Audience reporting is read server-side from GA4 and no Google credential is exposed to the browser.</p></div>
     </section>
