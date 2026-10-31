@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getPublicEnv } from './env';
 
 export type PublicSiteSettings = {
-  identity: { name?: string; domain?: string; tagline?: string };
+  identity: { name?: string; domain?: string; tagline?: string; contact_email?: string };
   seo: { site_name?: string; default_locale?: string; default_title_suffix?: string };
   footer: { copyright_name?: string; media_council_member?: boolean };
   social: Record<string, string>;

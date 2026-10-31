@@ -233,3 +233,14 @@ export async function getPublishedVideos(limit=10,{includeShorts=false}:{include
     .sort((a,b)=>(Date.parse(b.published_at||'')||0)-(Date.parse(a.published_at||'')||0))
     .slice(0,limit);
 }
+
+/** The stories published just before and just after this one, for previous/next links. */
+export async function getAdjacentStories(publishedAt:string|null|undefined,articleId:string){
+  if(!publishedAt) return {previous:null as Story|null,next:null as Story|null};
+  const supabase=await createClient();
+  const [older,newer]=await Promise.all([
+    supabase.from('articles').select(storyFields).eq('status','published').neq('id',articleId).lt('published_at',publishedAt).order('published_at',{ascending:false}).limit(1),
+    supabase.from('articles').select(storyFields).eq('status','published').neq('id',articleId).gt('published_at',publishedAt).lte('published_at',new Date().toISOString()).order('published_at',{ascending:true}).limit(1),
+  ]);
+  return {previous:(older.data?.[0]||null) as Story|null,next:(newer.data?.[0]||null) as Story|null};
+}

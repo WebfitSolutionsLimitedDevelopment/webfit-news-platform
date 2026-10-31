@@ -9,7 +9,12 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 import { ArticleAudioPlayer } from '@/components/ArticleAudioPlayer';
 import { EditorialSupportPrompt } from '@/components/EditorialSupportPrompt';
-import { getArticleBySlug, getLatestStories, getRelatedStories, resolveInlineArticleMedia } from '@/lib/news';
+import { getAdjacentStories, getArticleBySlug, getLatestStories, getRelatedStories, resolveInlineArticleMedia } from '@/lib/news';
+import { getPublicSiteSettings } from '@/lib/public-settings';
+import { ArticleShareBar } from '@/components/ArticleShareBar';
+import { ArticleFollow } from '@/components/ArticleFollow';
+import { ArticlePrevNext } from '@/components/ArticlePrevNext';
+import { LiveReaders } from '@/components/LiveReaders';
 import { articleHtmlToText, sanitizeArticleHtml } from '@/lib/article-html';
 import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story-display';
 import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
@@ -122,6 +127,10 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   const keepReading=discoveryStories.slice(4,12);
 
   const pageUrl=articleUrl(article.slug);
+  const [adjacent,siteSettings]=await Promise.all([
+    getAdjacentStories(article.published_at,article.id).catch(()=>({previous:null,next:null})),
+    getPublicSiteSettings(),
+  ]);
   const bodyText=articleHtmlToText(clean);
   const image=article.media?.public_url?{'@type':'ImageObject',url:article.media.public_url,...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{}),...(article.media.caption?{caption:article.media.caption}:{})}:undefined;
   const jsonLd={
@@ -179,10 +188,14 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}
           </div>)}
+          <ArticleShareBar url={pageUrl} title={displayTitle}/>
+          <ArticleFollow social={siteSettings.social} contactEmail={siteSettings.identity.contact_email||'sandy@webfitnews.co.nz'} storyTitle={displayTitle}/>
           <ArticleFeedback articleId={article.id}/>
           <CoalitionTrendCard/>
           <AdSlot slotKey="ARTICLE_BOTTOM" variant="inline"/>
           {cats.length?<div className="article-categories">{cats.map((c:any)=><Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>:null}
+          <ArticlePrevNext previous={adjacent.previous} next={adjacent.next}/>
+          <LiveReaders articleId={article.id}/>
         </article>
       </main>
 
