@@ -12,7 +12,7 @@ import { EditorialSupportPrompt } from '@/components/EditorialSupportPrompt';
 import { getAdjacentStories, getArticleBySlug, getLatestStories, getRelatedStories, resolveInlineArticleMedia } from '@/lib/news';
 import { getPublicSiteSettings } from '@/lib/public-settings';
 import { ArticleShareBar } from '@/components/ArticleShareBar';
-import { ArticleFollow } from '@/components/ArticleFollow';
+import { ArticleFollow, ArticleSocialBox } from '@/components/ArticleFollow';
 import { ArticlePrevNext } from '@/components/ArticlePrevNext';
 import { LiveReaders } from '@/components/LiveReaders';
 import { articleHtmlToText, sanitizeArticleHtml } from '@/lib/article-html';
@@ -188,8 +188,10 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}
           </div>)}
-          <ArticleShareBar url={pageUrl} title={displayTitle}/>
-          <ArticleFollow social={siteSettings.social} contactEmail={siteSettings.identity.contact_email||'sandy@webfitnews.co.nz'} storyTitle={displayTitle}/>
+          <ArticleSocialBox>
+            <ArticleShareBar url={pageUrl} title={displayTitle}/>
+            <ArticleFollow social={siteSettings.social} contactEmail={siteSettings.identity.contact_email||'sandy@webfitnews.co.nz'} storyTitle={displayTitle}/>
+          </ArticleSocialBox>
           <ArticleFeedback articleId={article.id}/>
           <CoalitionTrendCard/>
           <AdSlot slotKey="ARTICLE_BOTTOM" variant="inline"/>

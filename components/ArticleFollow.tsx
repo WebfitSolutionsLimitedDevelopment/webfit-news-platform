@@ -1,26 +1,34 @@
 import styles from './ArticleEnd.module.css';
+import { Icon, type IconName } from './SocialIcons';
 
-const LABELS: [string, string, string][] = [
-  ['facebook', 'Facebook Page', 'facebook'],
-  ['facebook_profile', 'Facebook Profile', 'facebook'],
-  ['instagram', 'Instagram', 'instagram'],
-  ['youtube', 'YouTube', 'youtube'],
-  ['linkedin', 'LinkedIn', 'linkedin'],
-  ['x', 'X', 'x'],
-  ['tiktok', 'TikTok', 'tiktok'],
+const ITEMS: [string, string, IconName][] = [
+  ['facebook', 'Webfit News on Facebook', 'facebook'],
+  ['facebook_profile', 'Webfit News Facebook profile', 'facebook'],
+  ['instagram', 'Webfit News on Instagram', 'instagram'],
+  ['youtube', 'Webfit News on YouTube', 'youtube'],
+  ['linkedin', 'Webfit News on LinkedIn', 'linkedin'],
+  ['x', 'Webfit News on X', 'x'],
+  ['tiktok', 'Webfit News on TikTok', 'tiktok'],
 ];
 
-/** "Follow Webfit News" links, read from Admin → Settings → Social media, plus an email link to the office. */
+/** Follow icons, read from Admin → Settings → Social media, plus an email link to the office. */
 export function ArticleFollow({ social, contactEmail, storyTitle }: { social: Record<string, string>; contactEmail?: string; storyTitle: string }) {
-  const items = LABELS.filter(([key]) => /^https?:\/\//.test(social?.[key] || ''));
+  const items = ITEMS.filter(([key]) => /^https?:\/\//.test(social?.[key] || ''));
   if (!items.length && !contactEmail) return null;
   return (
-    <section className={styles.block} aria-label="Follow Webfit News">
-      <h2 className={styles.heading}>Follow Webfit News</h2>
-      <div className={styles.row}>
-        {items.map(([key, label, cls]) => <a key={key} className={`${styles.btn} ${styles[cls] || ''}`} href={social[key]} target="_blank" rel="noopener noreferrer">{label}</a>)}
-        {contactEmail ? <a className={`${styles.btn} ${styles.email}`} href={`mailto:${contactEmail}?subject=${encodeURIComponent(`About: ${storyTitle}`)}`}>Email our office</a> : null}
+    <div className={styles.line}>
+      <span className={styles.lineLabel}>Follow</span>
+      <div className={styles.icons}>
+        {items.map(([key, label, icon]) => (
+          <a key={key} className={`${styles.icon} ${styles[icon] || ''}`} href={social[key]} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}><Icon name={icon} /></a>
+        ))}
+        {contactEmail ? <a className={`${styles.icon} ${styles.mail}`} href={`mailto:${contactEmail}?subject=${encodeURIComponent(`About: ${storyTitle}`)}`} aria-label="Email our office" title="Email our office"><Icon name="mail" /></a> : null}
       </div>
-    </section>
+    </div>
   );
+}
+
+/** Share and Follow together in one tidy box. */
+export function ArticleSocialBox({ children }: { children: React.ReactNode }) {
+  return <section className={styles.socialBox} aria-label="Share and follow">{children}</section>;
 }

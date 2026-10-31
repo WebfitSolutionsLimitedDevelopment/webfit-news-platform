@@ -1,20 +1,24 @@
-.block{margin:1.75rem 0;padding-top:1.25rem;border-top:1px solid var(--line,#ddd)}
-.heading{margin:0 0 .75rem;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#666);font-weight:700}
-.row{display:flex;flex-wrap:wrap;gap:.5rem}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.45rem 1rem;border-radius:8px;border:0;font:inherit;font-size:.95rem;font-weight:700;text-decoration:none;color:#fff;cursor:pointer;line-height:1.1}
-.btn:hover{filter:brightness(1.08);text-decoration:none;color:#fff}
-.btn:focus-visible{outline:3px solid var(--accent,#c8102e);outline-offset:2px}
-.facebook{background:#1b4fa0}
-.whatsapp{background:#1a7f43}
+.socialBox{margin:2rem 0 1.5rem;padding:.8rem;border:1px solid var(--line,#ddd);border-radius:12px;display:flex;flex-direction:column;gap:.75rem}
+.line{display:flex;flex-direction:column;align-items:flex-start;gap:.45rem}
+.line+.line{padding-top:.75rem;border-top:1px solid var(--line,#e5e5e5)}
+.lineLabel{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#666);font-weight:700}
+.icons{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.icon{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:40px;height:40px;border-radius:50%;border:0;padding:0;color:#fff;cursor:pointer;text-decoration:none;transition:transform .12s ease,filter .12s ease}
+.icon:hover{transform:translateY(-1px);filter:brightness(1.08);color:#fff}
+.icon:focus-visible{outline:3px solid var(--accent,#c8102e);outline-offset:2px}
+.facebook{background:#1877f2}
+.whatsapp{background:#1a9e4b}
 .x{background:#111}
 .linkedin{background:#0a66c2}
-.instagram{background:#b5306b}
-.youtube{background:#c4000c}
+.instagram{background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285aeb 90%)}
+.youtube{background:#e00000}
 .tiktok{background:#111}
-.email{background:#2f5bd3}
-.native{background:var(--ink,#111);color:var(--paper,#fff)}
-.copy{background:transparent;color:var(--ink,#111);border:1px solid var(--line,#bbb)}
-.copy:hover{color:var(--ink,#111)}
+.mail{background:#5b6472}
+.plain{background:transparent;color:var(--ink,#111);border:1px solid var(--line,#ccc)}
+.plain:hover{color:var(--ink,#111)}
+.copied:empty{display:none}
+.copied{font-size:.85rem;font-weight:600;color:var(--muted,#666)}
+@media(prefers-reduced-motion:reduce){.icon{transition:none}.icon:hover{transform:none}}
 .prevNext{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.75rem;margin:1.75rem 0 .5rem}
 .pn{display:flex;flex-direction:column;gap:.35rem;padding:1rem;border:1px solid var(--line,#ddd);border-radius:10px;color:inherit;text-decoration:none;min-height:44px}
 .pn:hover{border-color:currentColor;text-decoration:none}
@@ -27,3 +31,4 @@
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,158,75,.5)}70%{box-shadow:0 0 0 8px rgba(26,158,75,0)}100%{box-shadow:0 0 0 0 rgba(26,158,75,0)}}
 @keyframes liveIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.live,.liveDot{animation:none}}
+@media(min-width:640px){.line{flex-direction:row;align-items:center;gap:1rem}.lineLabel{flex:0 0 4rem}.icon{width:44px;height:44px}.icons{gap:8px}}
