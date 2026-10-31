@@ -26,7 +26,7 @@
 .pnNext{text-align:right}
 .pnLabel{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#666);font-weight:700}
 @media(max-width:560px){.prevNext{grid-template-columns:1fr}.pnNext{text-align:left}.prevNext>span:empty{display:none}}
-.live{position:fixed;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-radius:999px;background:var(--paper,#fff);color:var(--ink,#111);box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.9rem;font-weight:700;animation:liveIn .25s ease-out}
+.live{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-radius:999px;background:var(--paper,#fff);color:var(--ink,#111);box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.9rem;font-weight:700;animation:liveIn .25s ease-out}
 .liveDot{width:9px;height:9px;border-radius:50%;background:#1a9e4b;box-shadow:0 0 0 0 rgba(26,158,75,.5);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,158,75,.5)}70%{box-shadow:0 0 0 8px rgba(26,158,75,0)}100%{box-shadow:0 0 0 0 rgba(26,158,75,0)}}
 @keyframes liveIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
