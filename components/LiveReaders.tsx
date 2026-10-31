@@ -11,6 +11,8 @@ import styles from './ArticleEnd.module.css';
 export function LiveReaders({ articleId }: { articleId: string }) {
   const [count, setCount] = useState(1);
   const [visible, setVisible] = useState(false);
+  const [debug, setDebug] = useState(false);
+  useEffect(() => { try { setDebug(new URLSearchParams(window.location.search).get('readers') === 'test'); } catch {} }, []);
   const lastShown = useRef(0);
   const hideTimer = useRef<number | undefined>(undefined);
 
@@ -48,20 +50,22 @@ export function LiveReaders({ articleId }: { articleId: string }) {
     };
   }, [articleId]);
 
-  // Show for 8 seconds whenever the number changes (and is 2+), not permanently.
+  // Show for 12 seconds whenever the number changes (and is 2+), not permanently.
+  // Add ?readers=test to a story URL to see the bubble even with 1 reader, for checking.
+  const min = debug ? 1 : 2;
   useEffect(() => {
-    if (count < 2 || count === lastShown.current) { if (count < 2) setVisible(false); return; }
+    if (count < min || count === lastShown.current) { if (count < min) setVisible(false); return; }
     lastShown.current = count;
     setVisible(true);
     window.clearTimeout(hideTimer.current);
-    hideTimer.current = window.setTimeout(() => setVisible(false), 8000);
-  }, [count]);
+    hideTimer.current = window.setTimeout(() => setVisible(false), debug ? 60000 : 12000);
+  }, [count, min, debug]);
 
   if (!visible) return null;
   return (
     <div className={styles.live} role="status">
       <span className={styles.liveDot} aria-hidden="true" />
-      {count} people reading this story
+      {count === 1 ? '1 person reading this story (test)' : `${count} people reading this story`}
     </div>
   );
 }
