@@ -4,21 +4,27 @@ import { useEffect, useState } from 'react';
 import styles from './ArticleEnd.module.css';
 import { Icon, type IconName } from './SocialIcons';
 
-/** End-of-story share icons. No public share counts: a row of zeros puts readers off. */
-export function ArticleShareBar({ url, title }: { url: string; title: string }) {
-  const [canNativeShare, setCanNativeShare] = useState(false);
-  const [copied, setCopied] = useState(false);
-  useEffect(() => { setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function'); }, []);
+export type ShareLink = { label: string; icon: IconName; href: string; external: boolean };
 
+export function shareLinks(url: string, title: string): ShareLink[] {
   const u = encodeURIComponent(url);
   const t = encodeURIComponent(title);
-  const links: { label: string; icon: IconName; href: string; external: boolean }[] = [
+  return [
     { label: 'Share on Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${u}`, external: true },
     { label: 'Share on WhatsApp', icon: 'whatsapp', href: `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`, external: true },
     { label: 'Share on X', icon: 'x', href: `https://x.com/intent/post?url=${u}&text=${t}`, external: true },
     { label: 'Share on LinkedIn', icon: 'linkedin', href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}`, external: true },
     { label: 'Share by email', icon: 'mail', href: `mailto:?subject=${t}&body=${encodeURIComponent(`I thought you might find this useful:\n\n${title}\n${url}`)}`, external: false },
   ];
+}
+
+/** End-of-story share icons. No public share counts: a row of zeros puts readers off. */
+export function ArticleShareBar({ url, title }: { url: string; title: string }) {
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function'); }, []);
+
+  const links = shareLinks(url, title);
 
   const nativeShare = async () => { try { await navigator.share({ title, url }); } catch {} };
   const copy = async () => {

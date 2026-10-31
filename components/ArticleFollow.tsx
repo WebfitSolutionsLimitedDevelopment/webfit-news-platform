@@ -29,6 +29,6 @@ export function ArticleFollow({ social, contactEmail, storyTitle }: { social: Re
 }
 
 /** Share and Follow together in one tidy box. */
-export function ArticleSocialBox({ children }: { children: React.ReactNode }) {
-  return <section className={styles.socialBox} aria-label="Share and follow">{children}</section>;
+export function ArticleSocialBox({ children, id }: { children: React.ReactNode; id?: string }) {
+  return <section id={id} className={styles.socialBox} aria-label="Share and follow">{children}</section>;
 }
