@@ -6,9 +6,9 @@ import styles from './CricketScores.module.css';
 const widgetUrl = 'https://cwidget.crictimes.org/?v=1.1&a=ffffff&c=18212b&bo=e2e5e8&b=f3f5f7&sb=ffffff&lb=c8102e&lc=ffffff&db=18212b&dc=ffffff&tc=18212b&ti=c8102e';
 
 export function CricketScores({ compact = false }: { compact?: boolean }) {
-  const scores = <>
+  const scores = <div className={compact ? `${styles.viewport} ${styles.compactViewport}` : styles.viewport}>
     <iframe
-      className={compact ? `${styles.frame} ${styles.compactFrame}` : styles.frame}
+      className={styles.frame}
       src={compact ? widgetUrl.replace('lb=c8102e&lc=ffffff', 'lb=ffffff&lc=ffffff') : widgetUrl}
       tabIndex={compact ? -1 : undefined}
       title="Cricket scores, results and upcoming matches from CricTimes"
@@ -16,7 +16,7 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
       referrerPolicy="no-referrer"
       sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
     />
-  </>;
+  </div>;
 
   return <section className={compact ? `${styles.panel} ${styles.strip}` : styles.panel} aria-label="Live cricket scores">
     {compact ? <>
