@@ -15,10 +15,6 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
       referrerPolicy="no-referrer"
       sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
     />
-    <p className={styles.note}>
-      Scores supplied by <a href="https://crictimes.org/cricket-scores" target="_blank" rel="noopener noreferrer nofollow">CricTimes</a>.
-      {' '}Updates may be delayed. If scores do not load, open the provider link.
-    </p>
   </>;
 
   return <section className={styles.panel} aria-label="Live cricket scores">
