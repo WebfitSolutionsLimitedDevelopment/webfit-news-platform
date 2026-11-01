@@ -8,25 +8,21 @@ const widgetUrl = 'https://cwidget.crictimes.org/?v=1.1&a=ffffff&c=18212b&bo=e2e
 export function CricketScores({ compact = false }: { compact?: boolean }) {
   const scores = <>
     <iframe
-      className={styles.frame}
+      className={compact ? `${styles.frame} ${styles.compactFrame}` : styles.frame}
       src={widgetUrl}
       title="Cricket scores, results and upcoming matches from CricTimes"
-      loading="lazy"
+      loading={compact ? 'eager' : 'lazy'}
       referrerPolicy="no-referrer"
       sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
     />
   </>;
 
-  return <section className={styles.panel} aria-label="Live cricket scores">
-    {compact ? <details>
-      <summary className={styles.summary}>
-        <span>Cricket scores</span><span className={styles.action}>View scores</span>
-      </summary>
-      <div className={styles.body}>
-        <p className={styles.intro}>Follow the latest scores, results and upcoming matches.</p>
-        {scores}
-        <Link className={styles.more} href="/live-cricket">Open cricket score centre →</Link>
+  return <section className={compact ? `${styles.panel} ${styles.strip}` : styles.panel} aria-label="Live cricket scores">
+    {compact ? <>
+      <div className={styles.stripHeading}>
+        <span>Cricket scores</span><Link href="/live-cricket">Full score centre →</Link>
       </div>
-    </details> : <div className={styles.body}>{scores}</div>}
+      {scores}
+    </> : <div className={styles.body}>{scores}</div>}
   </section>;
 }

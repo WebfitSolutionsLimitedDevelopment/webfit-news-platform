@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function LiveCricketPage() {
   return <>
-    <SiteHeader />
+    <SiteHeader cricketScores={false} />
     <main className="shell category-page">
       <nav className="article-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>Cricket scores</span></nav>
       <div className="archive-heading">
