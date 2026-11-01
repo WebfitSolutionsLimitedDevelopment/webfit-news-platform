@@ -19,6 +19,7 @@ const sections=[
   ['Community','/category/communities'],
   ['Entertainment','/category/entertainment'],
   ['Sports','/category/sports'],
+  ['Cricket scores','/live-cricket'],
   ['Opinion','/category/opinion'],
 ];
 
