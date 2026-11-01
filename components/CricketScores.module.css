@@ -25,6 +25,5 @@
 
 /* Keep the provider footer controls below the visible score window. */
 .viewport { height:410px; overflow:hidden; }
-.viewport .frame { height:460px; }
+.viewport .frame { height:460px; pointer-events:none; }
 .viewport.compactViewport { height:210px; }
-

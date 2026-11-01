@@ -18,7 +18,7 @@ export default function LiveCricketPage() {
       <nav className="article-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>Cricket scores</span></nav>
       <div className="archive-heading">
         <span>Sport</span><h1>Live cricket scores</h1>
-        <p>Follow scores, recent results and upcoming fixtures. Select a match for more details on CricTimes.</p>
+        <p>Follow scores, recent results and upcoming fixtures here on Webfit News.</p>
       </div>
       <CricketScores />
       <p><Link href="/category/sports">Read the latest sports coverage from Webfit News →</Link></p>

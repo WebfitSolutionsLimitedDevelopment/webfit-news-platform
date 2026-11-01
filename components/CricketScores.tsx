@@ -10,11 +10,12 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
     <iframe
       className={styles.frame}
       src={compact ? widgetUrl.replace('lb=c8102e&lc=ffffff', 'lb=ffffff&lc=ffffff') : widgetUrl}
-      tabIndex={compact ? -1 : undefined}
+      tabIndex={-1}
+      inert
       title="Cricket scores, results and upcoming matches from CricTimes"
       loading={compact ? 'eager' : 'lazy'}
       referrerPolicy="no-referrer"
-      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      sandbox="allow-scripts allow-same-origin"
     />
   </div>;
 
