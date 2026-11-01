@@ -8,6 +8,7 @@ import { AdUnit } from '@/components/AdUnit';
 import { getLiveAds, type LiveAd } from '@/lib/ads';
 import { VideoSection } from '@/components/VideoSection';
 import { AnimatedMastheadLogo } from '@/components/AnimatedMastheadLogo';
+import { CricketScores } from '@/components/CricketScores';
 import { EpaperPromo } from '@/components/epaper/EpaperPromo';
 import { getBreakingStories,getHomepageFeed,getLatestStories,getPublishedVideos } from '@/lib/news';
 import { getPublicStoryTitle } from '@/lib/public-story-display';
@@ -120,6 +121,8 @@ export default async function Home(){
         <div className={styles.heroLead}><StoryCard story={hero.stories[0]} variant="lead"/></div>
         <div className={styles.heroRail}>{hero.stories.slice(1,5).map((story:any)=><StoryCard key={story.id} story={story} variant="compact"/>)}</div>
       </section>:null}
+
+      <div className="shell"><CricketScores compact /></div>
 
       {popular.length?<section className={styles.popular}>
         <div className={styles.popularHead}><span>Right now</span><h2>Popular</h2></div>
