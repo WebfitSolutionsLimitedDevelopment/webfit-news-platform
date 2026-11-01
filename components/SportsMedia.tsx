@@ -29,7 +29,7 @@ export function SportsMedia({videos,photos}:{videos:Video[];photos:Photo[]}) {
         </div>
       </div>:null}
       <div className={styles.grid}>{videos.map(v=><button type="button" className={styles.card} key={v.id} onClick={()=>setSelected(v)} aria-pressed={selected?.id===v.id}>
-        <div className={styles.thumb}><img src={`https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`} alt="" loading="lazy"/><span>▶ Watch here</span></div>
+        <div className={styles.thumb}><img src={`https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`} alt="" loading="lazy" onError={e=>{e.currentTarget.style.visibility='hidden';}}/><span>▶ Watch here</span></div>
         <strong>{v.title}</strong><time dateTime={v.date}>{new Date(v.date).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric',timeZone:'Pacific/Auckland'})}</time>
       </button>)}</div>
     </>:null}
