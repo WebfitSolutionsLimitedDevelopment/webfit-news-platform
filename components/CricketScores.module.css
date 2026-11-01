@@ -24,7 +24,7 @@
 .scoreLink:focus-visible { outline:3px solid #18212b; outline-offset:-3px; }
 
 /* Keep the provider footer controls below the visible score window. */
-.viewport { height:480px; overflow:hidden; }
-.viewport .frame { height:calc(100% + 48px); }
+.viewport { height:410px; overflow:hidden; }
+.viewport .frame { height:460px; }
 .viewport.compactViewport { height:210px; }
-@media(max-width:580px) { .viewport { height:460px; } }
+
