@@ -16,3 +16,9 @@
 .note a,.more { color:inherit; text-decoration:underline; text-underline-offset:3px; }
 .more { display:inline-block; margin-top:4px; font-size:14px; font-weight:700; }
 @media(max-width:580px) { .summary { padding:14px; } .body { padding:10px; } .frame { height:460px; } }
+
+/* Header scores are display-only; the overlay keeps navigation on Webfit News. */
+.scoreDisplay { position:relative; }
+.scoreDisplay iframe { pointer-events:none; }
+.scoreLink { position:absolute; inset:0; display:block; }
+.scoreLink:focus-visible { outline:3px solid #18212b; outline-offset:-3px; }

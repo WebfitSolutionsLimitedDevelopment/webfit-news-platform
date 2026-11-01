@@ -9,7 +9,8 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
   const scores = <>
     <iframe
       className={compact ? `${styles.frame} ${styles.compactFrame}` : styles.frame}
-      src={widgetUrl}
+      src={compact ? widgetUrl.replace('lb=c8102e&lc=ffffff', 'lb=ffffff&lc=ffffff') : widgetUrl}
+      tabIndex={compact ? -1 : undefined}
       title="Cricket scores, results and upcoming matches from CricTimes"
       loading={compact ? 'eager' : 'lazy'}
       referrerPolicy="no-referrer"
@@ -22,7 +23,10 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
       <div className={styles.stripHeading}>
         <span>Cricket scores</span><Link href="/live-cricket">Full score centre →</Link>
       </div>
-      {scores}
+      <div className={styles.scoreDisplay}>
+        {scores}
+        <Link className={styles.scoreLink} href="/live-cricket" aria-label="Open the full cricket score centre on Webfit News" />
+      </div>
     </> : <div className={styles.body}>{scores}</div>}
   </section>;
 }
