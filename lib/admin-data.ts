@@ -34,8 +34,18 @@ export async function getArticlesAdmin(filters:ArticleAdminFilters={}) {
     const safe=filters.q.trim().replaceAll(',',' ');
     query=query.or(`title.ilike.%${safe}%,slug.ilike.%${safe}%`);
   }
-  // The review queue reads oldest first, so nothing waits too long.
-  const {data,error,count}=await (filters.status==='in_review'?query.order('submitted_at',{ascending:true,nullsFirst:false}):query.order('updated_at',{ascending:false})).range(from,to);
+  if(filters.status==='in_review') {
+    // The review queue reads oldest first, so nothing waits too long.
+    query=query.order('submitted_at',{ascending:true,nullsFirst:false});
+  } else if(!filters.status || filters.status==='all' || filters.status==='published') {
+    // Editing an older story must not move it above newer publications.
+    // Unpublished stories follow dated stories in the combined list.
+    query=query.order('published_at',{ascending:false,nullsFirst:false}).order('updated_at',{ascending:false});
+  } else {
+    query=query.order('updated_at',{ascending:false});
+  }
+  // Keep pagination stable when timestamps match.
+  const {data,error,count}=await query.order('id',{ascending:false}).range(from,to);
   if(error) throw error;
   return {items:data||[],count:count||0,page,pageSize,pages:Math.max(1,Math.ceil((count||0)/pageSize))};
 }
