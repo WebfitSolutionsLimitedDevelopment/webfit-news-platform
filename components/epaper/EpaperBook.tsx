@@ -76,13 +76,16 @@ const HOUSE_AD: EpaperAd = { assignmentId: 'house', href: '/advertise-media-kit'
 
 function buildAdBlock(block: AdBlock): HTMLElement {
   // As in a printed paper: the ads fill the foot of the page, each in its own ruled frame.
-  const box = el('aside', styles.adBlock);
+  const box = el('aside', block.forFront ? `${styles.adBlock} ${styles.adBlockFront}` : styles.adBlock);
   box.style.height = `${block.h}px`;
+  // Front page: one ad panel, equal cells across the full width, each poster centred in its cell
+  // (posters of different shapes used to sit in separate frames with uneven white gaps).
+  const frontCell = block.forFront ? Math.floor((FLOW_W - AD_GAP * (block.ads.length - 1)) / block.ads.length) : 0;
   box.setAttribute('aria-label', block.ads.length > 1 ? 'Advertisements' : 'Advertisement');
   block.ads.forEach((ad, i) => {
     const w = Math.round(block.artH * block.ratios[i]);
     const fig = el('figure', styles.adFrame);
-    fig.style.width = `${w + AD_FRAME}px`;
+    fig.style.width = `${frontCell || w + AD_FRAME}px`;
     if (ad.assignmentId === 'house') {
       fig.classList.add(styles.adFrameHouse);
       fig.style.height = `${block.h}px`;
@@ -103,7 +106,7 @@ function buildAdBlock(block: AdBlock): HTMLElement {
     if (ad.href) { a.href = ad.href; a.target = '_blank'; a.rel = 'sponsored noopener'; }
     const im = img(ad.image, ad.alt, 900);
     im.style.height = `${block.artH}px`;
-    im.style.width = `${w}px`;
+    im.style.width = frontCell ? '100%' : `${w}px`;
     a.append(im);
     fig.append(a);
     if (ad.isElectionAd && ad.promoterStatement) fig.append(el('span', styles.promoter, ad.promoterStatement));
