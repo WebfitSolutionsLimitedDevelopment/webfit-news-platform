@@ -34,10 +34,14 @@ export class ResendError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
-export async function resend<T = any>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function resend<T = any>(path: string, init: { method?: string; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const response = await fetch(`https://api.resend.com${path}`, {
     method: init.method || 'GET',
-    headers: { authorization: `Bearer ${apiKey()}`, 'content-type': 'application/json' },
+    headers: {
+      authorization: `Bearer ${apiKey()}`,
+      'content-type': 'application/json',
+      ...(init.idempotencyKey ? { 'Idempotency-Key': init.idempotencyKey } : {}),
+    },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
     cache: 'no-store',
   });
