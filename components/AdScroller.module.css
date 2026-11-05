@@ -1,16 +1,21 @@
-/* Phones only: the window is one screen tall and full width; the poster behind it is fixed to the screen
-   and clipped to the window (clip-path clips fixed children too), so the story slides over a still poster. */
+/* Phones only. See AdScroller.tsx. */
 .wrap{display:none}
 @media (max-width:720px){
   .wrap{display:block;margin:22px calc(50% - 50vw)}
   .label{display:block;text-align:center;font:700 10px/1 Arial,Helvetica,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#7a7468;padding:8px 0}
+
+  /* Two or more posters: stacked cards. Each card is one screen tall and sticks to the top; the next card,
+     later in the page and drawn above, slides up over it as the reader scrolls. */
+  .stack{position:relative;background:#111}
+  .card{position:sticky;top:0;display:block;height:100vh;height:100svh;overflow:hidden;background:#111;box-shadow:0 -10px 24px rgba(0,0,0,.45);-webkit-tap-highlight-color:transparent}
+  .card:first-child{box-shadow:none}
+
+  /* One poster: a window onto a poster fixed to the screen (clip-path clips fixed children too). */
   .window{position:relative;display:block;height:100vh;height:100svh;clip-path:inset(0);overflow:hidden;background:#111;-webkit-tap-highlight-color:transparent}
   .fixed{position:fixed;inset:0;height:100vh;height:100svh;display:block;pointer-events:none}
-  .slide{position:absolute;inset:0;opacity:0;transition:opacity .9s ease}
-  .slide.on{opacity:1}
-  .slide img{position:absolute;inset:0;width:100%;height:100%}
+
+  .bg,.art{position:absolute;inset:0;width:100%;height:100%}
   .bg{object-fit:cover;filter:blur(22px) brightness(.55);transform:scale(1.15)}
   .art{object-fit:contain}
   .cta{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#fff;color:#151515;border-radius:999px;padding:12px 20px;font:700 15px/1 Arial,Helvetica,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.35);white-space:nowrap}
 }
-@media (max-width:720px) and (prefers-reduced-motion:reduce){.slide{transition:none}}
