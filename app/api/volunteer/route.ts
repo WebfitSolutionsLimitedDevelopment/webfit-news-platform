@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { resend } from '@/lib/newsletter';
+import { resend, ResendError } from '@/lib/newsletter';
 import {
   acceptanceStatement,
   agreementSections,
@@ -88,10 +88,20 @@ export async function POST(request: Request) {
         },
       ],
     });
-    if (delivery?.data?.length !== 2) throw new Error('Expected two email IDs');
+    if (delivery?.data?.length !== 2 || delivery.data.some(email => !email?.id)) {
+      throw new Error('Expected two email IDs');
+    }
+    console.info('[volunteer] Resend accepted agreement emails', {
+      reference,
+      volunteerEmailId: delivery.data[0].id,
+      newsroomEmailId: delivery.data[1].id,
+    });
     return NextResponse.json({ reference });
-  } catch {
-    console.error('[volunteer] Resend did not confirm the agreement emails');
+  } catch (error) {
+    console.error('[volunteer] Resend did not confirm the agreement emails', {
+      reference,
+      providerStatus: error instanceof ResendError ? error.status : undefined,
+    });
     return fail('We could not confirm your submission. Please try again using the same name and email.', 502);
   }
 }

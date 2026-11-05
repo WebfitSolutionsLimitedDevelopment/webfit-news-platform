@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { acceptanceStatement, agreementVersion } from '@/lib/volunteer-agreement';
+import { acceptanceStatement, agreementVersion, volunteerContact } from '@/lib/volunteer-agreement';
 import styles from './volunteer.module.css';
 
 export function VolunteerForm() {
@@ -49,7 +49,9 @@ export function VolunteerForm() {
       <h2 id="sign-agreement">Sign the agreement</h2>
       {reference ? (
         <p role="status">
-          Agreement submitted. Check your inbox for your signed copy. Your reference is <strong>{reference}</strong>.
+          Agreement submitted. Your signed copy was queued for email delivery. Your reference is <strong>{reference}</strong>.
+          If it does not arrive, check your spam folder or email{' '}
+          <a href={`mailto:${volunteerContact}`}>{volunteerContact}</a> with your reference.
           Your coordinator will send a separate authorisation email for any approved event.
         </p>
       ) : (
