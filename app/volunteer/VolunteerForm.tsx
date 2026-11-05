@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { acceptanceStatement, agreementVersion } from '@/lib/volunteer-agreement';
+import { acceptanceStatement, agreementVersion, volunteerContact, volunteerDeclarations } from '@/lib/volunteer-agreement';
 import styles from './volunteer.module.css';
 
 export function VolunteerForm() {
+  const [driving, setDriving] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [reference, setReference] = useState('');
@@ -25,6 +26,13 @@ export function VolunteerForm() {
         body: JSON.stringify({
           name: form.get('name'),
           email: form.get('email'),
+          declarations: {
+            transport: form.get('transport') === 'on',
+            workRights: form.get('workRights') === 'on',
+            authorisation: form.get('authorisation') === 'on',
+            driving: form.get('driving') === 'on',
+            validLicence: form.get('validLicence') === 'on',
+          },
           accepted: form.get('accepted') === 'on',
           website: form.get('website'),
           version: agreementVersion,
@@ -49,7 +57,9 @@ export function VolunteerForm() {
       <h2 id="sign-agreement">Sign the agreement</h2>
       {reference ? (
         <p role="status">
-          Agreement submitted. Check your inbox for your signed copy. Your reference is <strong>{reference}</strong>.
+          Agreement submitted. Your signed copy was queued for email delivery. Your reference is <strong>{reference}</strong>.
+          If it does not arrive, check your spam folder or email{' '}
+          <a href={`mailto:${volunteerContact}`}>{volunteerContact}</a> with your reference.
           Your coordinator will send a separate authorisation email for any approved event.
         </p>
       ) : (
@@ -66,6 +76,23 @@ export function VolunteerForm() {
             <div hidden>
               <label>Leave this blank <input name="website" tabIndex={-1} autoComplete="off" /></label>
             </div>
+            <h3>Volunteer declarations</h3>
+            {(['transport', 'workRights', 'authorisation'] as const).map(declaration => (
+              <label className={styles.acceptance} key={declaration}>
+                <input name={declaration} type="checkbox" required />
+                <span>{volunteerDeclarations[declaration]}</span>
+              </label>
+            ))}
+            <label className={styles.acceptance}>
+              <input name="driving" type="checkbox" checked={driving} onChange={event => setDriving(event.target.checked)} />
+              <span>I plan to drive my own vehicle to or from an event.</span>
+            </label>
+            {driving && (
+              <label className={styles.acceptance}>
+                <input name="validLicence" type="checkbox" required />
+                <span>{volunteerDeclarations.driving}</span>
+              </label>
+            )}
             <label className={styles.acceptance}>
               <input name="accepted" type="checkbox" required />
               <span>{acceptanceStatement}</span>
