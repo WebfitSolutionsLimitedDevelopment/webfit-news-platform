@@ -1,7 +1,14 @@
-export const agreementVersion = '1.1';
+export const agreementVersion = '1.2';
 export const volunteerContact = 'webfitnews@gmail.com';
 export const acceptanceStatement =
   'I have read and accept the Volunteer Media Agreement and NDA. I am submitting my own name as my electronic signature and agree to receive my signed copy by email.';
+
+export const volunteerDeclarations = {
+  transport: 'I will arrange my own travel to and from each event. I understand that travel costs are my responsibility unless Webfit News agrees in writing beforehand to reimburse actual expenses.',
+  workRights: 'I have current legal entitlement to work in New Zealand and any conditions on that entitlement allow me to carry out the proposed assignment. I will tell the coordinator before accepting or continuing an assignment if my eligibility changes or I am unsure.',
+  driving: 'If I drive my own vehicle to or from an event, I confirm that I hold a current licence that is valid in New Zealand for that vehicle and will comply with its conditions.',
+  authorisation: 'I will wait for written authorisation from Webfit News before attending each event on its behalf.',
+};
 
 export const agreementSections = [
   {
@@ -23,7 +30,7 @@ export const agreementSections = [
     title: '3. Coverage, consent and conduct',
     paragraphs: [
       'If you accept an assignment, follow the briefing and agree when to arrive, where to check in and how to hand over coverage. Take factual notes and enough useful, varied photos to cover the event where photography is permitted. Get permission before recording interviews, private conversations or audio or video of individuals for coverage. You may record a personal voice memo of your own observations where venue rules allow, away from private conversations.',
-      'Follow venue rules, respect privacy and requests to stop, and obtain the appropriate consent before recording or closely photographing children or people in sensitive situations. Follow safety instructions and leave or pause if conditions become unsafe. Tell the coordinator promptly about safety incidents, conflicts of interest, mistakes or complaints. Submit material through the approved newsroom channel for editorial review.',
+      'If your travel plans change and you decide to drive, you must hold a current licence valid in New Zealand for the vehicle and comply with its conditions. Follow venue rules, respect privacy and requests to stop, and obtain the appropriate consent before recording or closely photographing children or people in sensitive situations. Follow safety instructions and leave or pause if conditions become unsafe. Tell the coordinator promptly about safety incidents, conflicts of interest, mistakes or complaints. Submit material through the approved newsroom channel for editorial review.',
     ],
   },
   {
@@ -56,4 +63,4 @@ export const agreementSections = [
 ];
 
 export const volunteerPrivacyNotice =
-  'Webfit Solutions Limited (Webfit News), 605 Sandringham Road, Sandringham, Auckland 1025, New Zealand, collects and holds your name, email and acceptance to keep a record of this agreement and administer volunteer assignments. Authorised newsroom staff receive the record and Resend processes the confirmation emails. We keep the record only for as long as needed for these purposes or as required by law. Providing these details is your choice. They are required to sign online. You can request access to or correction of your details by emailing Webfit News.';
+  'Webfit Solutions Limited (Webfit News), 605 Sandringham Road, Sandringham, Auckland 1025, New Zealand, collects and holds your name, email, declarations and acceptance to keep a record of this agreement and administer volunteer assignments. Authorised newsroom staff receive the record and Resend processes the confirmation emails. We keep the record only for as long as needed for these purposes or as required by law. Providing these details is your choice. They are required to sign online. You can request access to or correction of your details by emailing Webfit News.';

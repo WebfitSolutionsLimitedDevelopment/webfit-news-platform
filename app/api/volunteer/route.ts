@@ -7,6 +7,7 @@ import {
   agreementSections,
   agreementVersion,
   volunteerContact,
+  volunteerDeclarations,
   volunteerPrivacyNotice,
 } from '@/lib/volunteer-agreement';
 
@@ -16,6 +17,13 @@ const submission = z.object({
   name: z.string().trim().min(1).max(120).regex(/^[^\p{Cc}<>]+$/u),
   email: z.string().trim().max(254).email(),
   accepted: z.literal(true),
+  declarations: z.object({
+    transport: z.literal(true),
+    workRights: z.literal(true),
+    authorisation: z.literal(true),
+    driving: z.boolean(),
+    validLicence: z.boolean(),
+  }).refine(({ driving, validLicence }) => driving === validLicence),
   version: z.string(),
   website: z.literal(''),
 });
@@ -42,13 +50,15 @@ export async function POST(request: Request) {
     return fail('The submission could not be read. Please try again.', 400);
   }
 
-  const result = submission.safeParse(input);
-  if (!result.success) return fail('Enter your full name and a valid email address, then tick the acceptance box.', 422);
-
-  const { name, email, version } = result.data;
-  if (version !== agreementVersion) {
+  const submittedVersion = z.object({ version: z.string() }).safeParse(input);
+  if (submittedVersion.success && submittedVersion.data.version !== agreementVersion) {
     return fail('The agreement has changed. Reload the page and read the current version before signing.', 409);
   }
+
+  const result = submission.safeParse(input);
+  if (!result.success) return fail('Enter your full name and a valid email address, then complete all required declarations and accept the agreement.', 422);
+
+  const { name, email, version, declarations } = result.data;
 
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return fail('Online signing is temporarily unavailable. Please try again later.', 503);
@@ -56,13 +66,20 @@ export async function POST(request: Request) {
   const inbox = process.env.VOLUNTEER_NDA_INBOX?.trim() || volunteerContact;
   const from = process.env.NEWSROOM_EMAIL_FROM?.trim() || 'Webfit Newsroom <newsroom@webfitnews.com>';
   // Stable across retries. The emails carry the full signed text, and the provider stamps the send time.
-  const reference = createHmac('sha256', key).update(JSON.stringify([version, name, email])).digest('hex').slice(0, 24);
+  const reference = createHmac('sha256', key).update(JSON.stringify([version, name, email, declarations.driving])).digest('hex').slice(0, 24);
   const signedCopy = [
     `Webfit News Volunteer Media Agreement and NDA (version ${version})`,
     `Reference: ${reference}`,
     `Signed electronically by: ${name}`,
     `Email: ${email}`,
     acceptanceStatement,
+    [
+      'Volunteer declarations accepted',
+      volunteerDeclarations.transport,
+      volunteerDeclarations.workRights,
+      volunteerDeclarations.authorisation,
+      declarations.driving ? volunteerDeclarations.driving : 'Driving declaration: no plan to drive a personal vehicle was declared at signing.',
+    ].join('\n'),
     ...agreementSections.map(({ title, paragraphs }) => [title, ...paragraphs].join('\n\n')),
     `How we use your details\n\n${volunteerPrivacyNotice} Contact: ${volunteerContact}`,
   ].join('\n\n');
