@@ -10,6 +10,7 @@ const PLACE_OPTIONS: { key: string; label: string }[] = [
   { key: 'ARTICLE_RAIL', label: 'Stories: right-hand column (desktop)' },
   { key: 'ARTICLE_INLINE_1', label: 'Stories: after paragraph 3' },
   { key: 'ARTICLE_INLINE_2', label: 'Stories: after paragraph 8' },
+  { key: 'ARTICLE_SCROLLER', label: 'Stories: full-screen scroller, phones (after paragraph 5)' },
   { key: 'ARTICLE_BOTTOM', label: 'Stories: end of story' },
   { key: 'MOBILE_STICKY', label: 'Stories: bar at bottom of phone screen' },
   { key: 'HEADER_LEADERBOARD', label: 'Top of homepage and stories (desktop)' },

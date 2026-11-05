@@ -113,9 +113,13 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
   // Ad breaks: after paragraph 3 on stories with at least 5 paragraphs, and
   // after paragraph 8 on stories with at least 11, so ads never crowd a short story.
   const paragraphCount=countTopLevelParagraphs(clean);
-  const breaks=[paragraphCount>=5?3:0,paragraphCount>=11?8:0].filter(Boolean);
-  const bodyChunks=splitArticleHtml(clean,breaks);
-  const breakSlots=['ARTICLE_INLINE_1','ARTICLE_INLINE_2'];
+  // Plus a full-screen scroll-through ad on phones after paragraph 5 (ARTICLE_SCROLLER) on stories of 8+ paragraphs.
+  const breakPlan=[
+    {at:3,slot:'ARTICLE_INLINE_1',variant:'inline' as const,min:5},
+    {at:5,slot:'ARTICLE_SCROLLER',variant:'scroller' as const,min:8},
+    {at:8,slot:'ARTICLE_INLINE_2',variant:'inline' as const,min:11},
+  ].filter(b=>paragraphCount>=b.min);
+  const bodyChunks=splitArticleHtml(clean,breakPlan.map(b=>b.at));
   const cats=(article.article_categories||[]).map((x:any)=>x.category).filter(Boolean);
   const related=await getRelatedStories(article.id,cats.map((c:any)=>c.id),4);
   const topic=topicForStory({title:article.title,published_at:article.published_at,categorySlugs:cats.map((c:any)=>c.slug)});
@@ -187,7 +191,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           {article.media?.public_url?<figure className="article-hero"><img {...responsiveImage(article.media.public_url,[480,800,1200,1600],'(max-width: 880px) 100vw, 850px')} alt={article.media.alt_text||displayTitle} fetchPriority="high" decoding="async" {...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{})}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
           {bodyChunks.map((html,index)=><div key={index}>
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
-            {index<bodyChunks.length-1?<AdSlot slotKey={breakSlots[index]} variant="inline"/>:null}
+            {index<bodyChunks.length-1&&breakPlan[index]?<AdSlot slotKey={breakPlan[index].slot} variant={breakPlan[index].variant}/>:null}
           </div>)}
           <ArticleSocialBox id="share-end">
             <ArticleShareBar url={pageUrl} title={displayTitle}/>

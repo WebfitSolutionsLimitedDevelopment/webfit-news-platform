@@ -1,8 +1,9 @@
 import { getLiveAds } from '@/lib/ads';
 import { AdUnit, type AdVariant } from './AdUnit';
 import { AdSpotlight } from './AdSpotlight';
+import { AdScroller } from './AdScroller';
 
-type Props = { slotKey: string; className?: string; variant?: AdVariant | 'spotlight' };
+type Props = { slotKey: string; className?: string; variant?: AdVariant | 'spotlight' | 'scroller' };
 
 /**
  * Renders whatever is booked into a named ad position (see /admin/advertisements).
@@ -12,6 +13,7 @@ export async function AdSlot({ slotKey, className = '', variant = 'banner' }: Pr
   const ads = (await getLiveAds())[slotKey];
   if (!ads?.length) return null;
   if (variant === 'spotlight') return <AdSpotlight ads={ads}/>;
+  if (variant === 'scroller') return <AdScroller ads={ads}/>;
   return <AdUnit ads={ads} variant={variant} className={className}/>;
 }
 
