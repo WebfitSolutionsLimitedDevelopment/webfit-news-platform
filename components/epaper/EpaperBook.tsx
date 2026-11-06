@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type { Edition, EditionSection, EpaperAd, EpaperFullStory, EditionSummary } from '@/lib/epaper';
 import { resizedImage } from '@/lib/image-url';
 import { EpaperViewer, PAGE_H, PAGE_W } from './EpaperViewer';
@@ -683,6 +683,86 @@ function Folio({ n, label, note, edition }: { n: number; label: string; note?: s
   </div>;
 }
 
+/*
+ * Page 1, laid out like a printed community weekly's front (The Indian Weekender style):
+ *   left  - solid nameplate band, an "Inside" line, the lead story in a bordered box (big headline, photo,
+ *           two columns of text cut to whole paragraphs, "Read the full story"), and three framed teasers;
+ *   right - the front-page business posters stacked in their own frames, then our "Advertise with us" box.
+ * Every element sits in a frame. Drawn here directly (not by the column-flow engine) from edition data.
+ */
+function CoverPage({ n, edition, contents, teaserPages, ads }: { n: number; edition: Edition; contents: Array<{ title: string; page: number }>; teaserPages?: Map<string, number>; ads: EpaperAd[] }) {
+  const lead = edition.sections[0]?.stories[0];
+  const paras = (lead?.blocks || []).filter(b => b.k === 'p' && !/^Read the full story at /.test(b.t)).map(b => b.t);
+  const [count, setCount] = useState(paras.length);
+  const [cut, setCut] = useState<string | null>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  // Keep only the paragraphs that fit the two columns; if even the first doesn't fit, shorten it to whole words.
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const over = () => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+    if (over()) {
+      if (count > 1) { setCount(c => c - 1); return; }
+      const words = (cut ?? paras[0] ?? '').split(' ');
+      if (words.length > 12) setCut(`${words.slice(0, Math.floor(words.length * 0.85)).join(' ')}…`);
+    }
+  }, [count, cut, paras]);
+  const shown = paras.slice(0, Math.max(1, count));
+  if (cut != null) shown[0] = cut;
+  const art = (ad: EpaperAd) => <a key={ad.assignmentId} className={styles.coverAd} href={ad.href || undefined} target="_blank" rel="sponsored noopener" aria-label={ad.alt || ad.advertiser || 'Advertisement'}>
+    <img src={resizedImage(ad.image, 500, 80)} alt={ad.alt || ''}/>
+  </a>;
+
+  return <div className={`${styles.page} ${styles.cover}`}>
+    <div className={styles.coverTop}>
+      <span>{edition.dateline}</span>
+      <span>{edition.released ? 'Weekly · every Thursday' : edition.isLive ? 'Preview edition' : edition.title}</span>
+      <span>Vol. 1 · No. {edition.number} · Free</span>
+    </div>
+    <div className={styles.coverGrid}>
+      <div className={styles.coverMain}>
+        <header className={styles.coverBand}>
+          <img src="/icon-192.png" alt=""/>
+          <div>
+            <div className={styles.coverName} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div>
+            <div className={styles.coverTag}>Independent New Zealand journalism · Member, New Zealand Media Council</div>
+          </div>
+        </header>
+        <div className={styles.coverInside}>
+          <strong>Inside</strong>
+          {contents.slice(1, 7).map(c => <span key={c.title}>{c.title} <b>{c.page}</b></span>)}
+        </div>
+        {lead ? <article className={styles.coverLead}>
+          <h1><a href={`/${lead.slug}`}>{lead.title}</a></h1>
+          <p className={styles.coverBy}>{[lead.author ? `By ${lead.author}` : null, edition.coverage].filter(Boolean).join(' · ')}</p>
+          {lead.image ? <img className={styles.coverPhoto} src={resizedImage(lead.image, 900, 75)} alt={lead.imageAlt || ''}/> : null}
+          <div className={styles.coverText} ref={textRef}>
+            {shown.map((t, i) => <p key={i} className={i === 0 ? styles.coverDrop : undefined}>{t}</p>)}
+          </div>
+          <a className={styles.coverMore} href={`/${lead.slug}`}>Read the full story ›</a>
+        </article> : null}
+        {edition.front?.teasers?.length ? <nav className={styles.coverTeasers} aria-label="Inside this week">
+          {edition.front.teasers.map(t => <a key={t.slug} href={`/${t.slug}`}>
+            {t.image ? <img src={resizedImage(t.image, 200, 70)} alt=""/> : null}
+            <em>{t.section}{teaserPages?.get(t.slug) ? ` · Page ${teaserPages.get(t.slug)}` : ''}</em>
+            <b>{t.title}</b>
+          </a>)}
+        </nav> : null}
+      </div>
+      <aside className={styles.coverRail} aria-label="Advertisements">
+        {ads.slice(0, 3).map(art)}
+        <div className={styles.coverHouse}>
+          <b>Webfit News</b>
+          <strong>Your business here</strong>
+          <span>Front page, inside pages and webfitnews.com</span>
+          <em>022 129 9323</em>
+        </div>
+      </aside>
+    </div>
+    <Folio n={n} label="Front page" edition={edition}/>
+  </div>;
+}
+
 function FlowPageView({ page, n, edition, contents, nextOf, prevOf, teaserPages }: { page: FlowPage; n: number; edition: Edition; contents: Array<{ title: string; page: number }>; nextOf: number | null; prevOf: number | null; teaserPages?: Map<string, number> }) {
   const continuesTitle = page.endsMidStory && page.lastStoryId ? page.section.stories.find(s => s.id === page.lastStoryId)?.title : null;
   const note = continuesTitle && nextOf ? `“${continuesTitle.length > 48 ? `${continuesTitle.slice(0, 46)}…` : continuesTitle}” continues on page ${nextOf}` : undefined;
@@ -911,7 +991,9 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
       let newsPages = TOTAL_PAGES - (hasAlmanac ? 4 : 3);
       let best: { flow: FlowPage[]; dropped: Array<{ title: string; slug: string }>; unplaced: AdBlock[]; total: number } | null = null;
       const tryLayout = (n: number, extraFor?: number) => {
-        const r = paginate(edition, host, blocks, n, extraFor);
+        const r0 = paginate(edition, host, blocks, n, extraFor);
+        // The front posters are drawn in page 1's right-hand column (CoverPage), never on Marketplace pages too.
+        const r = { ...r0, unplaced: r0.unplaced.filter(b => !b.forFront) };
         const total = assemble(r.pages, r.unplaced, hasAlmanac).length;
         const better = !best || (total <= TOTAL_PAGES && (best.total > TOTAL_PAGES || total > best.total)) || (best.total > TOTAL_PAGES && total < best.total);
         if (better) best = { flow: r.pages, dropped: r.dropped, unplaced: r.unplaced, total };
@@ -962,7 +1044,8 @@ export function EpaperBook({ edition, shelf }: { edition: Edition; shelf: Editio
         const n = i + 1;
         if (p.kind === 'flow') {
           const nx = nextFlow(i); const pv = prevFlow(i);
-          return { key: `p${n}`, label: p.front ? 'Front page' : p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1} teaserPages={teaserPages}/> };
+          if (p.front) return { key: `p${n}`, label: 'Front page', node: <CoverPage n={n} edition={edition} contents={contents} teaserPages={teaserPages} ads={blocks.find(b => b.forFront)?.ads || []}/> };
+          return { key: `p${n}`, label: p.section.title, node: <FlowPageView page={p} n={n} edition={edition} contents={contents} nextOf={nx == null ? null : nx + 1} prevOf={pv == null ? null : pv + 1} teaserPages={teaserPages}/> };
         }
         if (p.kind === 'house') return { key: `p${n}`, label: 'Advertise with us', node: <HousePageView n={n} edition={edition}/> };
         if (p.kind === 'almanac' && edition.almanac) return { key: `p${n}`, label: 'Stars & Week Ahead', node: <AlmanacPageView n={n} edition={edition} almanac={edition.almanac}/> };
