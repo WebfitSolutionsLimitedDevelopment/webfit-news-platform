@@ -1,4 +1,5 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { resend, ResendError } from '@/lib/newsletter';
@@ -28,7 +29,26 @@ const submission = z.object({
   }).refine(({ driving, validLicence }) => driving === validLicence),
   version: z.string(),
   website: z.literal(''),
+  signingToken: z.string().max(500).optional(),
 });
+
+const tokenLifetimeMs = 24 * 60 * 60 * 1000;
+const nzTime = new Intl.DateTimeFormat('en-NZ', {
+  timeZone: 'Pacific/Auckland', dateStyle: 'long', timeStyle: 'long',
+});
+
+function maskedNetworkIp(request: Request) {
+  if (process.env.VERCEL !== '1') return null;
+  const address = request.headers.get('x-vercel-forwarded-for')?.trim().replace(/^::ffff:(?=\d+\.)/i, '') || '';
+  if (isIP(address) === 4) return `${address.split('.').slice(0, 3).join('.')}.0/24`;
+  if (isIP(address) !== 6 || address.includes('%')) return null;
+  const leading = address.split('::')[0].split(':').filter(Boolean);
+  return `${[...leading, '0', '0', '0'].slice(0, 3).join(':')}::/48`;
+}
+
+function signRecord(record: string, agreement: string, key: string) {
+  return createHmac('sha256', key).update(JSON.stringify(['volunteer-signing', record, agreement])).digest('hex');
+}
 
 function fail(error: string, status: number) {
   return NextResponse.json({ error }, { status });
@@ -60,16 +80,50 @@ export async function POST(request: Request) {
   const result = submission.safeParse(input);
   if (!result.success) return fail('Enter your full name and a valid email address, then complete all required declarations and accept the agreement.', 422);
 
-  const { name, email, version, declarations } = result.data;
+  const { signingToken, ...agreement } = result.data;
+  const { name, email, version, declarations } = agreement;
 
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return fail('Online signing is temporarily unavailable. Please try again later.', 503);
 
+  const acceptedAgreement = JSON.stringify(agreement);
+  if (signingToken === undefined) {
+    // Issue the timestamp when the signer submits, then reuse it across email retries.
+    const record = Buffer.from(JSON.stringify({
+      issuedAt: Date.now(), nonce: randomUUID(), maskedIp: maskedNetworkIp(request),
+    })).toString('base64url');
+    return NextResponse.json({ signingToken: `${record}.${signRecord(record, acceptedAgreement, key)}` }, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  }
+
+  const [record, signature, extra] = signingToken.split('.');
+  const expected = signRecord(record, acceptedAgreement, key);
+  if (extra !== undefined || !/^[a-f0-9]{64}$/.test(signature || '') ||
+      !timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+    return fail('Your signing session changed. Submit again to start a new signing record.', 409);
+  }
+
+  const { issuedAt, maskedIp } = JSON.parse(Buffer.from(record, 'base64url').toString('utf8')) as {
+    issuedAt: number; maskedIp: string | null;
+  };
+  if (Date.now() - issuedAt >= tokenLifetimeMs) {
+    return fail('Your signing session expired. Submit again to start a new signing record.', 410);
+  }
+
   const inbox = process.env.VOLUNTEER_NDA_INBOX?.trim() || volunteerContact;
   const from = process.env.NEWSROOM_EMAIL_FROM?.trim() || 'Webfit Newsroom <newsroom@webfitnews.com>';
-  // Stable across retries. The emails carry the full signed text, and the provider stamps the send time.
-  const reference = createHmac('sha256', key).update(JSON.stringify([version, name, email, declarations.driving])).digest('hex').slice(0, 24);
+  const reference = signature.slice(0, 24);
   const blocks: AgreementBlock[] = [
+    {
+      title: 'Signing record',
+      paragraphs: [
+        `Reference: ${reference}`,
+        `Submitted at (New Zealand): ${nzTime.format(issuedAt)}`,
+        `Submitted at (UTC): ${new Date(issuedAt).toISOString()}`,
+        `Network IP (masked): ${maskedIp ?? 'Unavailable'}`,
+      ],
+    },
     {
       title: 'Electronic acceptance',
       paragraphs: [`Signed electronically by ${name}`, `Email address: ${email}`, acceptanceStatement],

@@ -10,6 +10,7 @@ export function VolunteerForm() {
   const [error, setError] = useState('');
   const [reference, setReference] = useState('');
   const submitting = useRef(false);
+  const signingAttempt = useRef<{ details: string; token: string } | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,24 +21,37 @@ export function VolunteerForm() {
     setError('');
 
     try {
-      const response = await fetch('/api/volunteer', {
+      const details = {
+        name: form.get('name'),
+        email: form.get('email'),
+        declarations: {
+          transport: form.get('transport') === 'on',
+          workRights: form.get('workRights') === 'on',
+          authorisation: form.get('authorisation') === 'on',
+          driving: form.get('driving') === 'on',
+          validLicence: form.get('validLicence') === 'on',
+        },
+        accepted: form.get('accepted') === 'on',
+        website: form.get('website'),
+        version: agreementVersion,
+      };
+      const request = (payload: object) => fetch('/api/volunteer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.get('name'),
-          email: form.get('email'),
-          declarations: {
-            transport: form.get('transport') === 'on',
-            workRights: form.get('workRights') === 'on',
-            authorisation: form.get('authorisation') === 'on',
-            driving: form.get('driving') === 'on',
-            validLicence: form.get('validLicence') === 'on',
-          },
-          accepted: form.get('accepted') === 'on',
-          website: form.get('website'),
-          version: agreementVersion,
-        }),
+        body: JSON.stringify(payload),
       });
+      const submittedDetails = JSON.stringify(details);
+      if (signingAttempt.current?.details !== submittedDetails) {
+        const prepared = await request(details);
+        const result = await prepared.json();
+        if (!prepared.ok || typeof result.signingToken !== 'string') {
+          setError(result.error || 'We could not prepare your signing record. Please try again.');
+          return;
+        }
+        signingAttempt.current = { details: submittedDetails, token: result.signingToken };
+      }
+      const response = await request({ ...details, signingToken: signingAttempt.current.token });
+      if (response.status === 409 || response.status === 410) signingAttempt.current = null;
       const result = await response.json();
       if (!response.ok || !result.reference) {
         setError(result.error || 'We could not submit your agreement. Please try again.');
