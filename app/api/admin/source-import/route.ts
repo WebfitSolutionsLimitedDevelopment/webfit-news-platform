@@ -195,7 +195,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase.from('profiles').select('is_active').eq('id', user.id).maybeSingle();
+  const { data: profile } = await supabase.from('profiles').select('is_active,role').eq('id', user.id).maybeSingle();
   if (!profile?.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
@@ -218,13 +218,13 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       rawText = await textFromBuffer(buffer, file.name, file.type);
       sourceLabel = file.name;
-    } else if (sourceUrl) {
+    } else if (sourceUrl && profile.role !== 'volunteer') {
       const fetched = await safeFetch(sourceUrl);
       const filename = decodeURIComponent(fetched.finalUrl.pathname.split('/').pop() || 'webpage.html');
       rawText = await textFromBuffer(fetched.data, filename, fetched.contentType);
       sourceLabel = fetched.finalUrl.toString();
     } else {
-      return NextResponse.json({ error: 'Choose a file or enter a source URL.' }, { status: 422 });
+      return NextResponse.json({ error: profile.role === 'volunteer' ? 'Choose a source file or paste your text in the editor.' : 'Choose a file or enter a source URL.' }, { status: 422 });
     }
 
     if (rawText.length < 40) {

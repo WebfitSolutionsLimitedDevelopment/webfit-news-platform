@@ -4,11 +4,10 @@ import { createClient } from '../../../../../lib/supabase-server';
 import { revalidateEditorialContent } from '../../../../../lib/editorial-revalidate';
 import { notifyIndexNow } from '@/lib/indexnow';
 import { after } from 'next/server';
-import { sanitizeArticleHtml } from '../../../../../lib/article-html';
+import { articleHtmlToText, sanitizeArticleHtml } from '../../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../../lib/env';
 import { isWriterRole } from '@/lib/admin-auth';
-import { volunteerStoryHtml } from '@/lib/volunteer-story';
 import { notifyReview } from '../../../../../lib/review-notify';
 
 const Patch = z.object({
@@ -39,12 +38,6 @@ const Patch = z.object({
   review_note:z.string().trim().max(4000).nullable().optional()
 });
 
-const VolunteerUpdate = z.object({
-  title: z.string().trim().min(5).max(250),
-  body: z.string().trim().min(1).max(60000),
-  status: z.enum(['draft', 'in_review']),
-});
-
 async function ctx(){
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
@@ -70,22 +63,13 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
   const {id}=await params;
   const body=await req.json().catch(()=>null);
-  if(c.profile.role==='volunteer'){
-    const entry=VolunteerUpdate.safeParse(body);
-    if(!entry.success)return NextResponse.json({error:'Add a headline and article text before saving.'},{status:422});
-    const {title,body:text,status}=entry.data;
-    const {data:article,error}=await c.supabase.from('articles')
-      .update({title,content_html:volunteerStoryHtml(text),status})
-      .eq('id',id).eq('created_by',c.user.id).eq('status','draft').select('id,slug,status').maybeSingle();
-    if(error)return NextResponse.json({error:error.message},{status:400});
-    if(!article)return NextResponse.json({error:'This draft is unavailable or has already been submitted.'},{status:409});
-    if(status==='in_review')after(()=>notifyReview(article.id,'submitted'));
-    return NextResponse.json({article});
-  }
   const p=Patch.safeParse(body);
   if(!p.success)return NextResponse.json({error:p.error.flatten()},{status:422});
   if(p.data.status&&['published','scheduled','rejected'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
   if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
+  const volunteer=c.profile.role==='volunteer';
+  if(volunteer&&p.data.status!==undefined&&!['draft','in_review'].includes(p.data.status))
+    return NextResponse.json({error:'Volunteers can save drafts and submit them for review.'},{status:403});
   const reviewer=['super_admin','editor'].includes(c.profile.role);
   if(p.data.review_note!==undefined&&!reviewer)return NextResponse.json({error:'Only an editor can comment on a story.'},{status:403});
 
@@ -93,7 +77,18 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(isWriterRole(c.profile.role))beforeQuery=beforeQuery.eq('created_by',c.user.id);
   const {data:before}=await beforeQuery.maybeSingle();
   if(!before)return NextResponse.json({error:'Story not found, or it is waiting for review and cannot be changed.'},{status:404});
-  if(!reviewer&&before.status!=='draft')return NextResponse.json({error:before.status==='in_review'?'This story is with the editor. You can edit it again if it is sent back.':'This story is published. Ask an editor to change it.'},{status:409});
+  if(volunteer&&before.status==='in_review'&&p.data.status==='in_review'&&Object.keys(p.data).length===1)
+    return NextResponse.json({article:{id,slug:before.slug,status:before.status}});
+  if(volunteer&&p.data.status==='in_review'&&(before.status!=='draft'||Object.keys(p.data).length!==1))
+    return NextResponse.json({error:'Save your edits as a draft before submitting.'},{status:409});
+  if(volunteer&&p.data.status==='in_review'){
+    const {data:story}=await c.supabase.from('articles').select('title,content_html').eq('id',id).eq('created_by',c.user.id).maybeSingle();
+    if(!story||story.title.trim().length<5||!articleHtmlToText(story.content_html||'').trim())
+      return NextResponse.json({error:'Add a headline and article text before submitting.'},{status:422});
+  }
+  if(volunteer&&p.data.tag_names?.some(tag=>tag.length>80))
+    return NextResponse.json({error:'Keep each tag to 80 characters or fewer.'},{status:422});
+  if(!reviewer&&before.status!=='draft'&&!(volunteer&&before.status==='rejected'&&p.data.status==='draft'))return NextResponse.json({error:before.status==='in_review'?'This story is with the editor. You can edit it again if it is sent back.':'This story is published. Ask an editor to change it.'},{status:409});
 
   if(p.data.status==='rejected'&&(before.status!=='in_review'||!p.data.review_note))
     return NextResponse.json({error:'Add a rejection reason to a story waiting for review.'},{status:422});
@@ -104,6 +99,7 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
 
   let update=c.supabase.from('articles').update(changes).eq('id',id);
+  if(volunteer)update=update.eq('created_by',c.user.id).eq('status',before.status);
   if(p.data.status&&before.status==='in_review')update=update.eq('status','in_review');
   const {data,error}=await update.select('id,slug,status').maybeSingle();
   if(error)return NextResponse.json({error:error.message},{status:400});
@@ -122,12 +118,19 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   if(tag_names!==undefined){
     const {error:clearTagError}=await c.supabase.from('article_tags').delete().eq('article_id',id);
     if(clearTagError)return NextResponse.json({error:clearTagError.message},{status:400});
-    for(const raw of tag_names){
+    for(const raw of [...new Set(tag_names)]){
       const name=raw.trim();
       if(!name)continue;
       const tagSlug=name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
       if(!tagSlug)continue;
-      const {data:tag,error:tagError}=await c.supabase.from('tags').upsert({name,slug:tagSlug},{onConflict:'slug'}).select('id').single();
+      const tags=c.supabase.from('tags');
+      if(volunteer){
+        const {error}=await tags.upsert({name,slug:tagSlug},{onConflict:'slug',ignoreDuplicates:true});
+        if(error)return NextResponse.json({error:error.message},{status:400});
+      }
+      const {data:tag,error:tagError}=volunteer
+        ? await tags.select('id').eq('slug',tagSlug).single()
+        : await tags.upsert({name,slug:tagSlug},{onConflict:'slug'}).select('id').single();
       if(tagError)return NextResponse.json({error:tagError.message},{status:400});
       if(tag){
         const {error:linkError}=await c.supabase.from('article_tags').upsert({article_id:id,tag_id:tag.id},{onConflict:'article_id,tag_id'});
