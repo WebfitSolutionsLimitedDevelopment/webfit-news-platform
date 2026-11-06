@@ -1,3 +1,5 @@
+export const assignmentAttachmentMaxBytes = 4 * 1024 * 1024;
+
 export const assignmentStatuses = ['draft', 'offered', 'accepted', 'declined', 'reported', 'complete'] as const;
 export type AssignmentStatus = typeof assignmentStatuses[number];
 
