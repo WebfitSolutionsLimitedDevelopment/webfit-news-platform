@@ -36,3 +36,7 @@ export const assignmentLabels: Record<AssignmentStatus, string> = {
   reported: 'Report submitted',
   complete: 'Complete',
 };
+
+export function canAddBriefingAttachments(status: AssignmentStatus) {
+  return status === 'draft' || status === 'offered' || status === 'accepted';
+}
