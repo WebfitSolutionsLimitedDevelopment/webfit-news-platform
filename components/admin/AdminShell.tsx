@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { LogoutButton } from './LogoutButton';
+import styles from './AdminShell.module.css';
 import { createClient } from '../../lib/supabase-server';
 import { isReviewerRole, isWriterRole } from '../../lib/admin-auth';
 
@@ -15,11 +16,15 @@ const volunteerGroups:Group[]=[
   {label:'My work',items:[['My assignments','/admin/assignments'],['My stories','/admin/articles'],['New story','/admin/articles/new']]},
 ];
 
-const groups:Group[]=[
-  {label:'Editorial',items:[['Dashboard','/admin'],['Analytics','/admin/analytics'],['Reader feedback','/admin/feedback'],['Articles','/admin/articles'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
+function staffGroups(reviewer=false):Group[]{
+  return [
+  {label:'Editorial',items:[['Dashboard','/admin'],['Articles','/admin/articles'],
+    ...(reviewer?[['Volunteer assignments','/admin/assignments'] as const]:[]),
+    ['Analytics','/admin/analytics'],['Reader feedback','/admin/feedback'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
   {label:'Revenue & formats',items:[['Advertisements','/admin/advertisements'],['Videos','/admin/videos'],['Digital Edition','/admin/digital-edition']]},
   {label:'Operations',items:[['Users','/admin/users'],['404 Monitor','/admin/404-monitor'],['Redirects','/admin/redirects'],['Archive Audit','/admin/migration'],['Launch Readiness','/admin/launch'],['Settings','/admin/settings']]}
-];
+  ];
+}
 
 function AdminMobileNav({active,groups}:{active?:string;groups:Group[]}){
   return <div className="admin-mobile-bar">
@@ -45,19 +50,18 @@ async function navFor():Promise<Group[]>{
   try{
     const supabase=await createClient();
     const {data:{user}}=await supabase.auth.getUser();
-    if(!user)return groups;
+    if(!user)return staffGroups();
     const {data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
     if(p?.role==='volunteer')return volunteerGroups;
-    if(isReviewerRole(p?.role))return [...groups, {label:'Volunteers',items:[['Volunteer assignments','/admin/assignments']]}];
-    return isWriterRole(p?.role)?writerGroups:groups;
-  }catch{return groups}
+    return isWriterRole(p?.role)?writerGroups:staffGroups(isReviewerRole(p?.role));
+  }catch{return staffGroups()}
 }
 
 export async function AdminShell({children,active}:{children:ReactNode;active?:string}){
   const groups=await navFor();
   return <div className="admin-layout premium-admin">
     <AdminMobileNav active={active} groups={groups}/>
-    <aside className="admin-sidebar premium-sidebar">
+    <aside className={`admin-sidebar premium-sidebar ${styles.sidebar}`}>
       <Link className="admin-brand premium-admin-brand" href="/admin"><img src="/webfit-news-logo-400.webp" alt="Webfit News"/><div><span>WEBFIT</span><strong>NEWSROOM</strong></div></Link>
       <nav className="admin-nav-groups">{groups.map(group=><div className="admin-nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label,href])=><Link key={href} className={active===label?'active':''} href={href}>{label}</Link>)}</div>)}</nav>
       <div className="admin-sidebar-footer"><Link href="/" target="_blank">Open public website</Link><LogoutButton/><span>Webfit News CMS</span></div>
