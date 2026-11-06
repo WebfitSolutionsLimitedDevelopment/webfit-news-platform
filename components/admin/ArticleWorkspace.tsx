@@ -8,7 +8,7 @@ import { compressImageForUpload, formatUploadSize } from '../../lib/client-image
 import { altFromFilename, isWeakAlt } from '../../lib/alt-text';
 
 type Option={id:string;name:string};
-type Media={id:string;public_url:string|null;alt_text:string|null;caption?:string|null;filename:string|null;width:number|null;height:number|null};
+type Media={uploaded_by?:string|null;id:string;public_url:string|null;alt_text:string|null;caption?:string|null;filename:string|null;width:number|null;height:number|null};
 export type ReviewEvent={action:'submitted'|'returned'|'rejected'|'published';note:string|null;created_at:string;actor:string|null};
 type Revision={id:string;title:string;created_at:string};
 type ConverterResult={
@@ -201,7 +201,7 @@ export default function ArticleWorkspace({
   categories,authors,article=null,revisions=[],
   initialCategoryIds=[],initialPrimaryCategoryId='',
   initialTags=[],initialMedia=null,defaultAuthorId='',
-  mode='reviewer',reviewTrail=[],reviewNote=null,submittedBy=null,myByline=null
+  mode='reviewer',reviewTrail=[],reviewNote=null,submittedBy=null,myByline=null,volunteerId
 }:{
   categories:Option[];authors:Array<Option&{title?:string|null;avatar_url?:string|null}>;article?:any;revisions?:Revision[];
   initialCategoryIds?:string[];initialPrimaryCategoryId?:string;initialTags?:string[];initialMedia?:Media|null;
@@ -209,6 +209,7 @@ export default function ArticleWorkspace({
   defaultAuthorId?:string;
   /** 'writer' = outside reporter: saves drafts and submits for review, never publishes. */
   mode?:'reviewer'|'writer';
+  volunteerId?:string;
   reviewTrail?:ReviewEvent[];
   /** The editor's comment when the story was sent back. */
   reviewNote?:string|null;
@@ -239,6 +240,9 @@ export default function ArticleWorkspace({
   const [slug,setSlug]=useState(article?.slug||'');
   const [slugTouched,setSlugTouched]=useState(Boolean(article?.slug));
   const [status,setStatus]=useState(article?.status||'draft');
+  const writerCanEdit=status==='draft'||(!!volunteerId&&status==='rejected');
+  const volunteerReadOnly=!!volunteerId&&!writerCanEdit;
+  const Layout=volunteerReadOnly?'fieldset':'div';
   const [articleType,setArticleType]=useState(article?.article_type||'news');
   const [tags,setTags]=useState(initialTags.join(', '));
   const [categoryIds,setCategoryIds]=useState<string[]>(initialCategoryIds);
@@ -290,7 +294,8 @@ export default function ArticleWorkspace({
   const [restoreOffer,setRestoreOffer]=useState<null|{savedAt:number;data:any;key?:string}>(null);
   // Backups follow the article: a new story's copy moves to its id once the
   // server draft exists, so a refresh at /admin/articles/<id> still finds it.
-  const backupKey=`wf-cms-draft:${articleId||'new'}`;
+  const backupPrefix=volunteerId?`wf-cms-volunteer-draft:${volunteerId}:`:'wf-cms-draft:';
+  const backupKey=`${backupPrefix}${articleId||'new'}`;
 
   const snapshot=useMemo(()=>JSON.stringify({title,slug,slugTouched,status,articleType,tags,categoryIds,form,media}),[title,slug,slugTouched,status,articleType,tags,categoryIds,form,media]);
   const savedSnapshotRef=useRef(snapshot);
@@ -300,10 +305,10 @@ export default function ArticleWorkspace({
   const markSaved=useCallback((snap:string)=>{
     savedSnapshotRef.current=snap;
     try{
-      localStorage.removeItem('wf-cms-draft:new');
-      if(articleIdRef.current)localStorage.removeItem(`wf-cms-draft:${articleIdRef.current}`);
+      localStorage.removeItem(`${backupPrefix}new`);
+      if(articleIdRef.current)localStorage.removeItem(`${backupPrefix}${articleIdRef.current}`);
     }catch{}
-  },[]);
+  },[backupPrefix]);
 
   // Offer to restore a device backup that is newer than what the server has.
   useEffect(()=>{
@@ -311,8 +316,8 @@ export default function ArticleWorkspace({
       let key=backupKey;
       let raw=localStorage.getItem(key);
       if(!raw&&article?.id){
-        const fromNew=localStorage.getItem('wf-cms-draft:new');
-        if(fromNew&&JSON.parse(fromNew)?.articleId===article.id){key='wf-cms-draft:new';raw=fromNew}
+        const fromNew=localStorage.getItem(`${backupPrefix}new`);
+        if(fromNew&&JSON.parse(fromNew)?.articleId===article.id){key=`${backupPrefix}new`;raw=fromNew}
       }
       if(!raw)return;
       const backup=JSON.parse(raw);
@@ -344,6 +349,7 @@ export default function ArticleWorkspace({
 
   // 1. Copy to this device ~1.5s after every change (works with no signal).
   useEffect(()=>{
+    if(volunteerReadOnly)return;
     if(!dirty){if(saveState==='dirty'||saveState==='local')setSaveState('saved');return}
     if(saveState==='saved')setSaveState('dirty');
     const t=window.setTimeout(()=>{
@@ -359,7 +365,7 @@ export default function ArticleWorkspace({
   // 2. Save to the server as a draft ~6s after typing stops, once there is a
   //    headline and some story. Live and scheduled stories are never autosaved
   //    to the server: changes to those only go out when you press the button.
-  const canAutosave=writer?(serverStatusRef.current===null||serverStatusRef.current==='draft'):(serverStatusRef.current===null||serverStatusRef.current==='draft'||serverStatusRef.current==='in_review');
+  const canAutosave=writer?(serverStatusRef.current===null||writerCanEdit):(serverStatusRef.current===null||serverStatusRef.current==='draft'||serverStatusRef.current==='in_review');
   useEffect(()=>{
     if(!dirty||!canAutosave||busy)return;
     if(title.trim().length<5||!hasMeaningfulArticleContent(form.content_html))return;
@@ -372,23 +378,18 @@ export default function ArticleWorkspace({
     if(savingRef.current)return;
     savingRef.current=true;
     const snap=snapshot;
-    const draftStatus=serverStatusRef.current||'draft';
+    const draftStatus=volunteerId?'draft':serverStatusRef.current||'draft';
     setSaveState('saving');
     try{
       const currentId=articleIdRef.current;
-      const r=await fetch(currentId?`/api/admin/articles/${currentId}`:'/api/admin/articles',{
-        method:currentId?'PATCH':'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify(buildPayload(draftStatus))
-      });
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(typeof d.error==='string'?d.error:'Server did not accept the draft');
+      const d=await writeArticle(draftStatus);
       if(!currentId&&d.article?.id){
         setArticleId(d.article.id);
-        serverStatusRef.current=d.article.status||'draft';
         try{window.history.replaceState(window.history.state,'',`/admin/articles/${d.article.id}`)}catch{}
-        try{const b=localStorage.getItem('wf-cms-draft:new');if(b){localStorage.setItem(`wf-cms-draft:${d.article.id}`,b);localStorage.removeItem('wf-cms-draft:new')}}catch{}
+        try{const b=localStorage.getItem(`${backupPrefix}new`);if(b){localStorage.setItem(`${backupPrefix}${d.article.id}`,b);localStorage.removeItem(`${backupPrefix}new`)}}catch{}
       }
+      serverStatusRef.current=d.article.status||draftStatus;
+      if(volunteerId&&status==='rejected')setStatus('draft');
       markSaved(snap);
       setSaveState(snap===snapshotRef.current?'saved':'dirty');
       setSaveNote(new Intl.DateTimeFormat('en-NZ',{hour:'numeric',minute:'2-digit'}).format(new Date()));
@@ -736,9 +737,40 @@ export default function ArticleWorkspace({
     };
   }
 
+  async function writeArticle(finalStatus:string){
+    async function send(id:string|null,payload:object){
+      const response=await fetch(id?`/api/admin/articles/${id}`:'/api/admin/articles',{
+        method:id?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),
+      });
+      const result=await response.json().catch(()=>({error:`Server returned ${response.status}`}));
+      if(!response.ok){
+        const detail=typeof result.error==='string'?result.error:result.error?.fieldErrors
+          ?Object.entries(result.error.fieldErrors).map(([field,errors])=>`${field}: ${(errors as string[]).join(', ')}`).join(' | ')
+          :'Could not save the article.';
+        throw new Error(detail);
+      }
+      return result;
+    }
+
+    let id=articleIdRef.current;
+    if(!volunteerId)return send(id,buildPayload(finalStatus));
+    // Keep the story editable until its fields and classifications have all saved.
+    const draft=buildPayload('draft');
+    if(!id){
+      const {category_ids,primary_category_id,tag_names,...initialDraft}=draft;
+      const result=await send(null,initialDraft);
+      id=result.article.id;
+      setArticleId(id);
+      serverStatusRef.current='draft';
+      try{window.history.replaceState(window.history.state,'',`/admin/articles/${id}`)}catch{}
+    }
+    const saved=await send(id,draft);
+    return finalStatus==='in_review'?send(id,{status:'in_review'}):saved;
+  }
+
   /** Saves the featured image's alt text if it was edited. Returns false when it could not be saved. */
   async function saveFeaturedAlt(){
-    if(!media?.id)return true;
+    if(!media?.id || (volunteerId&&media.uploaded_by!==volunteerId))return true;
     const next=altDraft.trim();
     const nextCaption=captionDraft.trim();
     if(next===(media.alt_text||'').trim()&&nextCaption===(media.caption||'').trim())return true;
@@ -779,6 +811,11 @@ export default function ArticleWorkspace({
   /** Everything a reporter must fill in before a story can go to the editor. */
   function submitGaps(){
     const gaps:string[]=[];
+    if(volunteerId){
+      if(title.trim().length<5)gaps.push('a clear headline');
+      if(!hasMeaningfulArticleContent(form.content_html))gaps.push('article text');
+      return gaps;
+    }
     if(title.trim().length<15)gaps.push('a full headline');
     if(form.subtitle.trim().length<20)gaps.push('a standfirst (the line under the headline)');
     if(form.excerpt.trim().length<20)gaps.push('an excerpt (summary for story cards)');
@@ -824,6 +861,7 @@ export default function ArticleWorkspace({
   }
 
   async function save(finalStatus=status){
+    if(volunteerReadOnly)return;
     if(title.trim().length<5){setMessageKind('error');setMessage('Add a clear headline before saving.');return}
     if(finalStatus==='scheduled'&&!form.scheduled_at){setMessageKind('error');setMessage('Choose a schedule date and time.');return}
     if(!(await saveFeaturedAlt()))return;
@@ -846,16 +884,7 @@ export default function ArticleWorkspace({
     setMessageKind('info');
     setMessage(finalStatus==='published'?'Publishing article...':finalStatus==='scheduled'?'Scheduling article...':'Saving changes...');
     try{
-      const r=await fetch(currentId?`/api/admin/articles/${currentId}`:'/api/admin/articles',{
-        method:currentId?'PATCH':'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify(buildPayload(finalStatus))
-      });
-      const d=await r.json().catch(()=>({error:`Server returned ${r.status}`}));      
-      if(!r.ok){
-        const detail=typeof d.error==='string'?d.error:d.error?.fieldErrors?Object.entries(d.error.fieldErrors).map(([key,value])=>`${key}: ${(value as string[]).join(', ')}`).join(' | '):JSON.stringify(d.error||d);
-        throw new Error(detail||`Could not ${finalStatus==='published'?'publish':'save'} article.`);
-      }
+      const d=await writeArticle(finalStatus);
       if(finalStatus==='published'&&d.article?.status&&d.article.status!=='published'){
         throw new Error(`Publish request completed but the database returned status "${d.article.status}". The article was not published.`);
       }
@@ -883,7 +912,7 @@ export default function ArticleWorkspace({
     <header className={styles.top}>
       <div><a href="/admin/articles" className={styles.back}>Back to Articles</a><span className={styles.kicker}>WEBFIT NEWSROOM</span><h1>{isEdit?'Edit Article':'New Article'}</h1><span className={`${styles.saveStatus} ${saveState==='error'?styles.saveError:saveState==='saved'?styles.saveOk:''}`} role="status" aria-live="polite">{saveLabel}</span>{isEdit&&<div className={styles.state}><span>{status==='in_review'?'submitted for review':status==='draft'&&reviewNote?'changes requested':status.replaceAll('_',' ')}</span>{writer?null:<small>Full editing remains available after publication.</small>}</div>}</div>
       <div className={styles.actions}>{writer?<>
-        {status==='draft'?<><button type="button" disabled={busy} onClick={()=>save('draft')}>{busy?'Working...':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={submitForReview}>{busy?'Working...':'Submit for review'}</button></>:null}
+        {writerCanEdit?<><button type="button" disabled={busy} onClick={()=>save('draft')}>{busy?'Working...':'Save draft'}</button><button type="button" className={styles.publish} disabled={busy} onClick={submitForReview}>{busy?'Working...':'Submit for review'}</button></>:null}
         {isEdit&&status==='published'&&article.slug?<a href={`/${article.slug}`} target="_blank">View live</a>:null}
         <a href="/admin/articles/new">+ New story</a>
       </>:<>
@@ -895,11 +924,11 @@ export default function ArticleWorkspace({
       </>}</div>
     </header>
 
-    {restoreOffer&&<div className={styles.restore} role="alert"><div><strong>Unsaved work found on this device</strong><span>From {new Intl.DateTimeFormat('en-NZ',{weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(restoreOffer.savedAt))}. {restoreOffer.data?.title?`“${String(restoreOffer.data.title).slice(0,80)}”`:''}</span></div><button type="button" onClick={restoreBackup}>Restore it</button><button type="button" onClick={discardBackup}>Discard</button></div>}
+    {restoreOffer&&!volunteerReadOnly&&<div className={styles.restore} role="alert"><div><strong>Unsaved work found on this device</strong><span>From {new Intl.DateTimeFormat('en-NZ',{weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(restoreOffer.savedAt))}. {restoreOffer.data?.title?`“${String(restoreOffer.data.title).slice(0,80)}”`:''}</span></div><button type="button" onClick={restoreBackup}>Restore it</button><button type="button" onClick={discardBackup}>Discard</button></div>}
 
     {writer&&status==='draft'&&reviewNote?<div role="alert" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #efc0c0',background:'#fff4f4',color:'#5b1d1d'}}><strong style={{display:'block',marginBottom:4}}>The editor sent this back with a comment</strong><div style={{whiteSpace:'pre-wrap',lineHeight:1.5}}>{reviewNote}</div><small style={{display:'block',marginTop:6}}>Make the changes, then press Submit for review again.</small></div>:null}
     {writer&&status==='in_review'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #f0d28a',background:'#fff8e8',color:'#6f4b00'}}><strong>Submitted: waiting for the editor.</strong> You cannot change it while it is being reviewed. If it is sent back, it opens for editing again with the editor's comment.</div>:null}
-    {writer&&status==='rejected'?<div role="status"><strong>Rejected.</strong> {reviewNote}</div>:null}
+    {writer&&status==='rejected'?<div role="status"><strong>Rejected.</strong> {reviewNote}{volunteerId?' You can revise it and submit it again.':''}</div>:null}
     {writer&&status==='published'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #cfe8d9',background:'#f0faf4',color:'#17613b'}}><strong>Published.</strong> To change a live story, contact the editor.</div>:null}
     {!writer&&status==='in_review'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #f0d28a',background:'#fff8e8',color:'#6f4b00'}}>
       <strong>Waiting for review{submittedBy?<> · submitted by {submittedBy}</>:null}{article?.submitted_at?<> on {new Intl.DateTimeFormat('en-NZ',{timeZone:'Pacific/Auckland',weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(article.submitted_at))}</>:null}.</strong> Check it, then Publish, or Send back with a comment for the reporter.
@@ -908,7 +937,7 @@ export default function ArticleWorkspace({
 
     {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
 
-    <div className={styles.layout}>
+    <Layout className={styles.layout} {...(volunteerReadOnly?{disabled:true,'aria-label':'Read-only article',style:{border:0,padding:0,minWidth:0}}:{})}>
       <main className={styles.main}>
         {!isEdit&&<section className={`${styles.card} ${styles.converterCard}`}>
           <header className={styles.cardHead}><div><span>IMPORT</span><h2>Source importer</h2></div><small>Paste text, upload a document, or use a URL. Drafts stay unpublished until you review them.</small></header>
@@ -917,13 +946,13 @@ export default function ArticleWorkspace({
               <input ref={sourceFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.md,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
               <small>PDF, DOC, DOCX or TXT. Uploads up to 4 MB.</small>
             </label>
-            <label className={styles.field}>Source URL
+            {!volunteerId&&<label className={styles.field}>Source URL
               <input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.govt.nz/media-release"/>
               <small>Web pages and direct PDF/Word/TXT links are supported.</small>
-            </label>
+            </label>}
           </div>
           <div className={styles.converterActions}>
-            <button className={styles.convertButton} disabled={converterBusy} onClick={importSource}>{converterBusy?'Reading source...':'Prepare from file or URL'}</button>
+            <button className={styles.convertButton} disabled={converterBusy} onClick={importSource}>{converterBusy?'Reading source...':volunteerId?'Prepare from file':'Prepare from file or URL'}</button>
           </div>
           <label className={styles.field}>Paste full media release<textarea className={styles.releaseInput} rows={14} value={releaseText} onChange={e=>setReleaseText(e.target.value)} placeholder="Paste the complete media release here, including its headline, date, source and body."/></label>
           <div className={styles.converterActions}>
@@ -945,7 +974,7 @@ export default function ArticleWorkspace({
           <header className={styles.cardHead}><div><span>STORY</span><h2>Article content</h2></div><small>Visual editor. What you see here is close to the published article.</small></header>
           <label className={styles.field}>Headline<input className={styles.headline} value={title} onChange={e=>handleTitleChange(e.target.value)} placeholder="Write a clear, specific headline"/></label>
           <label className={styles.field}>Subheadline / standfirst<textarea rows={3} value={form.subtitle} onChange={e=>setManualField('subtitle',e.target.value)} placeholder="Optional summary beneath the headline"/></label>
-          <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div><RichArticleEditor value={form.content_html} onChange={handleArticleBodyChange} placeholder="Write or paste the article here"/></div>
+          <div className={styles.field}><div className={styles.fieldToolbar}><span>Article body</span><button type="button" className={styles.clearBodyButton} onClick={clearArticleBodyOnly} disabled={!hasMeaningfulArticleContent(form.content_html)}>Clear article body</button></div>{volunteerReadOnly?<div className="article-body" dangerouslySetInnerHTML={{__html:article?.content_html||''}}/>:<RichArticleEditor value={form.content_html} onChange={handleArticleBodyChange} placeholder="Write or paste the article here"/>}</div>
           <label className={styles.field}>Excerpt<textarea rows={4} value={form.excerpt} onChange={e=>setManualField('excerpt',e.target.value)} placeholder="Short summary used on story cards"/></label>
         </section>
 
@@ -982,7 +1011,7 @@ export default function ArticleWorkspace({
         </section>
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>IMAGE</span><h2>Featured image</h2></div><small>16:9 recommended</small></header>
-          {media?.public_url?<div className={styles.featured}><img src={media.public_url} alt={media.alt_text||media.filename||''}/><strong>{media.filename||'Featured image'}</strong><small>{media.width&&media.height?`${media.width} × ${media.height}`:'Image selected'}</small><div><button onClick={openMedia}>Change image</button><button onClick={()=>{setMedia(null);setAltDraft('');setCaptionDraft('');update('featured_media_id','')}}>Remove</button></div><label className={styles.altField}>Describe this image (alt text) — required to publish<textarea rows={2} maxLength={250} value={altDraft} onChange={e=>setAltDraft(e.target.value)} onBlur={()=>{void saveFeaturedAlt()}} placeholder="Who or what is in the photo, and where. e.g. Erica Stanford speaks to residents at a public meeting in Auckland"/><small className={altDraft.trim()&&isWeakAlt(altDraft)?styles.over:undefined}>{altSaving?'Saving…':!altDraft.trim()?'Needed for Google Images and screen readers.':isWeakAlt(altDraft)?'Too short or looks like a file name — describe the picture.':`${altDraft.trim().length}/125 recommended`}</small></label><label className={styles.altField}>Caption{writer?' (required)':''}: shown under the photo<textarea rows={2} maxLength={300} value={captionDraft} onChange={e=>setCaptionDraft(e.target.value)} onBlur={()=>{void saveFeaturedAlt()}} placeholder="e.g. Residents at the Henderson meeting on Tuesday. Photo: Webfit News"/><small>Include who took it if it is not your own photo.</small></label></div>:<button className={styles.addImage} onClick={openMedia}><b>+</b><strong>Add featured image</strong><small>Upload new or browse Media Library</small></button>}
+          {media?.public_url?<div className={styles.featured}><img src={media.public_url} alt={media.alt_text||media.filename||''}/><strong>{media.filename||'Featured image'}</strong><small>{media.width&&media.height?`${media.width} × ${media.height}`:'Image selected'}</small><div><button onClick={openMedia}>Change image</button><button onClick={()=>{setMedia(null);setAltDraft('');setCaptionDraft('');update('featured_media_id','')}}>Remove</button></div><label className={styles.altField}>Describe this image (alt text) — required to publish<textarea rows={2} maxLength={250} value={altDraft} onChange={e=>setAltDraft(e.target.value)} onBlur={()=>{void saveFeaturedAlt()}} placeholder="Who or what is in the photo, and where. e.g. Erica Stanford speaks to residents at a public meeting in Auckland"/><small className={altDraft.trim()&&isWeakAlt(altDraft)?styles.over:undefined}>{altSaving?'Saving…':!altDraft.trim()?'Needed for Google Images and screen readers.':isWeakAlt(altDraft)?'Too short or looks like a file name — describe the picture.':`${altDraft.trim().length}/125 recommended`}</small></label><label className={styles.altField}>Caption{writer?' (required)':''}: shown under the photo<textarea rows={2} maxLength={300} value={captionDraft} onChange={e=>setCaptionDraft(e.target.value)} onBlur={()=>{void saveFeaturedAlt()}} placeholder="e.g. Residents at the Henderson meeting on Tuesday. Photo: Webfit News"/><small>Include who took it if it is not your own photo.</small></label></div>:<button className={styles.addImage} onClick={openMedia}><b>+</b><strong>Add featured image</strong><small>{volunteerId?'Upload new or choose your own image':'Upload new or browse Media Library'}</small></button>}
         </section>
 
         <section className={styles.card}><header className={styles.cardHead}><div><span>CLASSIFICATION</span><h2>Categories and tags</h2></div></header>
@@ -1001,11 +1030,11 @@ export default function ArticleWorkspace({
           </li>)}</ol>
         </section>:null}
       </aside>
-    </div>
+    </Layout>
 
     <div className={styles.mobileBar} aria-label="Save and publish">
       <span className={`${styles.mobileStatus} ${saveState==='error'?styles.saveError:saveState==='saved'?styles.saveOk:''}`}>{saveLabel}</span>
-      {writer?(status==='draft'?<><button type="button" disabled={busy} onClick={()=>save('draft')}>{busy?'…':'Save draft'}</button><button type="button" className={styles.mobilePublish} disabled={busy} onClick={submitForReview}>{busy?'Working…':'Submit'}</button></>:null):<>
+      {writer?(writerCanEdit?<><button type="button" disabled={busy} onClick={()=>save('draft')}>{busy?'…':'Save draft'}</button><button type="button" className={styles.mobilePublish} disabled={busy} onClick={submitForReview}>{busy?'Working…':'Submit'}</button></>:null):<>
       <button type="button" disabled={busy} onClick={()=>save(status==='published'?'published':status==='in_review'?'in_review':'draft')}>{busy?'…':isEdit&&status==='published'?'Save':'Save draft'}</button>
       <button type="button" className={styles.mobilePublish} disabled={busy} onClick={()=>save(status==='scheduled'?'scheduled':'published')}>{busy?'Working…':status==='scheduled'?'Schedule':isEdit&&status==='published'?'Update':'Publish'}</button>
       </>}
@@ -1014,7 +1043,7 @@ export default function ArticleWorkspace({
     {mediaOpen&&<div className={styles.modal}>
       <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
       <div className={styles.dialog} ref={mediaDialogRef}>
-        <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>Upload a new image or select an existing newsroom image.</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
+        <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>{volunteerId?'Upload a new image or choose one of your uploads.':'Upload a new image or select an existing newsroom image.'}</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
         <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Images are automatically optimised to about 300–500 KB before upload.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
         <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!mediaBusy){e.preventDefault();void loadMedia(mediaSearch)}}} placeholder="Search filename, caption or alt text"/><button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
         {mediaError&&<p className={styles.mediaError} role="alert">{mediaError} <button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch,mediaPage)}>Retry</button></p>}

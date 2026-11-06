@@ -1,31 +1,26 @@
 import { notFound } from 'next/navigation';
 import ArticleWorkspace, { type ReviewEvent } from '../../../../components/admin/ArticleWorkspace';
-import sanitizeHtml from 'sanitize-html';
-import { AdminHeader, AdminShell } from '@/components/admin/AdminShell';
-import VolunteerStoryForm from '@/components/admin/VolunteerStoryForm';
+import { sanitizeArticleHtml } from '@/lib/article-html';
 import { createAdminClient } from '../../../../lib/supabase-admin';
 import { requireAdmin, isWriterRole } from '../../../../lib/admin-auth';
 
 export default async function EditArticle({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const { supabase, user, profile } = await requireAdmin();
-  if (profile.role === 'volunteer') {
-    const { data: story } = await supabase.from('articles').select('id,slug,title,status,content_html,review_note')
-      .eq('id', id).eq('created_by', user.id).maybeSingle();
-    if (!story) notFound();
-    const text = sanitizeHtml((story.content_html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n'), { allowedTags: [], allowedAttributes: {} })
-      .replace(/&(?:amp|lt|gt);/g, value => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>' })[value]!).trim();
-    return <AdminShell active="My stories"><AdminHeader title="My story"/><VolunteerStoryForm story={{ ...story, text }}/></AdminShell>;
-  }
+  const volunteer = profile.role === 'volunteer';
+  const writer = isWriterRole(profile.role);
+  let articleQuery = supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,caption,filename,width,height,uploaded_by),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id);
+  if(writer) articleQuery=articleQuery.eq('created_by',user.id);
+  let authorQuery = supabase.from('authors').select('id,name,title,avatar_url,profile_id').eq('is_active',true);
+  if(volunteer) authorQuery=authorQuery.eq('profile_id',user.id);
   const [{data:article},{data:categories},{data:authors},{data:revisions},{data:reviews}]=await Promise.all([
-    supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,caption,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).maybeSingle(),
+    articleQuery.maybeSingle(),
     supabase.from('categories').select('id,name').eq('is_active',true).order('name'),
-    supabase.from('authors').select('id,name,title,avatar_url,profile_id').eq('is_active',true).order('name'),
+    authorQuery.order('name'),
     supabase.from('article_revisions').select('id,title,created_at').eq('article_id',id).order('created_at',{ascending:false}).limit(20),
     supabase.from('article_reviews').select('action,note,created_at,actor_id').eq('article_id',id).order('created_at',{ascending:false}).limit(30),
   ]);
   // Reporters only ever get their own stories (row security); anything else is "not found".
-  const writer=isWriterRole(profile.role);
   if(!article || (writer && article.created_by !== user.id))notFound();
 
   // Names for the review history (reviewers' profiles are private, so look them up on the server).
@@ -45,11 +40,11 @@ export default async function EditArticle({params}:{params:Promise<{id:string}>}
   const byline=(authors||[]).find(a=>a.id===article.author_id)||null;
   const mine=(authors||[]).find(a=>user&&a.profile_id===user.id)||null;
   return <ArticleWorkspace
-    article={article} categories={categories||[]}
+    article={{...article,content_html:sanitizeArticleHtml(article.content_html||'')}} categories={categories||[]}
     authors={(authors||[]).map(({id,name,title,avatar_url})=>({id,name,title,avatar_url}))}
     revisions={revisions||[]} initialCategoryIds={rows.map(row=>row.category_id)} initialPrimaryCategoryId={primary}
     initialTags={tags} initialMedia={(article as any).media||null}
-    mode={writer?'writer':'reviewer'} reviewTrail={reviewTrail} reviewNote={article.review_note||null}
+    volunteerId={volunteer ? user.id : undefined} mode={writer?'writer':'reviewer'} reviewTrail={reviewTrail} reviewNote={article.review_note||null}
     submittedBy={article.created_by?names.get(article.created_by)||byline?.name||null:null}
     myByline={mine?{name:mine.name,title:mine.title,avatar_url:mine.avatar_url}:null}
   />;

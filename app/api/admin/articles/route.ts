@@ -8,7 +8,6 @@ import { sanitizeArticleHtml } from '../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../lib/env';
 import { isWriterRole } from '@/lib/admin-auth';
-import { volunteerStoryHtml } from '@/lib/volunteer-story';
 import { notifyReview } from '../../../../lib/review-notify';
 
 const ArticleInput = z.object({
@@ -37,13 +36,6 @@ const ArticleInput = z.object({
   tag_names: z.array(z.string().trim().min(1)).default([]),
 });
 
-const VolunteerCreate = z.object({
-  title: z.string().trim().min(5).max(250),
-  slug: ArticleInput.shape.slug.max(120),
-  body: z.string().trim().min(1).max(60000),
-  status: z.enum(['draft', 'in_review']),
-});
-
 async function authContext() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -65,29 +57,13 @@ export async function GET() {
 export async function POST(req: Request) {
   const ctx = await authContext(); if ('error' in ctx) return ctx.error;
   const body = await req.json().catch(() => null);
-  if (ctx.profile.role === 'volunteer') {
-    const entry = VolunteerCreate.safeParse(body);
-    if (!entry.success) return NextResponse.json({ error: 'Add a headline and article text before saving.' }, { status: 422 });
-    const { title, slug, body: text, status } = entry.data;
-    const contentHtml = volunteerStoryHtml(text);
-    const { data: article, error } = await ctx.supabase.from('articles')
-      .insert({ title, slug, content_html: contentHtml, status, article_type: 'news', created_by: ctx.user.id })
-      .select('id,slug,status').single();
-    if (error?.code === '23505') {
-      const { data: saved } = await ctx.supabase.from('articles').select('id,slug,status,title,content_html')
-        .eq('created_by', ctx.user.id).eq('slug', slug).maybeSingle();
-      if (saved?.title === title && saved.content_html === contentHtml && saved.status === status) {
-        return NextResponse.json({ article: { id: saved.id, slug: saved.slug, status: saved.status } });
-      }
-      return NextResponse.json({ error: 'This submission already has a saved story. Open My stories to continue.' }, { status: 409 });
-    }
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    if (status === 'in_review') after(() => notifyReview(article.id, 'submitted'));
-    return NextResponse.json({ article }, { status: 201 });
-  }
   const parsed = ArticleInput.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
   const input = parsed.data;
+  const volunteer = ctx.profile.role === 'volunteer';
+  if (volunteer && (input.status !== 'draft' || input.category_ids.length || input.primary_category_id || input.tag_names.length)) {
+    return NextResponse.json({ error: 'Save a draft before adding categories or submitting for review.' }, { status: 422 });
+  }
   if (['published','scheduled'].includes(input.status) && !['super_admin','editor'].includes(ctx.profile.role)) return NextResponse.json({ error: 'Publishing permission required' }, { status: 403 });
   if (input.status === 'scheduled' && !input.scheduled_at) return NextResponse.json({ error: 'A schedule date and time is required.' }, { status: 422 });
 
@@ -96,6 +72,13 @@ export async function POST(req: Request) {
   const { category_ids, primary_category_id, tag_names, ...article } = input;
   const cleanArticle = { ...article, content_html: sanitizeArticleHtml(article.content_html || '') };
   const { data: created, error } = await ctx.supabase.from('articles').insert({ ...cleanArticle, canonical_url: cleanArticle.canonical_url || null, published_at: publishedAt }).select('id,slug,status').single();
+  if (volunteer && error?.code === '23505') {
+    const { data: saved } = await ctx.supabase.from('articles').select('id,slug,status,title,content_html')
+      .eq('created_by', ctx.user.id).eq('slug', input.slug).eq('status', 'draft').maybeSingle();
+    if (saved?.title === input.title && saved.content_html === cleanArticle.content_html) {
+      return NextResponse.json({ article: { id: saved.id, slug: saved.slug, status: saved.status } });
+    }
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const cats = Array.from(new Set([...category_ids, ...(primary_category_id ? [primary_category_id] : [])]));

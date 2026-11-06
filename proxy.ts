@@ -142,7 +142,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (path.startsWith('/api/admin/')) {
-    if (!VOLUNTEER_API.test(path)) {
+    if (!VOLUNTEER_API.test(path) && !['/api/admin/media','/api/admin/source-import','/api/admin/media-release-converter'].includes(path.replace(/\/$/, ''))) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
