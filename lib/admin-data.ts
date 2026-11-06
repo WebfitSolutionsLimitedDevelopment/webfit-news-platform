@@ -18,7 +18,7 @@ export async function getAdminDashboard() {
   return {publishedToday:publishedToday.count||0,drafts:drafts.count||0,inReview:inReview.count||0,scheduled:scheduled.count||0,articles:articles.count||0,recent:recent.data||[],nextScheduled:nextScheduled.data||[],media:media.count||0,failedMedia:failedMedia.count||0};
 }
 
-export type ArticleAdminFilters = { q?: string; status?: string; type?: string; page?: number; pageSize?: number };
+export type ArticleAdminFilters = { q?: string; status?: string; type?: string; page?: number; pageSize?: number; ownerId?: string };
 
 export async function getArticlesAdmin(filters:ArticleAdminFilters={}) {
   const supabase = await createClient();
@@ -27,6 +27,7 @@ export async function getArticlesAdmin(filters:ArticleAdminFilters={}) {
   const from=(page-1)*pageSize;
   const to=from+pageSize-1;
   let query=supabase.from('articles').select('id,title,slug,status,article_type,published_at,scheduled_at,updated_at,view_count,created_by,submitted_at,review_note,author:author_id(name),media:featured_media_id(public_url)',{count:'exact'});
+  if(filters.ownerId) query=query.eq('created_by',filters.ownerId);
   if(filters.status==='returned') query=query.eq('status','draft').not('review_note','is',null);
   else if(filters.status && filters.status!=='all') query=query.eq('status',filters.status as any);
   if(filters.type && filters.type!=='all') query=query.eq('article_type',filters.type as any);

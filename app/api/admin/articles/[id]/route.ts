@@ -7,6 +7,8 @@ import { after } from 'next/server';
 import { sanitizeArticleHtml } from '../../../../../lib/article-html';
 import { sendPushToAllDevices } from '../../../../../lib/push-notifications';
 import { getSiteUrl } from '../../../../../lib/env';
+import { isWriterRole } from '@/lib/admin-auth';
+import { volunteerStoryHtml } from '@/lib/volunteer-story';
 import { notifyReview } from '../../../../../lib/review-notify';
 
 const Patch = z.object({
@@ -15,7 +17,7 @@ const Patch = z.object({
   slug:z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
   excerpt:z.string().nullable().optional(),
   content_html:z.string().optional(),
-  status:z.enum(['draft','in_review','scheduled','published','archived']).optional(),
+  status:z.enum(['draft','in_review','scheduled','published','archived','rejected']).optional(),
   article_type:z.enum(['news','breaking_news','analysis','opinion','editorial','explainer','feature','interview','community','press_release']).optional(),
   author_id:z.string().uuid().nullable().optional(),
   featured_media_id:z.string().uuid().nullable().optional(),
@@ -37,6 +39,12 @@ const Patch = z.object({
   review_note:z.string().trim().max(4000).nullable().optional()
 });
 
+const VolunteerUpdate = z.object({
+  title: z.string().trim().min(5).max(250),
+  body: z.string().trim().min(1).max(60000),
+  status: z.enum(['draft', 'in_review']),
+});
+
 async function ctx(){
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
@@ -50,7 +58,9 @@ export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
   const c=await ctx();
   if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
   const {id}=await params;
-  const {data,error}=await c.supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id).single();
+  let query=c.supabase.from('articles').select('*,media:media!articles_featured_media_id_fkey(id,public_url,alt_text,filename,width,height),article_categories(category_id,is_primary),article_tags(tag_id,tags(name,slug))').eq('id',id);
+  if(isWriterRole(c.profile.role))query=query.eq('created_by',c.user.id);
+  const {data,error}=await query.single();
   if(error)return NextResponse.json({error:error.message},{status:404});
   return NextResponse.json({article:data});
 }
@@ -59,24 +69,45 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   const c=await ctx();
   if(!c)return NextResponse.json({error:'Unauthorized'},{status:401});
   const {id}=await params;
-  const p=Patch.safeParse(await req.json());
+  const body=await req.json().catch(()=>null);
+  if(c.profile.role==='volunteer'){
+    const entry=VolunteerUpdate.safeParse(body);
+    if(!entry.success)return NextResponse.json({error:'Add a headline and article text before saving.'},{status:422});
+    const {title,body:text,status}=entry.data;
+    const {data:article,error}=await c.supabase.from('articles')
+      .update({title,content_html:volunteerStoryHtml(text),status})
+      .eq('id',id).eq('created_by',c.user.id).eq('status','draft').select('id,slug,status').maybeSingle();
+    if(error)return NextResponse.json({error:error.message},{status:400});
+    if(!article)return NextResponse.json({error:'This draft is unavailable or has already been submitted.'},{status:409});
+    if(status==='in_review')after(()=>notifyReview(article.id,'submitted'));
+    return NextResponse.json({article});
+  }
+  const p=Patch.safeParse(body);
   if(!p.success)return NextResponse.json({error:p.error.flatten()},{status:422});
-  if(p.data.status&&['published','scheduled'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
+  if(p.data.status&&['published','scheduled','rejected'].includes(p.data.status)&&!['super_admin','editor'].includes(c.profile.role))return NextResponse.json({error:'Publishing permission required'},{status:403});
   if(p.data.status==='scheduled'&&!p.data.scheduled_at)return NextResponse.json({error:'A schedule date and time is required.'},{status:422});
   const reviewer=['super_admin','editor'].includes(c.profile.role);
   if(p.data.review_note!==undefined&&!reviewer)return NextResponse.json({error:'Only an editor can comment on a story.'},{status:403});
 
-  const {data:before}=await c.supabase.from('articles').select('slug,status').eq('id',id).maybeSingle();
+  let beforeQuery=c.supabase.from('articles').select('slug,status').eq('id',id);
+  if(isWriterRole(c.profile.role))beforeQuery=beforeQuery.eq('created_by',c.user.id);
+  const {data:before}=await beforeQuery.maybeSingle();
   if(!before)return NextResponse.json({error:'Story not found, or it is waiting for review and cannot be changed.'},{status:404});
   if(!reviewer&&before.status!=='draft')return NextResponse.json({error:before.status==='in_review'?'This story is with the editor. You can edit it again if it is sent back.':'This story is published. Ask an editor to change it.'},{status:409});
+
+  if(p.data.status==='rejected'&&(before.status!=='in_review'||!p.data.review_note))
+    return NextResponse.json({error:'Add a rejection reason to a story waiting for review.'},{status:422});
 
   const {category_ids,primary_category_id,tag_names,...articleChanges}=p.data;
   const changes:any={...articleChanges};
   if(typeof articleChanges.content_html==='string') changes.content_html=sanitizeArticleHtml(articleChanges.content_html);
   if(p.data.status==='published'&&!p.data.published_at)changes.published_at=new Date().toISOString();
 
-  const {data,error}=await c.supabase.from('articles').update(changes).eq('id',id).select('id,slug,status').single();
+  let update=c.supabase.from('articles').update(changes).eq('id',id);
+  if(p.data.status&&before.status==='in_review')update=update.eq('status','in_review');
+  const {data,error}=await update.select('id,slug,status').maybeSingle();
   if(error)return NextResponse.json({error:error.message},{status:400});
+  if(!data)return NextResponse.json({error:'The story changed. Refresh before taking another action.'},{status:409});
 
   if(category_ids!==undefined||primary_category_id!==undefined){
     const cats=Array.from(new Set([...(category_ids||[]),...(primary_category_id?[primary_category_id]:[])]));
@@ -127,6 +158,7 @@ export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
   // Review emails: submitted (to editors), sent back or published (to the reporter).
   if(data.status==='in_review'&&before.status!=='in_review')after(()=>notifyReview(id,'submitted'));
   if(before.status==='in_review'&&data.status==='draft')after(()=>notifyReview(id,'returned'));
+  if(before.status==='in_review'&&data.status==='rejected')after(()=>notifyReview(id,'rejected'));
   if(before.status==='in_review'&&data.status==='published')after(()=>notifyReview(id,'published'));
 
   return NextResponse.json({article:data});

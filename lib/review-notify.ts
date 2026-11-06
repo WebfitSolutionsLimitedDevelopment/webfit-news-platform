@@ -27,14 +27,17 @@ async function send(to: string[], subject: string, html: string) {
   await resend('/emails', { method: 'POST', body: { from: FROM, to, subject, html } });
 }
 
-export async function notifyReview(articleId: string, event: 'submitted' | 'returned' | 'published') {
+export async function notifyReview(articleId: string, event: 'submitted' | 'returned' | 'rejected' | 'published') {
   try {
     const admin = createAdminClient();
     const { data: a } = await admin.from('articles').select('id,title,slug,created_by,review_note,author:author_id(name)').eq('id', articleId).maybeSingle();
     if (!a) return;
     const title = esc(a.title || 'Untitled story');
     const editHref = absoluteUrl(`/admin/articles/${a.id}`);
-    const reporterName = esc((a.author as any)?.name || 'A reporter');
+    const { data: reporter } = a.created_by
+      ? await admin.from('profiles').select('email,display_name').eq('id', a.created_by).maybeSingle()
+      : { data: null };
+    const reporterName = esc(reporter?.display_name || (a.author as any)?.name || 'A reporter');
 
     if (event === 'submitted') {
       const { data: reviewers } = await admin.from('profiles').select('email').eq('is_active', true).in('role', ['super_admin', 'editor']);
@@ -42,10 +45,12 @@ export async function notifyReview(articleId: string, event: 'submitted' | 'retu
         page(`${reporterName} submitted a story`, `<p style="font-size:16px;line-height:1.5"><strong>${title}</strong></p><p style="font-size:15px;line-height:1.5;color:#4b4740">Open it to publish it, or send it back with a comment.</p>`, editHref, 'Review the story'));
       return;
     }
-    if (!a.created_by) return;
-    const { data: reporter } = await admin.from('profiles').select('email,display_name').eq('id', a.created_by).maybeSingle();
     if (!reporter?.email) return;
-    if (event === 'returned') {
+    if (event === 'rejected') {
+      const reason = esc(a.review_note || '');
+      await send([reporter.email], `Rejected: ${a.title}`,
+        page('Your story was rejected', `<p><strong>${title}</strong></p><p>Editor’s reason:</p><blockquote style="white-space:pre-wrap">${reason}</blockquote>`, editHref, 'View the decision'));
+    } else if (event === 'returned') {
       const { data: last } = await admin.from('article_reviews').select('note').eq('article_id', a.id).eq('action', 'returned').order('created_at', { ascending: false }).limit(1).maybeSingle();
       const note = esc(last?.note || a.review_note || '');
       await send([reporter.email], `Changes requested: ${a.title}`,
