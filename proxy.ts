@@ -56,8 +56,8 @@ let redirectCache: { rows: RedirectRow[]; loadedAt: number } | null = null;
 
 /** Reporters (submit stories for approval) and the CMS pages open to them. Keep in step with lib/admin-auth.ts. */
 const WRITER_ROLES = new Set(['contributor', 'journalist', 'volunteer']);
-const VOLUNTEER_PATHS = /^\/admin\/articles(\/|$)/;
-const VOLUNTEER_API = /^\/api\/admin\/articles(?:\/[a-f0-9-]+)?\/?$/i;
+const VOLUNTEER_PATHS = /^\/admin\/(articles(\/|$)|assignments\/?$)/;
+const VOLUNTEER_API = /^\/api\/admin\/(?:articles|assignments)(?:\/[a-f0-9-]+)?\/?$/i;
 const WRITER_PATHS = /^\/admin\/(articles|media)(\/|$)/;
 
 async function loadRedirects(supabase: any): Promise<RedirectRow[]> {
