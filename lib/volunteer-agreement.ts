@@ -1,3 +1,4 @@
+export const volunteerLogo = '/webfit-volunteer-logo.jpg';
 export const agreementVersion = '1.2';
 export const volunteerContact = 'webfitnews@gmail.com';
 export const acceptanceStatement =
