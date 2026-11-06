@@ -11,6 +11,10 @@ const writerGroups:Group[]=[
   {label:'My work',items:[['My stories','/admin/articles'],['New story','/admin/articles/new'],['Media','/admin/media']]},
 ];
 
+const volunteerGroups:Group[]=[
+  {label:'My work',items:[['My stories','/admin/articles'],['New story','/admin/articles/new']]},
+];
+
 const groups:Group[]=[
   {label:'Editorial',items:[['Dashboard','/admin'],['Analytics','/admin/analytics'],['Reader feedback','/admin/feedback'],['Articles','/admin/articles'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
   {label:'Revenue & formats',items:[['Advertisements','/admin/advertisements'],['Videos','/admin/videos'],['Digital Edition','/admin/digital-edition']]},
@@ -43,6 +47,7 @@ async function navFor():Promise<Group[]>{
     const {data:{user}}=await supabase.auth.getUser();
     if(!user)return groups;
     const {data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
+    if(p?.role==='volunteer')return volunteerGroups;
     return isWriterRole(p?.role)?writerGroups:groups;
   }catch{return groups}
 }

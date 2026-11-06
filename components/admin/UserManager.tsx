@@ -5,17 +5,20 @@ import { uploadAuthorPhoto } from '../../lib/author-photo';
 
 export type ManagedUser = {
   id: string; email: string | null; display_name: string | null; role: string; is_active: boolean; phone: string | null;
-  created_at: string; title: string | null; avatar_url: string | null; author_slug: string | null;
+  created_at: string; title: string | null; avatar_url: string | null; author_slug: string | null; byline_name: string | null;
   drafts: number; submitted: number; published: number;
 };
 
+type UnlinkedAuthor = { id: string; name: string; slug: string };
+
 const ROLE_OPTIONS: Array<[string, string, string]> = [
+  ['volunteer', 'Volunteer contributor', 'Can write and track their own stories. Only editors can publish them.'],
   ['contributor', 'Reporter', 'Writes stories and submits them for approval. Sees only their own stories.'],
   ['editor', 'Editor', 'Reviews, publishes and sends back stories. Sees every story.'],
   ['super_admin', 'Super Admin', 'Everything, including accounts, ads and settings.'],
   ['ad_manager', 'Ad Manager', 'Advertisements only.'],
 ];
-const ROLE_LABEL: Record<string, string> = { contributor: 'Reporter', journalist: 'Reporter', editor: 'Editor', super_admin: 'Super Admin', ad_manager: 'Ad Manager' };
+const ROLE_LABEL: Record<string, string> = { volunteer: 'Volunteer contributor', contributor: 'Reporter', journalist: 'Reporter', editor: 'Editor', super_admin: 'Super Admin', ad_manager: 'Ad Manager' };
 
 function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]!.toUpperCase()).join('') || '?'; }
 
@@ -58,21 +61,26 @@ function PhotoField({ name, url, onChange }: { name: string; url: string | null;
   </div>;
 }
 
-function AccountForm({ initial, onSaved, onCancel, isSelf }: { initial?: ManagedUser; onSaved: (creds?: { email: string; password: string }) => void; onCancel?: () => void; isSelf?: boolean }) {
+function AccountForm({ initial, onSaved, onCancel, isSelf, unlinkedAuthors = [], defaultRole = 'contributor' }: { initial?: ManagedUser; defaultRole?: string; unlinkedAuthors?: UnlinkedAuthor[]; onSaved: (creds?: { email: string; password: string }) => void; onCancel?: () => void; isSelf?: boolean }) {
   const [name, setName] = useState(initial?.display_name || '');
+  const [bylineName, setBylineName] = useState(initial?.byline_name || '');
+  const [existingAuthor, setExistingAuthor] = useState('');
+  const [password, setPassword] = useState('');
   const [email, setEmail] = useState(initial?.email || '');
   const [phone, setPhone] = useState(initial?.phone || '');
-  const [role, setRole] = useState(initial?.role === 'journalist' ? 'contributor' : initial?.role || 'contributor');
+  const [role, setRole] = useState(initial?.role === 'journalist' ? 'contributor' : initial?.role || defaultRole);
   const [title, setTitle] = useState(initial?.title || '');
   const [avatar, setAvatar] = useState<string | null>(initial?.avatar_url || null);
   const [active, setActive] = useState(initial?.is_active ?? true);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
 
+  const linkExisting = !initial && role === 'volunteer' && !!existingAuthor;
+
   async function save() {
     setBusy(true); setNote('');
     try {
-      const body = { name: name.trim(), email: email.trim(), phone: phone.trim() || null, role, title: title.trim() || null, avatar_url: avatar, ...(initial ? { is_active: active } : {}) };
+      const body = { name: name.trim(), email: email.trim(), phone: phone.trim() || null, role, title: title.trim() || null, avatar_url: avatar, byline_name: bylineName.trim(), ...(initial ? { is_active: active } : { password: password || null, existing_author_id: linkExisting ? existingAuthor : undefined }) };
       const r = await fetch(initial ? `/api/admin/users/${initial.id}` : '/api/admin/users', { method: initial ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Could not save.');
@@ -82,25 +90,28 @@ function AccountForm({ initial, onSaved, onCancel, isSelf }: { initial?: Managed
 
   const roleHelp = ROLE_OPTIONS.find(r => r[0] === role)?.[2];
   return <div className="admin-form-grid">
-    <label><span>Full name (shown on their stories)</span><input value={name} onChange={e => setName(e.target.value)} placeholder="Priya Sharma"/></label>
-    <label><span>Role under the name</span><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Reporter (used if left blank)"/></label>
+    <label><span>Full name (newsroom)</span><input value={name} onChange={e => setName(e.target.value)} placeholder="Priya Sharma"/></label>
+    {!initial && role === 'volunteer' && unlinkedAuthors.length > 0 ? <label><span>Link an existing author</span><select value={existingAuthor} onChange={e => setExistingAuthor(e.target.value)}><option value="">Create a new byline</option>{unlinkedAuthors.map(author => <option key={author.id} value={author.id}>{author.name} (/{author.slug})</option>)}</select></label> : null}
+    {!linkExisting ? <label><span>Screen name (public byline)</span><input maxLength={80} value={bylineName} onChange={e => setBylineName(e.target.value)} placeholder="Defaults to full name"/></label> : null}
+    {!initial ? <label><span>Set password (optional)</span><input type="password" value={password} onChange={e => setPassword(e.target.value)} maxLength={72} autoComplete="new-password" placeholder="Leave blank to generate one"/></label> : null}
+    {!linkExisting ? <label><span>Role under the name</span><input value={title} onChange={e => setTitle(e.target.value)} placeholder={role === 'volunteer' ? 'Media Volunteer' : 'Reporter'}/></label> : null}
     <label><span>Email (their login)</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com"/></label>
     <label><span>Mobile (newsroom only, not shown publicly)</span><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="021 123 4567"/></label>
     <label><span>Access</span><select value={role} onChange={e => setRole(e.target.value)} disabled={isSelf}>{ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>{roleHelp ? <small style={{ color: '#6b7280' }}>{roleHelp}</small> : null}</label>
     {initial ? <label><span>Status</span><select value={String(active)} onChange={e => setActive(e.target.value === 'true')} disabled={isSelf}><option value="true">Active: can sign in</option><option value="false">Disabled: cannot sign in</option></select></label> : <span/>}
-    <div style={{ gridColumn: '1/-1' }}><span style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Photo (shown in a circle next to their name on stories)</span><PhotoField name={name} url={avatar} onChange={setAvatar}/></div>
+    {!linkExisting ? <div style={{ gridColumn: '1/-1' }}><span style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Photo (shown in a circle next to their name on stories)</span><PhotoField name={name} url={avatar} onChange={setAvatar}/></div> : <p className="admin-note">The existing byline and photo will be kept. Edit them here after creating the login.</p>}
     <div className="admin-actions" style={{ gridColumn: '1/-1' }}>
-      <button className="admin-primary" type="button" disabled={busy || name.trim().length < 2 || !email.includes('@')} onClick={save}>{busy ? 'Saving…' : initial ? 'Save changes' : 'Create account'}</button>
+      <button className="admin-primary" type="button" disabled={busy || name.trim().length < 2 || !email.includes('@') || (!initial && !!password && password.length < 8)} onClick={save}>{busy ? 'Saving…' : initial ? 'Save changes' : 'Create account'}</button>
       {onCancel ? <button className="admin-secondary" type="button" onClick={onCancel}>Cancel</button> : null}
       {note ? <span className="admin-note" style={{ color: '#a32323' }}>{note}</span> : null}
     </div>
-    {!initial ? <p className="admin-note" style={{ gridColumn: '1/-1', margin: 0 }}>A password is made for them automatically and shown once, ready to copy and send. They cannot change their name, photo, email or mobile: you do that here.</p> : null}
+    {!initial ? <p className="admin-note" style={{ gridColumn: '1/-1', margin: 0 }}>Set a password of at least eight characters or leave it blank to generate one. Copy the sign-in details when they appear. The account can sign in with this password immediately.</p> : null}
   </div>;
 }
 
-export default function UserManager({ users, currentUserId, canManage }: { users: ManagedUser[]; currentUserId: string; canManage: boolean }) {
+export default function UserManager({ users, currentUserId, canManage, unlinkedAuthors, openVolunteerForm }: { users: ManagedUser[]; currentUserId: string; canManage: boolean; unlinkedAuthors: UnlinkedAuthor[]; openVolunteerForm: boolean }) {
   const router = useRouter();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(openVolunteerForm);
   const [editing, setEditing] = useState<string | null>(null);
   const [creds, setCreds] = useState<{ email: string; password: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'reporters' | 'staff' | 'disabled'>('all');
@@ -114,14 +125,14 @@ export default function UserManager({ users, currentUserId, canManage }: { users
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const shown = users.filter(u => filter === 'all' ? true : filter === 'disabled' ? !u.is_active : filter === 'reporters' ? (u.is_active && (u.role === 'contributor' || u.role === 'journalist')) : (u.is_active && !['contributor', 'journalist'].includes(u.role)));
+  const shown = users.filter(u => filter === 'all' ? true : filter === 'disabled' ? !u.is_active : filter === 'reporters' ? (u.is_active && (['contributor', 'journalist', 'volunteer'].includes(u.role))) : (u.is_active && !['contributor', 'journalist', 'volunteer'].includes(u.role)));
 
   return <>
     {creds ? <Credentials email={creds.email} password={creds.password} onClose={() => setCreds(null)}/> : null}
 
     {canManage ? <section className="admin-card">
       <div className="admin-card-head"><h2>Add a reporter or staff member</h2>{!adding ? <button className="admin-primary" type="button" onClick={() => setAdding(true)}>+ New account</button> : null}</div>
-      {adding ? <AccountForm onSaved={c => { setAdding(false); if (c) setCreds(c); router.refresh(); }} onCancel={() => setAdding(false)}/> : <p className="admin-note" style={{ margin: 0 }}>Reporters write and submit stories; you approve them or send them back with a comment.</p>}
+      {adding ? <AccountForm defaultRole={openVolunteerForm ? 'volunteer' : 'contributor'} unlinkedAuthors={unlinkedAuthors} onSaved={c => { setAdding(false); if (c) setCreds(c); router.refresh(); }} onCancel={() => setAdding(false)}/> : <p className="admin-note" style={{ margin: 0 }}>Volunteer contributors can submit their own stories for an editor to review.</p>}
     </section> : <section className="admin-card"><p className="admin-note" style={{ margin: 0 }}>Only a Super Admin can create or change accounts.</p></section>}
 
     <section className="admin-card">

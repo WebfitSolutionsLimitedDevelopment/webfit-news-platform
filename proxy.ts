@@ -55,7 +55,9 @@ const REDIRECT_TTL_MS = 5 * 60 * 1000;
 let redirectCache: { rows: RedirectRow[]; loadedAt: number } | null = null;
 
 /** Reporters (submit stories for approval) and the CMS pages open to them. Keep in step with lib/admin-auth.ts. */
-const WRITER_ROLES = new Set(['contributor', 'journalist']);
+const WRITER_ROLES = new Set(['contributor', 'journalist', 'volunteer']);
+const VOLUNTEER_PATHS = /^\/admin\/articles(\/|$)/;
+const VOLUNTEER_API = /^\/api\/admin\/articles(?:\/[a-f0-9-]+)?\/?$/i;
 const WRITER_PATHS = /^\/admin\/(articles|media)(\/|$)/;
 
 async function loadRedirects(supabase: any): Promise<RedirectRow[]> {
@@ -139,6 +141,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (path.startsWith('/api/admin/')) {
+    if (!VOLUNTEER_API.test(path)) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        if (profile?.role === 'volunteer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+    return response;
+  }
+
   if (!path.startsWith('/admin')) return response;
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -166,9 +179,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // Outside reporters only get their own stories and the image library.
-  if (user && path !== '/admin/login' && !WRITER_PATHS.test(path)) {
+  if (user && path !== '/admin/login' && !VOLUNTEER_PATHS.test(path)) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-    if (profile && WRITER_ROLES.has(profile.role)) {
+    if (profile?.role === 'volunteer' || (profile && WRITER_ROLES.has(profile.role) && !WRITER_PATHS.test(path))) {
       const url = request.nextUrl.clone();
       url.pathname = '/admin/articles';
       url.search = '';
@@ -182,6 +195,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/api/admin/:path*',
     '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|news-sitemap.xml|rss.xml|.*\\..*).*)',
   ],
 };

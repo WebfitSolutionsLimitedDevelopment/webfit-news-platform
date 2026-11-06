@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from './supabase-server';
 import { createAdminClient } from './supabase-admin';
 
-export const ROLES = ['super_admin', 'editor', 'contributor', 'journalist', 'ad_manager'] as const;
+export const ROLES = ['super_admin', 'editor', 'contributor', 'journalist', 'volunteer', 'ad_manager'] as const;
 
 /** Only an active Super Admin may create or change newsroom accounts. */
 export async function superAdminContext() {

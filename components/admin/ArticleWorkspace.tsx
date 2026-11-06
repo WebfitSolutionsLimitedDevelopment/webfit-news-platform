@@ -9,7 +9,7 @@ import { altFromFilename, isWeakAlt } from '../../lib/alt-text';
 
 type Option={id:string;name:string};
 type Media={id:string;public_url:string|null;alt_text:string|null;caption?:string|null;filename:string|null;width:number|null;height:number|null};
-export type ReviewEvent={action:'submitted'|'returned'|'published';note:string|null;created_at:string;actor:string|null};
+export type ReviewEvent={action:'submitted'|'returned'|'rejected'|'published';note:string|null;created_at:string;actor:string|null};
 type Revision={id:string;title:string;created_at:string};
 type ConverterResult={
   source_name:string|null;release_date:string|null;warnings:string[];
@@ -805,18 +805,19 @@ export default function ArticleWorkspace({
     await save('in_review');
   }
 
-  async function sendBack(){
+  async function sendBack(reject=false){
     const note=sendBackNote.trim();
     if(note.length<5){setMessageKind('error');setMessage('Write a comment for the reporter: what needs to change.');return}
     const id=articleIdRef.current;
     if(!id)return;
     setBusy(true);
     try{
-      const r=await fetch(`/api/admin/articles/${id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status:'draft',review_note:note})});
+      const r=await fetch(`/api/admin/articles/${id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status:reject?'rejected':'draft',review_note:note})});
       const d=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(typeof d.error==='string'?d.error:'Could not send the story back.');
-      setStatus('draft');serverStatusRef.current='draft';setSendBackOpen(false);setSendBackNote('');
-      setMessageKind('success');setMessage('Sent back to the reporter with your comment. They have been emailed.');
+      const nextStatus=reject?'rejected':'draft';
+      setStatus(nextStatus);serverStatusRef.current=nextStatus;setSendBackOpen(false);setSendBackNote('');
+      setMessageKind('success');setMessage(reject?'Story rejected. The reporter can see the reason.':'Sent back to the reporter with your comment.');
       router.refresh();
     }catch(e:any){setMessageKind('error');setMessage(e.message)}
     finally{setBusy(false)}
@@ -898,10 +899,11 @@ export default function ArticleWorkspace({
 
     {writer&&status==='draft'&&reviewNote?<div role="alert" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #efc0c0',background:'#fff4f4',color:'#5b1d1d'}}><strong style={{display:'block',marginBottom:4}}>The editor sent this back with a comment</strong><div style={{whiteSpace:'pre-wrap',lineHeight:1.5}}>{reviewNote}</div><small style={{display:'block',marginTop:6}}>Make the changes, then press Submit for review again.</small></div>:null}
     {writer&&status==='in_review'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #f0d28a',background:'#fff8e8',color:'#6f4b00'}}><strong>Submitted: waiting for the editor.</strong> You cannot change it while it is being reviewed. If it is sent back, it opens for editing again with the editor's comment.</div>:null}
+    {writer&&status==='rejected'?<div role="status"><strong>Rejected.</strong> {reviewNote}</div>:null}
     {writer&&status==='published'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #cfe8d9',background:'#f0faf4',color:'#17613b'}}><strong>Published.</strong> To change a live story, contact the editor.</div>:null}
     {!writer&&status==='in_review'?<div role="status" style={{margin:'0 0 14px',padding:'14px 16px',borderRadius:12,border:'1px solid #f0d28a',background:'#fff8e8',color:'#6f4b00'}}>
       <strong>Waiting for review{submittedBy?<> · submitted by {submittedBy}</>:null}{article?.submitted_at?<> on {new Intl.DateTimeFormat('en-NZ',{timeZone:'Pacific/Auckland',weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(article.submitted_at))}</>:null}.</strong> Check it, then Publish, or Send back with a comment for the reporter.
-      {sendBackOpen?<div style={{marginTop:10}}><textarea rows={4} value={sendBackNote} onChange={e=>setSendBackNote(e.target.value)} placeholder="What needs to change? e.g. Add a quote from the council and a photo credit." style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e0c27a',font:'inherit'}}/><div style={{display:'flex',gap:8,marginTop:8}}><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #151515',background:'#151515',color:'#fff',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={sendBack}>{busy?'Sending…':'Send back to reporter'}</button><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #cdb36a',background:'#fff',color:'#4b3500',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={()=>setSendBackOpen(false)}>Cancel</button></div></div>:<div style={{marginTop:10}}><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #cdb36a',background:'#fff',color:'#4b3500',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={()=>setSendBackOpen(true)}>Send back with a comment</button></div>}
+      {sendBackOpen?<div style={{marginTop:10}}><textarea rows={4} value={sendBackNote} onChange={e=>setSendBackNote(e.target.value)} placeholder="What needs to change? e.g. Add a quote from the council and a photo credit." style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e0c27a',font:'inherit'}}/><div style={{display:'flex',gap:8,marginTop:8}}><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #151515',background:'#151515',color:'#fff',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={()=>void sendBack()}>{busy?'Sending…':'Send back to reporter'}</button><button type="button" className="admin-secondary" disabled={busy} onClick={()=>{if(window.confirm('Reject this story and record the reason for the reporter?'))void sendBack(true)}}>Reject story</button><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #cdb36a',background:'#fff',color:'#4b3500',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={()=>setSendBackOpen(false)}>Cancel</button></div></div>:<div style={{marginTop:10}}><button type="button" style={{padding:'9px 16px',borderRadius:999,border:'1px solid #cdb36a',background:'#fff',color:'#4b3500',fontWeight:700,cursor:'pointer'}} disabled={busy} onClick={()=>setSendBackOpen(true)}>Send back with a comment</button></div>}
     </div>:null}
 
     {message&&<div role="status" aria-live="polite" className={`${styles.message} ${messageKind==='error'?styles.messageError:messageKind==='success'?styles.messageSuccess:''}`}>{message}</div>}
@@ -993,7 +995,7 @@ export default function ArticleWorkspace({
         {writer?null:<section className={styles.card}><header className={styles.cardHead}><div><span>PLACEMENT</span><h2>Homepage options</h2></div></header><div className={styles.toggles}>{[['is_breaking','Breaking News'],['is_featured','Featured'],['is_editor_pick',"Editor's Pick"],['is_homepage_hero','Homepage Hero']].map(([k,l])=><label key={k}><input type="checkbox" checked={(form as any)[k]} onChange={e=>update(k,e.target.checked)}/><span>{l}</span></label>)}</div></section>}
         {reviewTrail.length?<section className={styles.card}><header className={styles.cardHead}><div><span>REVIEW</span><h2>Review history</h2></div></header>
           <ol style={{listStyle:'none',margin:0,padding:0,display:'grid',gap:10}}>{reviewTrail.map((e,i)=><li key={i} style={{borderLeft:`3px solid ${e.action==='returned'?'#c8232c':e.action==='published'?'#17613b':'#c68100'}`,paddingLeft:10}}>
-            <strong style={{fontSize:13}}>{e.action==='submitted'?'Submitted':e.action==='returned'?'Sent back':'Published'}</strong>{e.actor?<span style={{fontSize:12,color:'#6b7280'}}> · {e.actor}</span>:null}
+            <strong style={{fontSize:13}}>{e.action==='submitted'?'Submitted':e.action==='returned'?'Sent back':e.action==='rejected'?'Rejected':'Published'}</strong>{e.actor?<span style={{fontSize:12,color:'#6b7280'}}> · {e.actor}</span>:null}
             <small style={{display:'block',color:'#8a94a5'}}>{new Intl.DateTimeFormat('en-NZ',{timeZone:'Pacific/Auckland',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(e.created_at))}</small>
             {e.note?<div style={{fontSize:13,whiteSpace:'pre-wrap',marginTop:4,lineHeight:1.45}}>{e.note}</div>:null}
           </li>)}</ol>

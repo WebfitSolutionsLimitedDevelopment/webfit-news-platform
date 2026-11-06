@@ -5,6 +5,7 @@ import { ROLES, audit, freeAuthorSlug, superAdminContext } from '@/lib/user-admi
 
 const Patch = z.object({
   name: z.string().trim().min(2).max(80).optional(),
+  byline_name: z.string().trim().max(80).optional(),
   email: z.string().trim().toLowerCase().email().optional(),
   phone: z.string().trim().max(30).nullable().optional(),
   role: z.enum(ROLES).optional(),
@@ -57,17 +58,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Keep their byline in step.
   const authorChanges: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (input.name) authorChanges.name = input.name;
+  if (input.byline_name !== undefined || input.name) authorChanges.name = input.byline_name || input.name || target.display_name;
   if (input.email) authorChanges.email = input.email;
   if (input.title !== undefined) authorChanges.title = input.title || null;
   if (input.avatar_url !== undefined) authorChanges.avatar_url = input.avatar_url;
-  if (input.is_active !== undefined) authorChanges.is_active = input.is_active;
+  if (input.is_active !== undefined && role !== 'volunteer') authorChanges.is_active = input.is_active;
   const { data: author } = await c.admin.from('authors').select('id').eq('profile_id', id).maybeSingle();
   if (author) {
-    await c.admin.from('authors').update(authorChanges).eq('id', author.id);
+    const { error } = await c.admin.from('authors').update(authorChanges).eq('id', author.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   } else if (role !== 'ad_manager') {
-    const name = input.name || target.display_name || target.email || 'Reporter';
-    await c.admin.from('authors').insert({ ...authorChanges, profile_id: id, name, slug: await freeAuthorSlug(c.admin, name), email: input.email || target.email, is_active: active });
+    const name = input.byline_name || input.name || target.display_name || target.email || 'Reporter';
+    const { error } = await c.admin.from('authors').insert({ ...authorChanges, profile_id: id, name, slug: await freeAuthorSlug(c.admin, name), email: input.email || target.email, is_active: role === 'volunteer' || active });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
   await audit(c.admin, c.user.id, 'profile.update', id, { ...input, avatar_url: input.avatar_url ? 'changed' : input.avatar_url });
