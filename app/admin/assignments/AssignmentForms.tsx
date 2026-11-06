@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
-import { assignmentLabels, type Assignment, type AssignmentFile } from '@/lib/volunteer-assignments';
+import { assignmentLabels, canAddBriefingAttachments, type Assignment, type AssignmentFile } from '@/lib/volunteer-assignments';
 
 async function submit(url: string, payload: object | FormData) {
   const response = await fetch(url, {
@@ -48,7 +48,7 @@ export function NewAssignment({ volunteers }: { volunteers: Volunteer[] }) {
       <label><span>Venue or location</span><input name="venue" required maxLength={300} /></label>
       <label><span>On-site contact (optional)</span><input name="contact" maxLength={250} /></label>
       <label style={{ gridColumn: '1/-1' }}><span>Briefing and reporting instructions</span><textarea name="instructions" rows={5} required maxLength={6000} /></label>
-      <div className="admin-actions" style={{ gridColumn: '1/-1' }}><button className="admin-primary" disabled={busy}>Create briefing draft</button></div>
+      <div className="admin-actions" style={{ gridColumn: '1/-1' }}><button className="admin-primary" disabled={busy}>Create briefing draft</button><small>Open the assignment after saving to add briefing files.</small></div>
       {message && <p role="alert">{message}</p>}
     </form> : <p>Set up an active volunteer account under Users before assigning work.</p>}
   </section>;
@@ -102,7 +102,7 @@ export function AssignmentActions({ assignment, files, reviewer }: { assignment:
 
   const briefing = files.filter(file => file.kind === 'briefing');
   const photos = files.filter(file => file.kind === 'report');
-  const uploadAllowed = reviewer ? status === 'draft' : status === 'accepted';
+  const uploadAllowed = reviewer ? canAddBriefingAttachments(status) : status === 'accepted';
   return <section className="admin-card">
     <div className="admin-card-head"><h2>{assignment.title}</h2><span className="status-badge">{assignmentLabels[status]}</span></div>
     <p><strong>{assignment.volunteer_name}</strong> · {assignment.event_date}{assignment.event_time ? ` · ${assignment.event_time}` : ''} · {assignment.venue}</p>
@@ -129,9 +129,9 @@ export function AssignmentActions({ assignment, files, reviewer }: { assignment:
 
     <div className="admin-form-grid">
       {uploadAllowed && <label style={{ gridColumn: '1/-1' }}><span>{reviewer ? 'Add briefing attachments' : 'Upload report photos'}</span>
-        <input type="file" multiple disabled={busy} accept={reviewer ? '.pdf,.docx,.txt,.jpg,.jpeg,.png,.webp' : 'image/jpeg,image/png,image/webp'}
+        <input type="file" multiple disabled={busy} accept={reviewer ? '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp' : 'image/jpeg,image/png,image/webp'}
           onChange={event => { void upload(event.target.files); event.target.value = ''; }} />
-        <small>Up to 12 attachments, 4 MB each.</small>
+        <small>{reviewer ? 'PDF, Word, text or images. ' : ''}Up to 12 attachments, 4 MB each.</small>
       </label>}
       {!reviewer && status === 'offered' && <label style={{ gridColumn: '1/-1' }}><span>Reason if declining (optional)</span>
         <textarea rows={2} value={declineNote} onChange={event => setDeclineNote(event.target.value)} maxLength={1000} />
