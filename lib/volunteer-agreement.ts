@@ -1,5 +1,5 @@
 export const volunteerLogo = '/webfit-volunteer-logo.jpg';
-export const agreementVersion = '1.2';
+export const agreementVersion = '1.3';
 export const volunteerContact = 'webfitnews@gmail.com';
 export const acceptanceStatement =
   'I have read and accept the Volunteer Media Agreement and NDA. I am submitting my own name as my electronic signature and agree to receive my signed copy by email.';
@@ -64,4 +64,4 @@ export const agreementSections = [
 ];
 
 export const volunteerPrivacyNotice =
-  'Webfit Solutions Limited (Webfit News), 605 Sandringham Road, Sandringham, Auckland 1025, New Zealand, collects and holds your name, email, declarations and acceptance to keep a record of this agreement and administer volunteer assignments. Authorised newsroom staff receive the record and Resend processes the confirmation emails. We keep the record only for as long as needed for these purposes or as required by law. Providing these details is your choice. They are required to sign online. You can request access to or correction of your details by emailing Webfit News.';
+  'Webfit Solutions Limited (Webfit News), based in Auckland, New Zealand, collects and holds your name, email, declarations and acceptance to keep a record of this agreement and administer volunteer assignments. Authorised newsroom staff receive the record and Resend processes the confirmation emails. We keep the record only for as long as needed for these purposes or as required by law. Providing these details is your choice. They are required to sign online. You can request access to or correction of your details by emailing Webfit News.';
