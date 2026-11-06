@@ -27,10 +27,10 @@ const nameFontFiles = [
   'noto-sans-greek-ext-400-normal.woff',
 ];
 
-export async function createVolunteerPdf(version: string, reference: string, blocks: AgreementBlock[]) {
+export async function createVolunteerPdf(version: string, reference: string, blocks: AgreementBlock[], branding?: { title: string; kicker: string; subtitle: string }) {
   // Stable bytes keep Resend's request body identical when the same signature is retried.
   const pdf = await PDFDocument.create({ updateMetadata: false });
-  pdf.setTitle('Webfit News Volunteer Media Agreement and NDA');
+  pdf.setTitle(branding?.title ?? 'Webfit News Volunteer Media Agreement and NDA');
   pdf.setAuthor('Webfit News');
   pdf.setSubject(`Agreement version ${version} | Reference ${reference}`);
   pdf.registerFontkit(fontkit);
@@ -101,14 +101,14 @@ export async function createVolunteerPdf(version: string, reference: string, blo
     const page = pdf.addPage([width, height]);
     const top = height - margin;
     page.drawImage(logo, { x: margin, y: top - (first ? 62 : 31), width: first ? 62 : 31, height: first ? 62 : 31 });
-    page.drawText('WEBFIT NEWS  /  VOLUNTEER ONBOARDING', {
+    page.drawText(branding?.kicker ?? 'WEBFIT NEWS  /  VOLUNTEER ONBOARDING', {
       x: margin + (first ? 76 : 44), y: top - 16, size: 9, font: bold, color: headingColor,
     });
     if (first) {
-      page.drawText('Volunteer Media Agreement and NDA', {
+      page.drawText(branding?.title ?? 'Volunteer Media Agreement and NDA', {
         x: margin + 76, y: top - 42, size: 23, font: headline, color: headingColor,
       });
-      page.drawText(`Signed copy  |  Version ${version}`, {
+      page.drawText(branding?.subtitle ?? `Signed copy  |  Version ${version}`, {
         x: margin + 76, y: top - 59, size: 10, font: regular, color: bodyColor,
       });
     }

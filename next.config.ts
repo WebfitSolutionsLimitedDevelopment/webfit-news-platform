@@ -11,6 +11,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
+    '/api/admin/assignments/**': ['./public/webfit-volunteer-logo.jpg', './node_modules/@fontsource/noto-sans/files/*-400-normal.woff'],
     '/api/volunteer': ['./public/webfit-volunteer-logo.jpg', './node_modules/@fontsource/noto-sans/files/*-400-normal.woff'],
   },
   images: {

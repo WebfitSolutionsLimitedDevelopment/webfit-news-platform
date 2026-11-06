@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { LogoutButton } from './LogoutButton';
 import { createClient } from '../../lib/supabase-server';
-import { isWriterRole } from '../../lib/admin-auth';
+import { isReviewerRole, isWriterRole } from '../../lib/admin-auth';
 
 type Group={label:string;items:ReadonlyArray<readonly [string,string]>};
 
@@ -12,7 +12,7 @@ const writerGroups:Group[]=[
 ];
 
 const volunteerGroups:Group[]=[
-  {label:'My work',items:[['My stories','/admin/articles'],['New story','/admin/articles/new']]},
+  {label:'My work',items:[['My assignments','/admin/assignments'],['My stories','/admin/articles'],['New story','/admin/articles/new']]},
 ];
 
 const groups:Group[]=[
@@ -48,6 +48,7 @@ async function navFor():Promise<Group[]>{
     if(!user)return groups;
     const {data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
     if(p?.role==='volunteer')return volunteerGroups;
+    if(isReviewerRole(p?.role))return [...groups, {label:'Volunteers',items:[['Volunteer assignments','/admin/assignments']]}];
     return isWriterRole(p?.role)?writerGroups:groups;
   }catch{return groups}
 }
