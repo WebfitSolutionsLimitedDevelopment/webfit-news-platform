@@ -1,117 +1,76 @@
-import base from './CoalitionTrendCard.module.css';
+'use client';
+
+import { useEffect, useState } from 'react';
 import styles from './LiveResultsCard.module.css';
 
-/**
- * Official 2026 election results card, shown at the end of every story from
- * 5 November 2026. Until the Electoral Commission releases counts (from 7pm
- * on 7 November) it only says when results will appear.
- *
- * Data: poll.webfitnews.co.nz/api/public/results (Electoral Commission feed,
- * cached for a minute).
- */
-
-const API_URL = process.env.RESULTS_API_URL || 'https://poll.webfitnews.co.nz/api/public/results';
 const RESULTS_URL = 'https://poll.webfitnews.co.nz/results-2026';
+const API_URL = 'https://poll.webfitnews.co.nz/api/public/results';
+const REFRESH_MS = 60_000;
+const votes = new Intl.NumberFormat('en-NZ');
 
-type Bloc = 'government' | 'opposition' | 'other';
 type Feed = {
   hasResults: boolean;
+  pollsClosed?: boolean;
   percentPlacesCounted: number;
-  totalSeats: number;
-  majority: number;
-  blocs: Record<Bloc, { percent: number; seats: number }>;
-  parties: { abbrev: string; name: string; bloc: Bloc; percent: number; seats: number }[];
+  advanceVoting?: { date: string; total: number } | null;
+  parties: { abbrev: string; name: string; percent: number }[];
 };
 
-const ORDER: Bloc[] = ['government', 'other', 'opposition'];
-const META: Record<Bloc, { label: string; parties: string; colour: string }> = {
-  government: { label: 'Government', parties: 'National · ACT · NZ First', colour: '#2a63b0' },
-  opposition: { label: 'Opposition', parties: 'Labour · Green · Te Pāti Māori', colour: '#c0303a' },
-  other: { label: 'Others', parties: 'Other parties', colour: '#d08a1c' },
-};
+export function LiveResultsCard() {
+  const [feed, setFeed] = useState<Feed | null>(null);
 
-const tag = (url: string) =>
-  `${url}?utm_source=webfitnews&utm_medium=house_promo&utm_campaign=election_2026&utm_content=article_results`;
+  useEffect(() => {
+    const controller = new AbortController();
 
-async function loadFeed(): Promise<Feed | null> {
-  try {
-    const res = await fetch(API_URL, { next: { revalidate: 60 }, signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
-    const data = (await res.json()) as Feed;
-    return data && data.blocs && Array.isArray(data.parties) ? data : null;
-  } catch {
-    return null;
-  }
-}
+    async function refresh() {
+      try {
+        const response = await fetch(API_URL, {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(16_000)]),
+        });
+        if (!response.ok && response.status !== 503) return;
+        const data: Feed = await response.json();
+        if (controller.signal.aborted || !Array.isArray(data.parties)) return;
+        setFeed(previous => previous?.hasResults && !data.hasResults ? previous : data);
+      } catch {
+        // Keep the last usable update and retry on the next interval.
+      }
+    }
 
-export async function LiveResultsCard() {
-  const feed = await loadFeed();
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, REFRESH_MS);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
+  }, []);
 
-  if (!feed || !feed.hasResults) {
-    return (
-      <aside className={base.card} aria-label="Election 2026 results">
-        <span className={base.kicker}>Election 2026 · Official results</span>
-        <h2 className={base.title}>Results from 7pm on Saturday 7 November</h2>
-        <p className={styles.lead}>
-          Voting places close at 7pm on election day. Follow the official count live on our results page as the
-          Electoral Commission releases it.
-        </p>
-        <div className={base.actions}>
-          <a className={base.primary} href={tag(RESULTS_URL)} target="_blank" rel="noopener">Live results page</a>
-        </div>
-      </aside>
-    );
-  }
-
-  const total = Math.max(feed.totalSeats, 1);
-  const pct = (v: number) => `${v.toFixed(1)}%`;
+  const live = feed?.hasResults;
+  const advance = feed?.advanceVoting;
+  const leaders = live ? [...feed.parties].sort((a, b) => b.percent - a.percent).slice(0, 2) : [];
 
   return (
-    <aside className={base.card} aria-label="Election 2026 live results">
-      <span className={base.kicker}>Election 2026 · Live results</span>
-      <h2 className={base.title}>{pct(feed.percentPlacesCounted)} of voting places counted</h2>
-
-      <ul className={base.shares}>
-        {ORDER.map((b) => (
-          <li key={b}>
-            <span className={base.swatch} style={{ background: META[b].colour }} />
-            <span className={base.shareLabel}>{META[b].label}</span>
-            <strong>{feed.blocs[b].seats} seats</strong>
-            <small>{pct(feed.blocs[b].percent)} party vote · {META[b].parties}</small>
-          </li>
-        ))}
-      </ul>
-
-      <div className={styles.barWrap}>
-        <div className={styles.bar}>
-          {ORDER.map((b) =>
-            feed.blocs[b].seats > 0 ? (
-              <span key={b} style={{ width: `${(feed.blocs[b].seats / total) * 100}%`, background: META[b].colour }} />
-            ) : null,
+    <aside aria-label="2026 election updates">
+      <a className={styles.strip} href={RESULTS_URL}>
+        <span className={styles.details}>
+          <strong>{live ? 'NZ Election 2026 · Preliminary results' : 'NZ Election 2026'}</strong>
+          {live ? (
+            <span>
+              {feed.percentPlacesCounted.toFixed(1)}% of voting places counted
+              {leaders.map(party => (
+                <span key={party.abbrev}> · {party.name} {party.percent.toFixed(1)}%</span>
+              ))}
+            </span>
+          ) : (
+            <span>
+              {advance ? `${votes.format(advance.total)} advance votes through ${advance.date} · ` : ''}
+              {feed?.pollsClosed ? 'Awaiting the first results' : 'Results from 7 pm, Saturday 7 November'}
+            </span>
           )}
-        </div>
-        <span className={styles.majority} style={{ left: `${(feed.majority / total) * 100}%` }} aria-hidden />
-        <p className={base.axisNote}>Line = {feed.majority} seats needed to govern ({feed.totalSeats} seats)</p>
-      </div>
-
-      <ol className={styles.parties}>
-        {feed.parties.slice(0, 6).map((p) => (
-          <li key={p.abbrev}>
-            <span className={base.swatch} style={{ background: META[p.bloc].colour }} />
-            <span className={styles.partyName}>{p.name}</span>
-            <span className={styles.partyPct}>{pct(p.percent)}</span>
-            <strong>{p.seats}</strong>
-          </li>
-        ))}
-      </ol>
-
-      <div className={base.actions}>
-        <a className={base.primary} href={tag(RESULTS_URL)} target="_blank" rel="noopener">Full live results</a>
-      </div>
-      <p className={base.note}>
-        Preliminary election-night results from the Electoral Commission. Special votes are counted later, and the
-        official result is due on 27 November.
-      </p>
+        </span>
+        <span className={styles.link}>Full results <span aria-hidden="true">→</span></span>
+      </a>
     </aside>
   );
 }

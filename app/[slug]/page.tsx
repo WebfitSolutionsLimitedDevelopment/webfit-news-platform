@@ -21,7 +21,7 @@ import { getPublicStoryTitle, getPublicStoryTypeLabel } from '@/lib/public-story
 import { SEO_DESCRIPTION_MAX_LENGTH, SEO_TITLE_MAX_LENGTH, truncateSeoText } from '@/lib/seo';
 import discovery from '@/components/ArticleDiscovery.module.css';
 import { AdSlot } from '@/components/AdSlot';
-import { CoalitionTrendCard } from '@/components/CoalitionTrendCard';
+import { LiveResultsCard } from '@/components/LiveResultsCard';
 import { ArticleFeedback } from '@/components/ArticleFeedback';
 import { RSS_ALTERNATE, SITE_NAME, SITE_URL, absoluteUrl, articleCanonical, articleUrl } from '@/lib/site';
 import { countTopLevelParagraphs, splitArticleHtml } from '@/lib/ads';
@@ -189,6 +189,7 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
           <ArticleAudioPlayer text={speechText}/>
           <div className="share-strip" id="share-top"><span>Share</span><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl(article.slug))}`} target="_blank" rel="noreferrer">Facebook</a><a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(articleUrl(article.slug))}`}>Email</a></div>
           {article.media?.public_url?<figure className="article-hero"><img {...responsiveImage(article.media.public_url,[480,800,1200,1600],'(max-width: 880px) 100vw, 850px')} alt={article.media.alt_text||displayTitle} fetchPriority="high" decoding="async" {...(article.media.width&&article.media.height?{width:article.media.width,height:article.media.height}:{})}/>{article.media.caption||article.media.credit?<figcaption>{article.media.caption}{article.media.credit?<span> Credit: {article.media.credit}</span>:null}</figcaption>:null}</figure>:null}
+          <LiveResultsCard/>
           {bodyChunks.map((html,index)=><div key={index}>
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1&&breakPlan[index]?<AdSlot slotKey={breakPlan[index].slot} variant={breakPlan[index].variant}/>:null}
@@ -198,7 +199,6 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
             <ArticleFollow social={siteSettings.social} contactEmail={siteSettings.identity.contact_email||'sandy@webfitnews.co.nz'} storyTitle={displayTitle}/>
           </ArticleSocialBox>
           <ArticleFeedback articleId={article.id}/>
-          <CoalitionTrendCard/>
           <AdSlot slotKey="ARTICLE_BOTTOM" variant="inline"/>
           {cats.length?<div className="article-categories">{cats.map((c:any)=><Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>:null}
           <ArticlePrevNext previous={adjacent.previous} next={adjacent.next}/>
