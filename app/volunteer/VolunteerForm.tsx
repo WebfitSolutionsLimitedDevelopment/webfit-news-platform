@@ -55,6 +55,7 @@ export function VolunteerForm() {
   return (
     <section className={styles.signing} aria-labelledby="sign-agreement">
       <h2 id="sign-agreement">Sign the agreement</h2>
+      <p className={styles.formIntro}>We’ll email you a PDF of your signed agreement.</p>
       {reference ? (
         <p role="status">
           Agreement submitted. Your signed copy was queued for email delivery. Your reference is <strong>{reference}</strong>.

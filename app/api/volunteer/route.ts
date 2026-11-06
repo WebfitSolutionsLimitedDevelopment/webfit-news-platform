@@ -2,12 +2,14 @@ import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { resend, ResendError } from '@/lib/newsletter';
+import { createVolunteerPdf, type AgreementBlock } from '@/lib/volunteer-pdf';
 import {
   acceptanceStatement,
   agreementSections,
   agreementVersion,
   volunteerContact,
   volunteerDeclarations,
+  volunteerLogo,
   volunteerPrivacyNotice,
 } from '@/lib/volunteer-agreement';
 
@@ -67,52 +69,63 @@ export async function POST(request: Request) {
   const from = process.env.NEWSROOM_EMAIL_FROM?.trim() || 'Webfit Newsroom <newsroom@webfitnews.com>';
   // Stable across retries. The emails carry the full signed text, and the provider stamps the send time.
   const reference = createHmac('sha256', key).update(JSON.stringify([version, name, email, declarations.driving])).digest('hex').slice(0, 24);
-  const signedCopy = [
-    `Webfit News Volunteer Media Agreement and NDA (version ${version})`,
-    `Reference: ${reference}`,
-    `Signed electronically by: ${name}`,
-    `Email: ${email}`,
-    acceptanceStatement,
-    [
-      'Volunteer declarations accepted',
-      volunteerDeclarations.transport,
-      volunteerDeclarations.workRights,
-      volunteerDeclarations.authorisation,
-      declarations.driving ? volunteerDeclarations.driving : 'Driving declaration: no plan to drive a personal vehicle was declared at signing.',
-    ].join('\n'),
-    ...agreementSections.map(({ title, paragraphs }) => [title, ...paragraphs].join('\n\n')),
-    `How we use your details\n\n${volunteerPrivacyNotice} Contact: ${volunteerContact}`,
-  ].join('\n\n');
+  const blocks: AgreementBlock[] = [
+    {
+      title: 'Electronic acceptance',
+      paragraphs: [`Signed electronically by ${name}`, `Email address: ${email}`, acceptanceStatement],
+    },
+    {
+      title: 'Volunteer declarations',
+      paragraphs: [
+        volunteerDeclarations.transport,
+        volunteerDeclarations.workRights,
+        volunteerDeclarations.authorisation,
+        declarations.driving ? volunteerDeclarations.driving : 'Driving declaration: no plan to drive a personal vehicle was declared at signing.',
+      ],
+    },
+    ...agreementSections,
+    { title: 'How we use your details', paragraphs: [volunteerPrivacyNotice, `Contact: ${volunteerContact}`] },
+  ];
 
   try {
-    const delivery = await resend<{ data?: Array<{ id: string }> }>('/emails/batch', {
-      method: 'POST',
-      idempotencyKey: `volunteer-nda/${reference}`,
-      body: [
-        {
-          from,
-          to: [email],
-          reply_to: inbox,
-          subject: 'Your signed Webfit News volunteer agreement',
-          text: `Thank you for signing. Keep this copy for your records. Wait for a separate written authorisation before attending an event on behalf of Webfit News.\n\n${signedCopy}`,
-        },
-        {
-          from,
-          to: [inbox],
-          reply_to: email,
-          subject: 'Webfit News volunteer agreement accepted',
-          text: `A volunteer has signed the agreement. Send a separate authorisation email for any approved assignment.\n\n${signedCopy}`,
-        },
-      ],
-    });
-    if (delivery?.data?.length !== 2 || delivery.data.some(email => !email?.id)) {
-      throw new Error('Expected two email IDs');
+    const pdf = await createVolunteerPdf(version, reference, blocks);
+    const attachments = [{
+      filename: `Webfit-News-Signed-Volunteer-Agreement-${reference}.pdf`,
+      content: Buffer.from(pdf).toString('base64'),
+      content_type: 'application/pdf',
+    }];
+
+    async function sendReceipt(kind: 'volunteer' | 'newsroom', to: string, replyTo: string, subject: string, message: string) {
+      const text = `Webfit News Volunteer Media Agreement and NDA\n\n${message}\n\nReference: ${reference}`;
+      const html = `<div style="max-width:560px;margin:0 auto;font:16px/1.55 Arial,sans-serif;color:#152331">
+        <div style="padding:20px;background:#122333;border-bottom:4px solid #ebbd5f;color:#fff">
+          <img src="https://webfitnews.com${volunteerLogo}" width="64" height="64" alt="Webfit News" style="border-radius:50%;display:block;margin-bottom:12px">
+          <strong style="color:#ebbd5f">WEBFIT NEWS</strong>
+          <h1 style="font:700 25px/1.2 Georgia,serif;margin:6px 0 0">Volunteer Media Agreement and NDA</h1>
+        </div>
+        <div style="padding:20px;border:1px solid #dbe2e8">
+          <p style="margin:0 0 12px">${message}</p>
+          <p style="margin:0">Reference <strong>${reference}</strong></p>
+        </div>
+      </div>`;
+      const delivery = await resend<{ id?: string }>('/emails', {
+        method: 'POST',
+        idempotencyKey: `volunteer-nda/pdf/${reference}/${kind}`,
+        body: { from, to: [to], reply_to: replyTo, subject, text, html, attachments },
+      });
+      if (!delivery?.id) throw new Error('Resend did not return a message ID');
+      console.info('[volunteer] Resend accepted agreement email', { reference, kind, emailId: delivery.id });
     }
-    console.info('[volunteer] Resend accepted agreement emails', {
-      reference,
-      volunteerEmailId: delivery.data[0].id,
-      newsroomEmailId: delivery.data[1].id,
-    });
+
+    const deliveries = await Promise.allSettled([
+      sendReceipt('volunteer', email, inbox, 'Your signed Webfit News volunteer agreement',
+        'Thank you for signing. Your signed agreement is attached as a PDF. Keep it for your records and wait for separate written authorisation before attending an event on behalf of Webfit News.'),
+      sendReceipt('newsroom', inbox, email, 'Webfit News volunteer agreement accepted',
+        'A volunteer has signed the agreement. The signed PDF is attached. Send a separate written authorisation for each approved event.'),
+    ]);
+    for (const delivery of deliveries) {
+      if (delivery.status === 'rejected') throw delivery.reason;
+    }
     return NextResponse.json({ reference });
   } catch (error) {
     console.error('[volunteer] Resend did not confirm the agreement emails', {

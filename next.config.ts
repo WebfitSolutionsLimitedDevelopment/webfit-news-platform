@@ -10,6 +10,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    '/api/volunteer': ['./public/webfit-volunteer-logo.jpg', './node_modules/@fontsource/noto-sans/files/*-400-normal.woff'],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'webfitnews.co.nz' },
