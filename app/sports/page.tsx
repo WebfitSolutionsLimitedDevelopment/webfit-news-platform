@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { XMLParser } from 'fast-xml-parser';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
@@ -40,13 +41,32 @@ function eventLabel(e: Event) {
 function eventScore(e: Event) {
   return e.intHomeScore != null && e.intAwayScore != null ? `${e.intHomeScore} – ${e.intAwayScore}` : null;
 }
+type NewsItem = { title: string; url: string; source: string; date: string };
+async function getSportHeadlines(sport: string): Promise<NewsItem[]> {
+  try {
+    const query = sport === 'All sports' ? 'sports news' : sport + ' sports news';
+    const url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query + ' when:7d') + '&hl=en-NZ&gl=NZ&ceid=NZ:en';
+    const response = await fetch(url, { next: { revalidate: 900 }, signal: AbortSignal.timeout(6500) });
+    if (!response.ok) return [];
+    const parsed = new XMLParser({ ignoreAttributes: false }).parse(await response.text());
+    const raw = parsed?.rss?.channel?.item;
+    const items: any[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    return items.slice(0, 18).flatMap(item => {
+      const title = String(item.title || '').trim();
+      const link = String(item.link || '');
+      if (!title || !link.startsWith('https://news.google.com/')) return [];
+      return [{ title, url: link, source: typeof item.source === 'string' ? item.source : String(item.source?.['#text'] || 'News'), date: String(item.pubDate || '') }];
+    });
+  } catch { return []; }
+}
 export default async function SportsPage({searchParams}:{searchParams:Promise<{sport?:string}>}) {
   const { sport } = await searchParams;
   const selected = SPORTS.find(s=>s[1].toLowerCase() === (sport||'').toLowerCase());
-  const [section, published, leaguesResponse] = await Promise.all([
+  const [section, published, leaguesResponse, headlines] = await Promise.all([
     getSectionPage('sports').catch(()=>null),
     getPublishedVideos(40).catch(()=>[]),
     fetchJson<{leagues:League[] | null}>(`${API}/all_leagues.php`),
+    getSportHeadlines(selected?.[1] || 'All sports'),
   ]);
   const availableLeagues = (leaguesResponse?.leagues || []).filter(l => selected ? l.strSport === selected[0] : true);
   const leagues = availableLeagues.slice(0,selected ? 8 : 12);
@@ -72,16 +92,26 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
       <section aria-label="Browse sports" style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
         <Link href="/sports" aria-current={!selected?'page':undefined} style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24,fontWeight:!selected?700:400}}>All sports</Link>
         <Link href="/sports#cricket" style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24}}>Cricket</Link>
-        {SPORTS.map(([_,label])=><Link key={label} href={`/sports?sport=${encodeURIComponent(label)}#results`} aria-current={selected?.[1]===label?'page':undefined} style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24,fontWeight:selected?.[1]===label?700:400}}>{label}</Link>)}
+        {SPORTS.map(([_,label])=><Link key={label} href={`/sports?sport=${encodeURIComponent(label)}#news`} aria-current={selected?.[1]===label?'page':undefined} style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24,fontWeight:selected?.[1]===label?700:400}}>{label}</Link>)}
       </section>
       {(!selected) && <section id="cricket" aria-label="Live cricket" style={{marginBottom:28}}>
         <h2>Cricket score centre</h2>
         <p>Our existing cricket score feed is available here, with no separate page needed.</p>
         <CricketScores/>
       </section>}
+      <section id="news" aria-label="Latest sports news" style={{marginBottom:32}}>
+        <h2>Latest {selected ? selected[1] : 'sports'} news</h2>
+        <p>Headlines from sports publishers around the world. Select a story to read the original report.</p>
+        {headlines.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:12}}>
+          {headlines.map((item,i)=><article key={item.url+i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
+            <div style={{fontSize:12,color:'#606775'}}>{item.source}{item.date ? ' · '+new Date(item.date).toLocaleDateString('en-NZ',{day:'numeric',month:'short'}) : ''}</div>
+            <h3 style={{fontSize:17,margin:'9px 0'}}><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a></h3>
+          </article>)}
+        </div> : <p>More sports headlines are on the way. Browse Webfit News coverage in the meantime.</p>}
+      </section>
       <section id="results" aria-label="Sports results" style={{marginBottom:32}}>
         <h2>{selected ? selected[1] : 'Worldwide'} results</h2>
-        <p style={{color:'#606775'}}>Recent results from TheSportsDB's public feed. These are not live scores; data availability and update times vary by competition.</p>
+        <p style={{color:'#606775'}}>Match results and updates from competitions around the world.</p>
         {events.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:12}}>
           {events.map((e,i)=><article key={e.idEvent||i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
             <div style={{fontSize:12,color:'#6b7280'}}>{e.strSport||selected?.[1]||'Sport'} · {e.strLeague||'Competition'}</div>
@@ -89,8 +119,8 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
             <div style={{fontWeight:700,fontSize:20}}>{eventScore(e)||'Result pending'}</div>
             <div style={{fontSize:12,color:'#6b7280',marginTop:6}}>{e.dateEvent||'Date unavailable'}{e.strStatus?` · ${e.strStatus}`:''}</div>
           </article>)}
-        </div> : <p>There are no recent results available from the free feed for this selection. Try another sport.</p>}
-        <p style={{fontSize:12,marginTop:12}}>Source: TheSportsDB public API. Scores are provided for information only and may be delayed.</p>
+        </div> : <p>No live matches at the moment. Explore the latest sports news and updates above.</p>}
+
       </section>
       {!selected && <SportsMedia videos={videos} photos={photos}/>}
       <p><Link href="/category/sports">Read the latest Webfit News sports stories →</Link></p>
