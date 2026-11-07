@@ -76,6 +76,7 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
     return (data?.events || []).slice(0,3).map(e=>({...e,strLeague:e.strLeague||league.strLeague}));
   }));
   const events = eventResults.flat().sort((a,b)=>(b.dateEvent||'').localeCompare(a.dateEvent||'')).slice(0,18);
+  const cricketUpdates = !selected ? await getSportHeadlines('Cricket') : [];
   const recent = Date.now()-90*86400000;
   const terms = /\b(cricket|blackcaps|white ferns|t20|odi|rugby|football|netball|tennis|ipl|fifa|icc|basketball|motorsport|formula 1|sport|santner|kohli|rohit)\b/i;
   const videos = published.filter(v=>v.youtube_id&&terms.test(v.display_title)&&Date.parse(v.published_at||'')>=recent).slice(0,9).map(v=>({id:v.id,title:v.display_title,youtubeId:v.youtube_id!,date:v.published_at!}));
@@ -98,6 +99,16 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
         <h2>Cricket score centre</h2>
         <p>Our existing cricket score feed is available here, with no separate page needed.</p>
         <CricketScores/>
+        <div style={{marginTop:24}}>
+          <h3>Latest cricket updates</h3>
+          <p>Match reports, team news and developments from sports publishers around the world.</p>
+          {cricketUpdates.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:12}}>
+            {cricketUpdates.slice(0,6).map((item,i)=><article key={item.url+i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,color:'#606775'}}>{item.source}</div>
+              <h4 style={{fontSize:16,margin:'8px 0'}}><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a></h4>
+            </article>)}
+          </div> : <p>More cricket updates are coming soon.</p>}
+        </div>
       </section>}
       <section id="news" aria-label="Latest sports news" style={{marginBottom:32}}>
         <h2>Latest {selected ? selected[1] : 'sports'} news</h2>
