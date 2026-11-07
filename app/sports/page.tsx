@@ -8,7 +8,7 @@ import { CricketScores } from '@/components/CricketScores';
 import { SportsMedia } from '@/components/SportsMedia';
 import { getPublishedVideos } from '@/lib/news';
 import { getSectionPage } from '@/lib/section';
-import { absoluteUrl } from '@/lib/site';
+import { absoluteUrl, articleUrl } from '@/lib/site';
 
 export const revalidate = 300;
 export const metadata: Metadata = {
@@ -135,7 +135,7 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
           <section className={styles.section}>
             <div className={styles.heading}><h2>Webfit News coverage</h2></div>
             <p className={styles.muted}>Original reporting, interviews and analysis from our sports desk.</p>
-            {(section?.stories||[]).slice(0,5).map(story=><Link className={styles.story} href={`/article/${story.slug}`} key={story.id}><h3>{story.title}</h3></Link>)}
+            {(section?.stories||[]).slice(0,5).map(story=><Link className={styles.story} href={articleUrl(story.slug)} key={story.id}><h3>{story.title}</h3></Link>)}
             <Link className={styles.footerlink} href="/category/sports">Explore our sports reporting →</Link>
           </section>
         </aside>
