@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import styles from './sports.module.css';
 import { XMLParser } from 'fast-xml-parser';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -66,7 +67,7 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
     getSectionPage('sports').catch(()=>null),
     getPublishedVideos(40).catch(()=>[]),
     fetchJson<{leagues:League[] | null}>(`${API}/all_leagues.php`),
-    getSportHeadlines(selected?.[1] || 'All sports'),
+    getSportHeadlines(selected?.[1] || (sport==='cricket'?'Cricket':'All sports')),
   ]);
   const availableLeagues = (leaguesResponse?.leagues || []).filter(l => selected ? l.strSport === selected[0] : true);
   const leagues = availableLeagues.slice(0,selected ? 8 : 12);
@@ -76,65 +77,69 @@ export default async function SportsPage({searchParams}:{searchParams:Promise<{s
     return (data?.events || []).slice(0,3).map(e=>({...e,strLeague:e.strLeague||league.strLeague}));
   }));
   const events = eventResults.flat().sort((a,b)=>(b.dateEvent||'').localeCompare(a.dateEvent||'')).slice(0,18);
-  const cricketUpdates = !selected ? await getSportHeadlines('Cricket') : [];
+  const cricketUpdates = !selected && sport!=='cricket' ? await getSportHeadlines('Cricket') : sport==='cricket' ? headlines : [];
   const recent = Date.now()-90*86400000;
   const terms = /\b(cricket|blackcaps|white ferns|t20|odi|rugby|football|netball|tennis|ipl|fifa|icc|basketball|motorsport|formula 1|sport|santner|kohli|rohit)\b/i;
   const videos = published.filter(v=>v.youtube_id&&terms.test(v.display_title)&&Date.parse(v.published_at||'')>=recent).slice(0,9).map(v=>({id:v.id,title:v.display_title,youtubeId:v.youtube_id!,date:v.published_at!}));
   const photos = (section?.stories||[]).filter(s=>s.media?.public_url).slice(0,9).map(s=>({id:s.id,title:s.title,image:s.media!.public_url!,alt:s.media!.alt_text||s.title,slug:s.slug,date:s.published_at}));
+  const feature = headlines[0];
+  const secondary = headlines.slice(1,11);
+  const cricketStories = cricketUpdates.slice(0,6);
+  const results = events.filter(e => e.intHomeScore != null && e.intAwayScore != null).slice(0,6);
   return <>
     <SiteHeader cricketScores={false}/>
-    <main className="shell category-page">
+    <main className={`shell ${styles.page}`}>
       <nav className="article-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>Sports</span></nav>
-      <div className="archive-heading">
-        <span>Webfit News Sports Centre</span>
-        <h1>Sports from around the world</h1>
-        <p>Live cricket, international results, fixtures and original sports journalism. One destination, no extra sign-in.</p>
-      </div>
-      <section aria-label="Browse sports" style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
-        <Link href="/sports" aria-current={!selected?'page':undefined} style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24,fontWeight:!selected?700:400}}>All sports</Link>
-        <Link href="/sports#cricket" style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24}}>Cricket</Link>
-        {SPORTS.map(([_,label])=><Link key={label} href={`/sports?sport=${encodeURIComponent(label)}#news`} aria-current={selected?.[1]===label?'page':undefined} style={{padding:'9px 14px',border:'1px solid #ddd',borderRadius:24,fontWeight:selected?.[1]===label?700:400}}>{label}</Link>)}
-      </section>
-      {(!selected) && <section id="cricket" aria-label="Live cricket" style={{marginBottom:28}}>
-        <h2>Cricket score centre</h2>
-        <p>Our existing cricket score feed is available here, with no separate page needed.</p>
-        <CricketScores/>
-        <div style={{marginTop:24}}>
-          <h3>Latest cricket updates</h3>
-          <p>Match reports, team news and developments from sports publishers around the world.</p>
-          {cricketUpdates.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:12}}>
-            {cricketUpdates.slice(0,6).map((item,i)=><article key={item.url+i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,color:'#606775'}}>{item.source}</div>
-              <h4 style={{fontSize:16,margin:'8px 0'}}><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a></h4>
-            </article>)}
-          </div> : <p>More cricket updates are coming soon.</p>}
+      <header className={styles.masthead}>
+        <span className={styles.eyebrow}>WEBFIT NEWS / SPORTS DESK</span>
+        <h1>{selected ? selected[1] : 'The world of sport.'}</h1>
+        <p>{selected ? `The latest ${selected[1].toLowerCase()} headlines, results and stories from around the world.` : 'The stories, scores and moments that matter. From New Zealand to the world.'}</p>
+      </header>
+      <nav className={styles.tabs} aria-label="Choose a sport">
+        <Link className={`${styles.tab} ${!selected&&!sport?styles.active:''}`} href="/sports">Top stories</Link>
+        <Link className={`${styles.tab} ${sport==='cricket'?styles.active:''}`} href="/sports?sport=cricket">Cricket</Link>
+        {SPORTS.map(([_,label])=><Link className={`${styles.tab} ${selected?.[1]===label?styles.active:''}`} key={label} href={`/sports?sport=${encodeURIComponent(label)}`}>{label}</Link>)}
+      </nav>
+      <div className={styles.layout}>
+        <div>
+          <section id="news" className={styles.section} aria-label="Sports headlines">
+            <div className={styles.heading}><h2>{selected ? `${selected[1]} headlines` : sport==='cricket'?'Cricket headlines':'Top stories'}</h2><span className={styles.pill}>Latest coverage</span></div>
+            {feature ? <a className={styles.feature} href={feature.url} target="_blank" rel="noopener noreferrer">
+              <span className={styles.source}>{feature.source} · Lead story</span>
+              <h3>{feature.title}</h3>
+              <p>Read the full report ↗</p>
+            </a> : <div className={styles.empty}>Fresh sports coverage is on its way. Explore our reporting below.</div>}
+            <div className={styles.storyGrid}>{secondary.map((item,i)=><a className={styles.story} href={item.url} key={item.url+i} target="_blank" rel="noopener noreferrer">
+              <span className={styles.source}>{item.source}{item.date?` · ${new Date(item.date).toLocaleDateString('en-NZ',{day:'numeric',month:'short'})}`:''}</span>
+              <h3>{item.title}</h3>
+            </a>)}</div>
+          </section>
+          {(!selected || sport==='cricket') && <section className={`${styles.section} ${styles.cricket}`} id="cricket">
+            <div className={styles.heading}><h2>Cricket match centre</h2><span className={styles.pill}>Scoreboard</span></div>
+            <CricketScores/>
+            <div className={styles.heading} style={{marginTop:28}}><h2>From the cricket desk</h2></div>
+            <div className={styles.cricketNews}>{cricketStories.map((item,i)=><a className={styles.story} key={item.url+i} href={item.url} target="_blank" rel="noopener noreferrer"><span className={styles.source}>{item.source}</span><h3>{item.title}</h3></a>)}</div>
+          </section>}
+          {!selected && <section className={styles.media}><div className={styles.heading}><h2>Sports video & photography</h2></div><SportsMedia videos={videos} photos={photos}/></section>}
         </div>
-      </section>}
-      <section id="news" aria-label="Latest sports news" style={{marginBottom:32}}>
-        <h2>Latest {selected ? selected[1] : 'sports'} news</h2>
-        <p>Headlines from sports publishers around the world. Select a story to read the original report.</p>
-        {headlines.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:12}}>
-          {headlines.map((item,i)=><article key={item.url+i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
-            <div style={{fontSize:12,color:'#606775'}}>{item.source}{item.date ? ' · '+new Date(item.date).toLocaleDateString('en-NZ',{day:'numeric',month:'short'}) : ''}</div>
-            <h3 style={{fontSize:17,margin:'9px 0'}}><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a></h3>
-          </article>)}
-        </div> : <p>More sports headlines are on the way. Browse Webfit News coverage in the meantime.</p>}
-      </section>
-      <section id="results" aria-label="Sports results" style={{marginBottom:32}}>
-        <h2>{selected ? selected[1] : 'Worldwide'} results</h2>
-        <p style={{color:'#606775'}}>Match results and updates from competitions around the world.</p>
-        {events.length ? <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:12}}>
-          {events.map((e,i)=><article key={e.idEvent||i} style={{border:'1px solid #e2e5e8',borderRadius:12,padding:16}}>
-            <div style={{fontSize:12,color:'#6b7280'}}>{e.strSport||selected?.[1]||'Sport'} · {e.strLeague||'Competition'}</div>
-            <h3 style={{fontSize:17,margin:'8px 0'}}>{eventLabel(e)}</h3>
-            <div style={{fontWeight:700,fontSize:20}}>{eventScore(e)||'Result pending'}</div>
-            <div style={{fontSize:12,color:'#6b7280',marginTop:6}}>{e.dateEvent||'Date unavailable'}{e.strStatus?` · ${e.strStatus}`:''}</div>
-          </article>)}
-        </div> : <p>No live matches at the moment. Explore the latest sports news and updates above.</p>}
-
-      </section>
-      {!selected && <SportsMedia videos={videos} photos={photos}/>}
-      <p><Link href="/category/sports">Read the latest Webfit News sports stories →</Link></p>
+        <aside className={styles.sidebar}>
+          <section className={styles.section} id="results">
+            <div className={styles.heading}><h2>Match centre</h2></div>
+            <div className={styles.scorebox}>{results.length?results.map((e,i)=><article className={styles.match} key={e.idEvent||i}>
+              <div className={styles.source}>{e.strLeague||e.strSport||'Sport'}</div>
+              <h3>{eventLabel(e)}</h3>
+              <strong>{eventScore(e)}</strong>
+              <div className={styles.muted}>{e.dateEvent||''} · Final score</div>
+            </article>):<div className={styles.empty}>No match updates right now. Catch up with the latest stories.</div>}</div>
+          </section>
+          <section className={styles.section}>
+            <div className={styles.heading}><h2>Webfit News coverage</h2></div>
+            <p className={styles.muted}>Original reporting, interviews and analysis from our sports desk.</p>
+            {(section?.stories||[]).slice(0,5).map(story=><Link className={styles.story} href={`/article/${story.slug}`} key={story.id}><h3>{story.title}</h3></Link>)}
+            <Link className={styles.footerlink} href="/category/sports">Explore our sports reporting →</Link>
+          </section>
+        </aside>
+      </div>
     </main>
     <PublicFooter/>
   </>;
