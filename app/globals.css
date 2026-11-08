@@ -265,33 +265,23 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
 @keyframes app-prompt-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.app-prompt{animation:none}}
 
-/* Editorial watermark: transparent lettering, never a white logo tile. */
+/* Public image watermark: transparent logo artwork, no opaque tile. */
 .story-card .story-image:has(img[src*="/storage/v1/"]),
 .article-hero:has(> img[src*="/storage/v1/"]) { position: relative; }
 .story-card .story-image:has(img[src*="/storage/v1/"])::after,
 .article-hero:has(> img[src*="/storage/v1/"])::after {
-  content: "WEBFIT NEWS";
+  content: "";
   position: absolute;
   right: 9px;
   bottom: 9px;
-  width: auto;
-  height: auto;
-  padding: 0;
-  background: transparent;
-  color: rgba(255,255,255,.78);
-  font: 800 clamp(8px,1.2vw,12px)/1 Arial,Helvetica,sans-serif;
-  letter-spacing: .08em;
-  text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 6px rgba(0,0,0,.55);
+  width: clamp(72px, 17%, 125px);
+  aspect-ratio: 10 / 3;
+  background: url("/webfit-news-watermark.svg") center / contain no-repeat;
+  opacity: .78;
   pointer-events: none;
   z-index: 2;
 }
-.article-hero:has(> figcaption)::after { bottom: 9px; }
 @media(max-width:600px){
   .story-card .story-image:has(img[src*="/storage/v1/"])::after,
-  .article-hero:has(> img[src*="/storage/v1/"])::after {
-    right: 7px;
-    bottom: 7px;
-    font-size: 9px;
-  }
-  .article-hero:has(> figcaption)::after { bottom: 7px; }
+  .article-hero:has(> img[src*="/storage/v1/"])::after { right: 6px; bottom: 6px; width: clamp(60px, 19%, 96px); }
 }
