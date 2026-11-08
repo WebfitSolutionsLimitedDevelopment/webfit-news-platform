@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
 import { altFromFilename } from '../../lib/alt-text';
+import { watermarkOn } from '../../lib/watermark-pref';
+import WatermarkToggle from './WatermarkToggle';
 
 export default function MediaUploader(){
   const ref=useRef<HTMLInputElement>(null);
@@ -25,6 +27,7 @@ export default function MediaUploader(){
       const fd=new FormData();
       fd.set('file',uploadFile);
       fd.set('alt_text',altFromFilename(file.name));
+      fd.set('watermark',watermarkOn()?'1':'0');
       const r=await fetch('/api/admin/media',{method:'POST',body:fd});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'Upload failed');
@@ -34,5 +37,5 @@ export default function MediaUploader(){
     }catch(e:any){setMsg(e.message)}finally{setBusy(false)}
   }
 
-  return <div className="media-uploader"><input ref={ref} type="file" accept="image/*,.pdf"/><button className="admin-primary" disabled={busy} onClick={upload}>{busy?'Uploading...':'Upload media'}</button>{msg&&<span>{msg}</span>}</div>
+  return <div className="media-uploader"><input ref={ref} type="file" accept="image/*,.pdf"/><WatermarkToggle/><button className="admin-primary" disabled={busy} onClick={upload}>{busy?'Uploading...':'Upload media'}</button>{msg&&<span>{msg}</span>}</div>
 }

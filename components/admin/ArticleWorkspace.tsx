@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { watermarkOn } from '../../lib/watermark-pref';
+import WatermarkToggle from './WatermarkToggle';
 import { useRouter } from 'next/navigation';
 import styles from './ArticleWorkspace.module.css';
 import { RichArticleEditor } from './RichArticleEditor';
@@ -511,6 +513,7 @@ export default function ArticleWorkspace({
       const fd=new FormData();
       fd.set('file',compressed);
       fd.set('alt_text',altFromFilename(file.name));
+      fd.set('watermark',watermarkOn()?'1':'0');
 
       const r=await fetch('/api/admin/media',{method:'POST',body:fd});
       const d=await r.json();
@@ -1044,7 +1047,7 @@ export default function ArticleWorkspace({
       <button className={styles.backdrop} aria-label="Close media library" onClick={()=>setMediaOpen(false)}/>
       <div className={styles.dialog} ref={mediaDialogRef}>
         <header><div><span>WEBFIT NEWSROOM</span><h2>Choose featured image</h2><p>{volunteerId?'Upload a new image or choose one of your uploads.':'Upload a new image or select an existing newsroom image.'}</p></div><button onClick={()=>setMediaOpen(false)}>Close</button></header>
-        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Images are automatically optimised to about 300–500 KB before upload.</small></div><input ref={fileRef} type="file" accept="image/*"/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
+        <div className={styles.upload}><div><strong>Upload new image</strong><small>JPG, PNG, WebP or AVIF. Images are automatically optimised to about 300–500 KB before upload.</small></div><input ref={fileRef} type="file" accept="image/*"/><WatermarkToggle/><button disabled={mediaBusy} onClick={uploadMedia}>{mediaBusy?'Uploading...':'Upload and use'}</button></div>
         <div className={styles.mediaSearch}><input value={mediaSearch} onChange={e=>setMediaSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!mediaBusy){e.preventDefault();void loadMedia(mediaSearch)}}} placeholder="Search filename, caption or alt text"/><button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch)}>Search</button></div>
         {mediaError&&<p className={styles.mediaError} role="alert">{mediaError} <button type="button" disabled={mediaBusy} onClick={()=>loadMedia(mediaSearch,mediaPage)}>Retry</button></p>}
         {!mediaBusy&&!mediaError&&mediaItems.length===0&&<p className={styles.loading}>No images found. Try another search.</p>}

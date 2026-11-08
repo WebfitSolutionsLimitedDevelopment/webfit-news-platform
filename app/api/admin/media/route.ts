@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '../../../../lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { readImageSize } from '@/lib/image-dimensions';
+import { watermarkImage } from '@/lib/watermark';
 
 async function ctx(){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return null;const {data:profile}=await supabase.from('profiles').select('role,is_active').eq('id',user.id).maybeSingle();if(!profile?.is_active)return null;return{supabase,user,profile}}
 
@@ -48,20 +49,38 @@ export async function POST(req:Request){
   // The volunteer role has no storage write grant. This route can only add a fresh, caller-owned image.
   const db=volunteer?createAdminClient():c.supabase;
   const bucket=db.storage.from('news-media');
-  const {error:uploadError}=await bucket.upload(path,file,{contentType:file.type||'application/octet-stream',cacheControl:'31536000',upsert:false});
-  if(uploadError)return NextResponse.json({error:uploadError.message},{status:400});
+  // Newsroom images get the Webfit News badge baked in, unless the uploader opts out
+  // (author photos, supplied or third-party pictures). The clean file is kept under
+  // originals/ so an image can be re-published without the badge later.
+  let body:Blob=file;
+  let stamped=false;
+  if(image&&String(form.get('watermark')??'1')!=='0'){
+    try{
+      const out=await watermarkImage(await file.arrayBuffer(),file.type);
+      if(out){body=new Blob([new Uint8Array(out)],{type:file.type});stamped=true}
+    }catch(e){console.error('watermark failed, uploading the clean image',e)}
+  }
+  if(stamped){
+    const {error:originalError}=await bucket.upload(`originals/${path}`,file,{contentType:file.type,cacheControl:'31536000',upsert:false});
+    if(originalError)return NextResponse.json({error:originalError.message},{status:400});
+  }
+  const {error:uploadError}=await bucket.upload(path,body,{contentType:file.type||'application/octet-stream',cacheControl:'31536000',upsert:false});
+  if(uploadError){
+    if(stamped)await bucket.remove([`originals/${path}`]);
+    return NextResponse.json({error:uploadError.message},{status:400});
+  }
   const {data:pub}=bucket.getPublicUrl(path);
   const {data,error}=await db.from('media').insert({
     width:size?.width??null,height:size?.height??null,uploaded_by:c.user.id,storage_bucket:'news-media',
-    storage_path:path,public_url:pub.publicUrl,filename:file.name,mime_type:file.type||null,file_size:file.size,
+    storage_path:path,public_url:pub.publicUrl,filename:file.name,mime_type:file.type||null,file_size:body.size,
     alt_text:String(form.get('alt_text')||'').slice(0,250),caption:String(form.get('caption')||'').slice(0,1000),
     credit:String(form.get('credit')||'').slice(0,1000),migration_status:'native',
   }).select('*').single();
   if(error){
-    if(volunteer)await bucket.remove([path]);
+    if(volunteer)await bucket.remove(stamped?[path,`originals/${path}`]:[path]);
     return NextResponse.json({error:error.message},{status:400});
   }
-  await db.from('audit_log').insert({actor_id:c.user.id,action:'media.upload',entity_type:'media',entity_id:data.id,metadata:{filename:file.name,size:file.size}});
+  await db.from('audit_log').insert({actor_id:c.user.id,action:'media.upload',entity_type:'media',entity_id:data.id,metadata:{filename:file.name,size:body.size,watermarked:stamped}});
   return NextResponse.json({media:data},{status:201});
 }
 

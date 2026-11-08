@@ -22,6 +22,7 @@ export async function uploadAuthorPhoto(file:File,slug:string,alt:string):Promis
   const form=new FormData();
   form.append('file',new File([blob],`author-${slug}.jpg`,{type:'image/jpeg'}));
   form.append('alt_text',alt);
+  form.append('watermark','0');
   const r=await fetch('/api/admin/media',{method:'POST',body:form});
   const d=await r.json().catch(()=>({}));
   if(!r.ok||!d.media?.public_url)throw new Error(typeof d.error==='string'?d.error:'Upload failed. Try again.');

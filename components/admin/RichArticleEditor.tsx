@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { watermarkOn } from '../../lib/watermark-pref';
+import WatermarkToggle from './WatermarkToggle';
 import { altFromFilename } from '../../lib/alt-text';
 import styles from './RichArticleEditor.module.css';
 import { compressImageForUpload, formatUploadSize } from '../../lib/client-image-compression';
@@ -876,6 +878,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
           file.name.replace(/\.[^.]+$/,'').replaceAll('-',' ').replaceAll('_',' ')
         );
 
+        form.set('watermark', watermarkOn() ? '1' : '0');
         const response = await fetch('/api/admin/media', { method: 'POST', body: form });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || `Could not upload ${file.name}.`);
@@ -1192,6 +1195,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         <div className={styles.mediaUpload}>
           <div><strong>Upload {mediaMode === 'gallery' || mediaPlacement === 'end' ? 'images' : 'image'}</strong><small>Every image is automatically optimised to about 300–500 KB before upload. You can add up to 20 images at the end or in a gallery.</small></div>
           <input ref={mediaFileRef} type="file" accept="image/*" multiple={mediaMode === 'gallery' || mediaPlacement === 'end'}/>
+          <WatermarkToggle/>
           <button type="button" disabled={mediaBusy} onClick={uploadMediaFiles}>{mediaBusy ? 'Uploading...' : 'Upload'}</button>
         </div>
 
