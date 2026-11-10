@@ -25,7 +25,7 @@ export function CricketScores({ compact = false }: { compact?: boolean }) {
         <span>Cricket scores</span><Link href="/live-cricket">Full score centre →</Link>
       </div>
       <div className={styles.scoreDisplay}>
-        {scores}
+        <span style={{display:'inline-flex',alignItems:'center',gap:8,fontSize:13,color:'#4b5563',padding:'10px 12px'}}>🏏 Live scores, recent results and upcoming matches</span>
         <Link className={styles.scoreLink} href="/live-cricket" aria-label="Open the full cricket score centre on Webfit News" />
       </div>
     </> : <div className={styles.body}>{scores}</div>}
