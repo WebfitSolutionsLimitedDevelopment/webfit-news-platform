@@ -101,6 +101,33 @@ export default async function Home(){
   return <>
     <SiteHeader/>
     <BreakingStrip stories={breaking}/>
+    <section aria-label="Election 2026 preliminary results" style={{background:'#fff',borderTop:'2px solid #ed1c24',borderBottom:'1px solid #d1d5db',padding:'0 12px'}}>
+      <div style={{maxWidth:1440,margin:'0 auto'}}>
+        <nav aria-label="Election 2026 coverage" style={{display:'flex',gap:22,alignItems:'center',flexWrap:'wrap',minHeight:42,borderBottom:'1px solid #d1d5db',fontSize:13}}>
+          <a href="https://poll.webfitnews.co.nz/results-2026" style={{fontWeight:800,color:'#151515',textDecoration:'none'}}><span aria-hidden="true" style={{color:'#f04a23',fontSize:18,marginRight:5}}>◉</span>Election 2026</a>
+          <Link href="/category/politics" style={{color:'#151515',textDecoration:'none'}}>Full coverage</Link>
+          <a href="https://poll.webfitnews.co.nz/results-2026" style={{color:'#151515',textDecoration:'none'}}>Results</a>
+          <a href="https://poll.webfitnews.co.nz/results-2026#candidate-races-title" style={{color:'#151515',textDecoration:'none'}}>Electorates</a>
+        </nav>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap',padding:'12px 0',fontSize:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:'8px 16px',flexWrap:'wrap'}}>
+            {[
+              {name:'NAT',seats:42,pct:'29.2%',color:'#1688e5'},
+              {name:'LAB',seats:36,pct:'29.4%',color:'#dc3045'},
+              {name:'GRE',seats:16,pct:'13.3%',color:'#219a42'},
+              {name:'ACT',seats:13,pct:'10.9%',color:'#e51c85'},
+              {name:'NZF',seats:12,pct:'9.8%',color:'#929292'},
+              {name:'OPP',seats:7,pct:'6.0%',color:'#04b8c2'},
+              {name:'TPM',seats:5,pct:'0.6%',color:'#ae1010'},
+            ].map(p=><span key={p.name} style={{display:'inline-flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+              <span aria-hidden="true" style={{height:10,width:10,borderRadius:'50%',background:p.color,display:'inline-block'}}/>
+              <strong style={{color:'#151515'}}>{p.name} {p.seats}</strong><span style={{color:'#6b7280'}}>{p.pct}</span>
+            </span>)}
+          </div>
+          <a href="https://poll.webfitnews.co.nz/results-2026" style={{color:'#111',textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>Full results</a>
+        </div>
+      </div>
+    </section>
 
     <main className={styles.home}>
       <div className={`shell ${adFlow.desktopTopAd}`}>
