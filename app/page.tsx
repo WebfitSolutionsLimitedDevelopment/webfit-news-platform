@@ -3,6 +3,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { StoryCard } from '@/components/StoryCard';
 import { BreakingStrip } from '@/components/BreakingStrip';
+import { ElectionResultsRibbon } from '@/components/ElectionResultsRibbon';
 import { AdSlot } from '@/components/AdSlot';
 import { AdUnit } from '@/components/AdUnit';
 import { getLiveAds, type LiveAd } from '@/lib/ads';
@@ -101,6 +102,7 @@ export default async function Home(){
   return <>
     <SiteHeader/>
     <BreakingStrip stories={breaking}/>
+    <ElectionResultsRibbon/>
 
     <main className={styles.home}>
       <div className={`shell ${adFlow.desktopTopAd}`}>
