@@ -286,3 +286,11 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
   .story-card .story-image:has(img[src*="/storage/v1/"])::after,
   .article-hero:has(> img[src*="/storage/v1/"])::after { right: 5px; bottom: 5px; width: clamp(38px, 11%, 58px); }
 }
+
+/* Instagram embeds are portrait-oriented; do not inherit the YouTube 16:9 iframe ratio. */
+.article-body .article-embed-instagram{max-width:540px;margin:1.8em auto}
+.article-body .article-embed-instagram iframe{display:block;width:100%;height:620px;min-height:540px;aspect-ratio:auto;border:1px solid #e2e5e8;border-radius:10px;background:#fff}
+.article-body .article-embed-instagram figcaption{text-align:center}
+.article-body .article-embed-instagram-profile{max-width:540px;margin:1.8em auto;padding:16px 20px;border:1px solid #e2e5e8;border-radius:10px;background:#fafafa}
+.article-body .article-embed-instagram-profile p{margin:0}
+@media(max-width:560px){.article-body .article-embed-instagram iframe{height:580px;min-height:520px}}
