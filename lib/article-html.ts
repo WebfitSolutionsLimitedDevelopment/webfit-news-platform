@@ -75,7 +75,7 @@ export function sanitizeArticleHtml(value: string) {
       td: ['colspan','rowspan'],
     },
     allowedSchemes: ['http','https','mailto','tel'],
-    allowedIframeHostnames: ['www.youtube.com','youtube.com','www.youtube-nocookie.com','player.vimeo.com'],
+    allowedIframeHostnames: ['www.youtube.com','youtube.com','www.youtube-nocookie.com','player.vimeo.com','www.instagram.com'],
     transformTags: {
       h1: 'h2',
       a: (tagName: string, attribs: Record<string,string>) => ({
