@@ -72,7 +72,7 @@ function decorateEditorEmbeds(editor: HTMLElement) {
     button.className = 'editor-embed-remove';
     button.setAttribute('data-editor-control', 'remove-embed');
     button.setAttribute('contenteditable', 'false');
-    button.setAttribute('aria-label', 'Remove YouTube video');
+    button.setAttribute('aria-label', 'Remove embedded media');
     figure.appendChild(button);
   });
 }
@@ -94,6 +94,24 @@ function youtubeEmbed(value: string) {
   const id = youtubeId(value);
   if (!id || !/^[A-Za-z0-9_-]{6,20}$/.test(id)) return '';
   return `<figure class="article-embed article-embed-youtube"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></figure><p><br></p>`;
+}
+
+function instagramEmbed(value: string) {
+  try {
+    const url = new URL(value.trim());
+    if (!['instagram.com','www.instagram.com','m.instagram.com'].includes(url.hostname)) return '';
+    const parts = url.pathname.split('/').filter(Boolean);
+    const type = parts[0]?.toLowerCase();
+    if (['p','reel','tv'].includes(type) && /^[A-Za-z0-9_-]{5,40}$/.test(parts[1] || '')) {
+      const permalink = `https://www.instagram.com/${type}/${parts[1]}/`;
+      return `<figure class="article-embed article-embed-instagram"><iframe src="${permalink}embed/" title="Instagram ${type === 'reel' ? 'Reel' : 'post'}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><figcaption><a href="${permalink}" target="_blank" rel="noopener noreferrer">View on Instagram</a></figcaption></figure><p><br></p>`;
+    }
+    if (parts.length === 1 && /^[A-Za-z0-9._]{1,30}$/.test(parts[0]) && !['explore','accounts','stories','direct','about'].includes(type)) {
+      const profile = `https://www.instagram.com/${parts[0]}/`;
+      return `<figure class="article-embed article-embed-instagram-profile"><p>Instagram profile: <a href="${profile}" target="_blank" rel="noopener noreferrer">@${parts[0]}</a></p></figure><p><br></p>`;
+    }
+  } catch {}
+  return '';
 }
 
 function inlinePlain(value: string) {
@@ -122,7 +140,7 @@ function plainTextToHtml(value: string) {
     const line = lines[i].trim();
     if (!line) { i += 1; continue; }
 
-    const embed = youtubeEmbed(line);
+    const embed = youtubeEmbed(line) || instagramEmbed(line);
     if (embed) { out.push(embed); i += 1; continue; }
 
     if (line.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1])) {
@@ -180,7 +198,7 @@ function plainTextToHtml(value: string) {
       const next = lines[i].trim();
       if (/^(#{1,4})\s+/.test(next) || /^[-*•]\s+/.test(next) || /^\d+[.)]\s+/.test(next) || /^>\s?/.test(next)) break;
       if (next.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1])) break;
-      if (youtubeEmbed(next)) break;
+      if (youtubeEmbed(next) || instagramEmbed(next)) break;
       paragraph.push(next);
       i += 1;
     }
@@ -376,7 +394,7 @@ function sanitizePastedHtml(html: string) {
       const src = element.getAttribute('src') || '';
       try {
         const url = new URL(src);
-        if (!['www.youtube.com','youtube.com','www.youtube-nocookie.com','player.vimeo.com'].includes(url.hostname)) element.remove();
+        if (!['www.youtube.com','youtube.com','www.youtube-nocookie.com','player.vimeo.com','www.instagram.com'].includes(url.hostname)) element.remove();
       } catch { element.remove(); }
     }
   }
@@ -669,6 +687,14 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     if (node) { node.setAttribute('target','_blank'); node.setAttribute('rel','noopener noreferrer'); emit(); }
   }
 
+  function addInstagram() {
+    const url = window.prompt('Paste an Instagram post, Reel or profile URL');
+    if (!url) return;
+    const embed = instagramEmbed(url);
+    if (!embed) { window.alert('Please use a public Instagram post, Reel or profile URL.'); return; }
+    insertHtml(embed);
+  }
+
   function addYoutube() {
     const url = window.prompt('Paste a YouTube URL');
     if (!url) return;
@@ -917,7 +943,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     emit();
     setEditorNotice(
       isEmbed
-        ? 'YouTube video removed from the article body. Save or update the article to publish this change.'
+        ? 'Embedded media removed from the article body. Save or update the article to publish this change.'
         : isGalleryItem
           ? 'Gallery image removed from the article body. Save or update the article to publish this change.'
           : 'Image removed from the article body. Save or update the article to publish this change.'
@@ -953,7 +979,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
     media.setAttribute('data-editor-selected', 'true');
     setSelectedMediaLabel(
       media.classList.contains('article-embed')
-        ? 'YouTube video'
+        ? 'embedded media'
         : media.classList.contains('article-gallery-item')
           ? 'gallery image'
           : 'inline image'
@@ -966,7 +992,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
 
     if (!media || !editor || !editor.contains(media)) {
       clearSelectedMedia();
-      setEditorNotice('Click an image or YouTube video in the article first, then choose Remove.');
+      setEditorNotice('Click an image or embed in the article first, then choose Remove.');
       return;
     }
 
@@ -1082,7 +1108,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
     const html = event.clipboardData.getData('text/html');
     const text = event.clipboardData.getData('text/plain');
-    const singleYoutube = text.trim() && !text.trim().includes('\n') ? youtubeEmbed(text.trim()) : '';
+    const singleYoutube = text.trim() && !text.trim().includes('\n') ? (youtubeEmbed(text.trim()) || instagramEmbed(text.trim())) : '';
     event.preventDefault();
     releaseEmptyFormattingBeforeText();
     rememberSelection();
@@ -1118,6 +1144,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Gallery',()=>openMedia('gallery','cursor'),'Insert up to 20 images as a gallery')}
         {toolbarButton('Table',addTable)}
         {toolbarButton('YouTube',addYoutube)}
+        {toolbarButton('Instagram',addInstagram)}
         {toolbarButton('Line',()=>command('insertHorizontalRule'))}
       </div>
       <div className={styles.group}>
@@ -1126,7 +1153,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
         {toolbarButton('Clear',()=>command('removeFormat'),'Clear inline formatting')}
       </div>
     </div>
-    <div className={styles.hint}>Place the cursor anywhere in the article, then choose Image or Gallery. The image will be inserted at that position. An image caption is optional. Click an image or YouTube video to remove it.</div>
+    <div className={styles.hint}>Place the cursor anywhere in the article, then choose Image or Gallery. The image will be inserted at that position. An image caption is optional. Click an image or embed to remove it.</div>
     {editorNotice && <div className={styles.mediaMessage} role="status" aria-live="polite">{editorNotice}</div>}
     <div
       ref={editorRef}
@@ -1147,7 +1174,7 @@ export function RichArticleEditor({ value, onChange, placeholder = 'Write or pas
       <button type="button" title="Insert one image where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('image','cursor')}}>+ Image here</button>
       <button type="button" title="Insert up to 20 separate images at the end of the article" onMouseDown={event=>{event.preventDefault();openMedia('image','end')}}>Images at end</button>
       <button type="button" title="Insert an image gallery where the cursor is positioned" onMouseDown={event=>{event.preventDefault();openMedia('gallery','cursor')}}>Gallery here</button>
-      {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='YouTube video'?'Remove video':'Remove image'}</button> : null}
+      {selectedMediaLabel ? <button type="button" className={styles.removeMedia} title={`Remove selected ${selectedMediaLabel}`} onMouseDown={event=>{event.preventDefault();removeSelectedMedia()}}>{selectedMediaLabel==='embedded media'?'Remove video':'Remove image'}</button> : null}
     </div>
 
     {mediaOpen && <div className={styles.mediaModal}>
