@@ -18,6 +18,7 @@ const sections=[
   ['World Guides','/world'],
   ['Community','/category/communities'],
   ['Entertainment','/category/entertainment'],
+  ['Book Reviews','/book-reviews'],
   ['Sports','/category/sports'],
   ['Cricket scores','/live-cricket'],
   ['Opinion','/category/opinion'],
