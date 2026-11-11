@@ -1,0 +1,21 @@
+.ribbon{background:#fff;border-top:2px solid #ed1c24;border-bottom:1px solid #d1d5db;color:#151515;padding:0 12px;width:100%;box-sizing:border-box}
+.inner{max-width:1440px;margin:0 auto;min-width:0}
+.nav{display:flex;align-items:center;gap:22px;min-height:42px;border-bottom:1px solid #d1d5db;font-size:13px;white-space:nowrap;overflow-x:auto;scrollbar-width:thin}
+.nav a{color:#151515;text-decoration:none;flex-shrink:0}
+.heading{font-weight:800}.headingIcon{color:#f04a23;font-size:18px;margin-right:5px}
+.resultsRow{display:flex;align-items:center;gap:14px;min-width:0;padding:10px 0}
+.resultsScroll{display:flex;align-items:center;gap:16px;overflow-x:auto;scrollbar-width:thin;min-width:0;flex:1;padding:2px 0 5px}
+.party{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:12px;flex-shrink:0}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.share{color:#6b7280}
+.fullResults{color:#111;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-size:12px;flex-shrink:0;font-weight:700}
+.note{margin:0 0 5px;color:#6b7280;font-size:10px}
+@media(max-width:640px){
+.ribbon{padding:0 10px}
+.nav{gap:16px;font-size:12px;min-height:38px}
+.resultsRow{gap:8px;padding:9px 0}
+.resultsScroll{gap:12px;scroll-snap-type:x proximity}
+.party{scroll-snap-align:start;font-size:12px}
+.fullResults{font-size:12px;padding:7px 0 7px 7px;border-left:1px solid #e5e7eb}
+.note{font-size:10px}
+}
