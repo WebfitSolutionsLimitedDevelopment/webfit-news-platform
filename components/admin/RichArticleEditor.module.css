@@ -211,3 +211,7 @@
   .quickMedia{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   :global(html[data-keyboard="open"]) .quickMedia{bottom:10px}
 }
+
+.editor :global(.article-embed-instagram iframe){aspect-ratio:auto;min-height:580px;max-width:540px;margin-inline:auto;background:#fff;border:1px solid #e2e5e8;border-radius:8px}
+.editor :global(.article-embed-instagram figcaption){text-align:center;font-size:13px;margin-top:8px}
+.editor :global(.article-embed-instagram-profile){border:1px solid #e2e5e8;border-radius:8px;padding:16px;background:#fafafa}
