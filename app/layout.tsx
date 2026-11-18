@@ -1,11 +1,13 @@
 import './globals.css';
 import './public-image-fit.css';
 import './admin-mobile.css';
+import './weather-mood.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ThirdPartyScripts } from '../components/ThirdPartyScripts';
 import { ReadTracker } from '../components/ReadTracker';
 import { AppInstallPrompt } from '../components/AppInstallPrompt';
+import { WeatherMood } from '../components/weather/WeatherMood';
 import { getSiteUrl } from '../lib/env';
 import { getPublicSiteSettings } from '../lib/public-settings';
 
@@ -124,6 +126,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <ThirdPartyScripts/>
       <ReadTracker/>
       <AppInstallPrompt/>
+      <WeatherMood/>
 
       <Script id="sw-register" strategy="afterInteractive">
         {`
