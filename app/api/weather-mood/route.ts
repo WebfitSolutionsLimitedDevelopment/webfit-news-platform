@@ -76,7 +76,7 @@ export async function GET(req: Request) {
 
   // The extra fields let anyone open /api/weather-mood and see why the site looks the way it does.
   // City comes from the reader's own IP lookup and is returned only to them.
-  const city = req.headers.get('x-vercel-ip-city');
+  const city = q.get('lat') ? null : req.headers.get('x-vercel-ip-city');
   return NextResponse.json({ ...mood, place: { city: city ? decodeURIComponent(city) : null, lat: where.lat, lon: where.lon, fallback: lat === null }, forecast: source }, {
     // Each reader's answer depends on their own IP location, so the CDN must not share it.
     headers: { 'Cache-Control': 'private, max-age=600' },
