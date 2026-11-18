@@ -8,6 +8,8 @@ export const metadata={
 };
 
 const audience=[
+  ['1.1M','Facebook views in the 28 days to 18 Nov 2026, up 301%'],
+  ['73K','Facebook engagements in the same 28 days, up 247%'],
   ['9.4K','Facebook followers'],
   ['10K','Instagram followers'],
   ['1K+','YouTube subscribers'],

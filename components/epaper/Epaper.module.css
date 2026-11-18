@@ -289,7 +289,7 @@
 .housePage .houseKicker{color:#c8232c;font-size:10px}
 .houseHeadline{margin:12px 0 10px;font:700 31px/1.08 Georgia,'Times New Roman',serif;letter-spacing:-.015em;color:#1d2a6b}
 .houseLead{margin:0 0 22px;font:13px/1.55 Georgia,'Times New Roman',serif;color:#3b3833;max-width:430px}
-.houseStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin-bottom:22px}
+.houseStats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 8px;width:100%;margin-bottom:22px}
 .houseStats div{border-top:3px solid #c8232c;padding-top:8px;display:flex;flex-direction:column;gap:4px}
 .houseStats strong{font:700 26px/1 Georgia,'Times New Roman',serif;color:#151515}
 .houseStats span{font:10px/1.3 Arial,Helvetica,sans-serif;color:#5d584f}

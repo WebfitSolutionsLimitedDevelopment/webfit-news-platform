@@ -889,7 +889,10 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
   </div>;
 }
 
+/** Audience figures for the advertising page. Facebook views and engagement: Meta, last 28 days as at 19 Nov 2026. */
 const REACH: Array<[string, string]> = [
+  ['1.1M', 'Facebook views in 28 days'],
+  ['73K', 'Facebook engagements in 28 days'],
   ['14.2K', 'website readers a month'],
   ['10K', 'Instagram followers'],
   ['9.4K', 'Facebook followers'],
