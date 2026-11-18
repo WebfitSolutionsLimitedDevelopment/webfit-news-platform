@@ -1,10 +1,9 @@
 /**
- * Light canvas effect drawn over the page: rain streaks, snow, sleet, or a
- * few seasonal leaves or petals on calm days. It never takes clicks
- * (pointer-events: none), runs at about 30 frames a second, pauses when the
- * tab is hidden and fades to half strength once the reader scrolls past the
- * first screen. It is not started at all for people who ask their device to
- * reduce motion.
+ * Light canvas effect drawn inside the masthead band only: rain streaks,
+ * snow, sleet, or a few seasonal leaves or petals on calm days. It never
+ * takes clicks (pointer-events: none), runs at about 30 frames a second and
+ * pauses when the tab is hidden or the masthead has scrolled out of view. It
+ * is not started at all for people who ask their device to reduce motion.
  */
 export type FxKind = 'rain' | 'drizzle' | 'storm' | 'sleet' | 'snow' | 'leaves' | 'petals';
 
@@ -23,10 +22,10 @@ export function startWeatherFx(canvas: HTMLCanvasElement, kind: FxKind, wind: nu
   const parts: P[] = [];
 
   function resize() {
-    w = window.innerWidth; h = window.innerHeight;
+    w = canvas.clientWidth || window.innerWidth; h = canvas.clientHeight || 300;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const target = Math.round(DENSITY[kind] * Math.min(1, (w * h) / (1280 * 800)) + (kind === 'leaves' || kind === 'petals' ? 3 : 10));
+    const target = Math.round(DENSITY[kind] * Math.min(1.6, (w / 1280) * (h / 150)) + (kind === 'leaves' || kind === 'petals' ? 3 : 10));
     while (parts.length < target) parts.push(spawn(true));
     parts.length = target;
   }
@@ -79,7 +78,7 @@ export function startWeatherFx(canvas: HTMLCanvasElement, kind: FxKind, wind: nu
     ctx!.clearRect(0, 0, w, h);
     const lines = kind !== 'snow' && kind !== 'leaves' && kind !== 'petals';
     if (lines) {
-      ctx!.strokeStyle = kind === 'sleet' ? 'rgba(235,242,250,.75)' : 'rgba(100,125,150,.45)';
+      ctx!.strokeStyle = kind === 'sleet' ? 'rgba(235,242,250,.75)' : 'rgba(84,108,134,.55)';
       ctx!.lineWidth = kind === 'storm' ? 1.3 : 1;
       ctx!.lineCap = 'round';
       ctx!.beginPath();
@@ -101,27 +100,27 @@ export function startWeatherFx(canvas: HTMLCanvasElement, kind: FxKind, wind: nu
     else if (kind === 'snow') ctx!.fill();
   }
 
-  function onVisibility() {
-    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
-    else if (!raf && !stopped) { last = 0; raf = requestAnimationFrame(frame); }
+  let onScreen = true;
+  function sync() {
+    const run = onScreen && !document.hidden && !stopped;
+    if (!run && raf) { cancelAnimationFrame(raf); raf = 0; }
+    else if (run && !raf) { last = 0; raf = requestAnimationFrame(frame); }
   }
-  function onScroll() {
-    canvas.style.opacity = window.scrollY > window.innerHeight ? '.5' : '1';
-  }
+  const sizeWatch = new ResizeObserver(resize);
+  const viewWatch = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); });
 
   resize();
-  onScroll();
-  window.addEventListener('resize', resize);
-  window.addEventListener('scroll', onScroll, { passive: true });
-  document.addEventListener('visibilitychange', onVisibility);
+  sizeWatch.observe(canvas);
+  viewWatch.observe(canvas);
+  document.addEventListener('visibilitychange', sync);
   raf = requestAnimationFrame(frame);
 
   return () => {
     stopped = true;
     cancelAnimationFrame(raf);
-    window.removeEventListener('resize', resize);
-    window.removeEventListener('scroll', onScroll);
-    document.removeEventListener('visibilitychange', onVisibility);
+    sizeWatch.disconnect();
+    viewWatch.disconnect();
+    document.removeEventListener('visibilitychange', sync);
     ctx.clearRect(0, 0, w, h);
   };
 }

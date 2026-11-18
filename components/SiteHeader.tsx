@@ -31,7 +31,7 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
       </div>
     </div>
 
-    <header className={`masthead-premium ${styles.desktopHeader}`}>
+    <header data-wx-masthead className={`masthead-premium ${styles.desktopHeader}`}>
       <div className="shell masthead-premium-inner">
         <SiteMenu/>
         <Link href="/" className="brand-premium"><img src="/webfit-news-logo-400.webp" alt={siteName}/></Link>
@@ -39,7 +39,7 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
       </div>
     </header>
 
-    <header className={styles.mobileHeader}>
+    <header data-wx-masthead className={styles.mobileHeader}>
       <div className={styles.mobileRow}>
         <Link href="/" className={styles.mobileBrand}>
           <img src="/webfit-news-logo-400.webp" alt={siteName}/>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SEASONS, SKIES, type Feel, type Season, type Sky, type WeatherMood as Mood } from '../../lib/weather-mood';
 import { startWeatherFx, type FxKind } from './weather-fx';
+import { christmasCountdownActive } from '../../lib/christmas';
 
 /** No weather effects in the newsroom, sign-in, ad reports or the e-paper (it copies a printed page). */
 const SKIP = /^\/(admin|login|epaper|ad-report)(\/|$)/;
@@ -19,6 +20,8 @@ const BAR: Record<Sky, string> = {
 function fxFor(mood: Mood): FxKind | null {
   if (mood.sky === 'drizzle' || mood.sky === 'rain' || mood.sky === 'storm' || mood.sky === 'sleet' || mood.sky === 'snow') return mood.sky;
   if (mood.night || mood.sky === 'fog') return null;
+  // The Christmas card is the seasonal moment in Nov and Dec; no petals or leaves alongside it.
+  if (christmasCountdownActive()) return null;
   if (mood.season === 'autumn') return 'leaves';
   if (mood.season === 'spring') return 'petals';
   return null;
@@ -56,17 +59,43 @@ async function loadMood(): Promise<Mood | null> {
   }
 }
 
+/** The masthead band (logo row, plus the desktop section menu) in page coordinates. */
+function mastheadBand(): { top: number; height: number } {
+  let top = Infinity, bottom = 0;
+  document.querySelectorAll('[data-wx-masthead]').forEach(h => {
+    const r = h.getBoundingClientRect();
+    if (r.height > 0) { top = Math.min(top, r.top + window.scrollY); bottom = Math.max(bottom, r.bottom + window.scrollY); }
+  });
+  if (!bottom) return { top: 0, height: 0 };
+  const nav = document.querySelector<HTMLElement>('.nav-premium-wrap');
+  if (nav && nav.offsetHeight > 0) bottom += nav.offsetHeight;
+  return { top: Math.round(top), height: Math.round(bottom - top) };
+}
+
 /**
- * Tints the public site to match the reader's local weather and season, with
- * a light effect (rain, snow, mist, sun glow, leaves or petals) on top. No
- * content, sections or layout change. Colours are set as attributes on <html>
- * and handled in app/weather-mood.css.
+ * Brings the reader's local weather into the masthead: a tint plus rain,
+ * snow, mist or sun glow across the logo row and section menu, fading out
+ * above the first story. The support banner and date bar stay as they are. Nothing is drawn over stories,
+ * the Christmas card or the Breaking bar, and nothing on the page moves.
+ * Attributes on <html> pick the look; styles are in app/weather-mood.css.
  */
 export function WeatherMood() {
   const pathname = usePathname() || '';
   const skip = SKIP.test(pathname);
   const [mood, setMood] = useState<Mood | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [band, setBand] = useState({ top: 0, height: 0 });
+
+  // Measure the masthead band and keep it right when the window or header changes size.
+  useEffect(() => {
+    if (skip || !mood) return;
+    const measure = () => setBand(mastheadBand());
+    measure();
+    const watch = new ResizeObserver(measure);
+    document.querySelectorAll('[data-wx-masthead]').forEach(h => watch.observe(h));
+    window.addEventListener('resize', measure);
+    return () => { watch.disconnect(); window.removeEventListener('resize', measure); };
+  }, [skip, mood, pathname]);
 
   useEffect(() => {
     if (skip || mood) return;
@@ -99,16 +128,16 @@ export function WeatherMood() {
   // The moving layer, only when the device allows motion.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (skip || !mood || !canvas) return;
+    if (skip || !mood || !canvas || !band.height) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const kind = fxFor(mood);
     if (!kind) return;
     return startWeatherFx(canvas, kind, mood.wind);
-  }, [skip, mood]);
+  }, [skip, mood, band.height > 0]);
 
-  if (skip || !mood) return null;
+  if (skip || !mood || !band.height) return null;
   return (
-    <div className="wx-layer" aria-hidden="true">
+    <div className="wx-layer" aria-hidden="true" style={{ top: band.top, height: band.height }}>
       <div className="wx-wash" />
       {mood.sky === 'fog' ? <div className="wx-fog" /> : null}
       <canvas ref={canvasRef} className="wx-fx" />
