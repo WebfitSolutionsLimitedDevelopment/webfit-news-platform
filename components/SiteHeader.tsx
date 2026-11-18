@@ -6,6 +6,9 @@ import { LanguageSelector } from './LanguageSelector';
 import styles from './SiteHeader.module.css';
 import { CricketScores } from './CricketScores';
 import { AdSlot } from './AdSlot';
+import { ChristmasCountdown } from './ChristmasCountdown';
+import { christmasCountdownActive } from '@/lib/christmas';
+import extras from './HeaderExtras.module.css';
 
 const links=[['E-Paper','/epaper'],['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
 
@@ -56,7 +59,10 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
       <nav className="shell nav-premium">{links.map(([name,href])=><Link key={href} href={href}>{name}</Link>)}</nav>
     </div>
 
-    {quiet || !cricketScores ? null : <div className="shell"><CricketScores compact /></div>}
+    {quiet || (!cricketScores && !christmasCountdownActive()) ? null : <div className="shell"><div className={extras.row}>
+      {cricketScores ? <CricketScores compact /> : null}
+      {christmasCountdownActive() ? <ChristmasCountdown /> : null}
+    </div></div>}
     {quiet ? null : <AdSlot slotKey="SPOTLIGHT" variant="spotlight"/>}
   </div>;
 }

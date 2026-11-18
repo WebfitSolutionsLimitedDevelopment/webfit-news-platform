@@ -1,0 +1,32 @@
+/* Header strip under the section menu: compact cricket scores and the Christmas countdown side by side. */
+.row { display:flex; gap:12px; margin:12px 0; align-items:stretch; }
+.row > * { min-width:0; margin:0 !important; }
+.row > :first-child { flex:1.5 1 0; }
+.row > .xmas { flex:1 1 0; }
+
+.xmas { position:relative; overflow:hidden; display:flex; align-items:center; min-height:100%; padding:16px 22px; border-radius:8px; background:#123d2c; color:#f4ead2; }
+.flower { position:absolute; right:-28px; top:50%; width:170px; height:170px; transform:translateY(-50%); opacity:.9; }
+.xmasBody { position:relative; z-index:1; max-width:calc(100% - 110px); }
+.xmasLabel { margin:0 0 6px; font-size:13px; font-weight:700; color:#e9c35d; }
+.xmasCount { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 16px; font-family:Georgia,'Times New Roman',serif; }
+.xmasDays { font-size:22px; }
+.xmasDays b { font-size:64px; line-height:.95; font-weight:700; color:#fff; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.xmasSmall { font-size:17px; color:#d9cfb6; }
+.xmasSmall b { font-size:24px; color:#fff; font-variant-numeric:tabular-nums; }
+.xmasGreeting { margin:0; font-family:Georgia,'Times New Roman',serif; font-size:40px; line-height:1.05; font-weight:700; color:#fff; }
+.xmasNote { margin:10px 0 0; font-size:13px; line-height:1.4; color:#cfc4a8; }
+
+@media (max-width:760px) {
+  .row { flex-direction:column; gap:8px; margin:8px 0; }
+  .row > :first-child, .row > .xmas { flex:none; }
+  .xmas { padding:10px 14px; }
+  .flower { width:96px; height:96px; right:-18px; }
+  .xmasBody { max-width:calc(100% - 64px); }
+  .xmasLabel { display:none; }
+  .xmasDays { font-size:15px; }
+  .xmasDays b { font-size:30px; }
+  .xmasSmall { font-size:13px; }
+  .xmasSmall b { font-size:16px; }
+  .xmasNote { margin-top:2px; font-size:12px; }
+  .xmasGreeting { font-size:24px; }
+}
