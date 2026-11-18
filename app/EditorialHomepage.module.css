@@ -8,8 +8,7 @@
   --wf-cream:#fff6df;
   --wf-yellow:#f1d77b;
   --wf-mint:#d8ecd0;
-  background:var(--wx-home,#f8f5ee);
-  transition:background-color 1.2s ease;
+  background:#f8f5ee;
   color:var(--wf-ink);
   overflow:hidden;
 }
