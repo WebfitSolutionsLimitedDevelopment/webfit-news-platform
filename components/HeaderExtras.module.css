@@ -1,32 +1,68 @@
-/* Header strip under the section menu: compact cricket scores and the Christmas countdown side by side. */
+/* Header strip under the section menu: Christmas countdown first, then the compact cricket scores. */
+@font-face { font-family:'WfCountdown'; src:url('/fonts/epaper/oswald-latin-600-normal.woff2') format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'WfCountdownTitle'; src:url('/fonts/epaper/playfair-display-latin-700-italic.woff2') format('woff2'); font-weight:700; font-style:italic; font-display:swap; }
+
 .row { display:flex; gap:12px; margin:12px 0; align-items:stretch; }
 .row > * { min-width:0; margin:0 !important; }
-.row > :first-child { flex:1.5 1 0; }
+.row > * { flex:1.3 1 0; }
 .row > .xmas { flex:1 1 0; }
 
-.xmas { position:relative; overflow:hidden; display:flex; align-items:center; min-height:100%; padding:16px 22px; border-radius:8px; background:#123d2c; color:#f4ead2; }
-.flower { position:absolute; right:-28px; top:50%; width:170px; height:170px; transform:translateY(-50%); opacity:.9; }
-.xmasBody { position:relative; z-index:1; max-width:calc(100% - 110px); }
-.xmasLabel { margin:0 0 6px; font-size:13px; font-weight:700; color:#e9c35d; }
-.xmasCount { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 16px; font-family:Georgia,'Times New Roman',serif; }
-.xmasDays { font-size:22px; }
-.xmasDays b { font-size:64px; line-height:.95; font-weight:700; color:#fff; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
-.xmasSmall { font-size:17px; color:#d9cfb6; }
-.xmasSmall b { font-size:24px; color:#fff; font-variant-numeric:tabular-nums; }
-.xmasGreeting { margin:0; font-family:Georgia,'Times New Roman',serif; font-size:40px; line-height:1.05; font-weight:700; color:#fff; }
-.xmasNote { margin:10px 0 0; font-size:13px; line-height:1.4; color:#cfc4a8; }
+/* Card */
+.xmas { position:relative; overflow:hidden; display:flex; align-items:flex-end; min-height:216px; padding:40px 0 18px 24px; border-radius:8px; color:#fbf1d8;
+  background:
+    radial-gradient(120px 120px at calc(100% - 78px) 62%, rgba(255,206,110,.20), transparent 70%),
+    linear-gradient(160deg,#17472f 0%,#123a28 55%,#0f3122 100%); }
+.lights { position:absolute; top:0; left:0; width:100%; height:40px; }
+.copy { position:relative; z-index:2; flex:1 1 auto; min-width:0; }
+.title { margin:0 0 12px; font-family:'WfCountdownTitle',Georgia,'Times New Roman',serif; font-style:italic; font-weight:700; font-size:22px; line-height:1.15; color:#fbf1d8; }
+.sub { margin:10px 0 0; font-size:13px; color:#cdbf9c; }
+.srOnly { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
+/* Number tiles */
+.tiles { display:flex; gap:8px; }
+.tile { display:grid; justify-items:center; gap:5px; }
+.tileFace { position:relative; display:grid; place-items:center; width:60px; height:62px; overflow:hidden; border-radius:7px; background:#fbf3df; color:#123a28;
+  box-shadow:inset 0 -3px 0 rgba(18,58,40,.14); }
+.tileFace::after { content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(18,58,40,.12); }
+.digits { display:block; font-family:'WfCountdown','Arial Narrow',Arial,sans-serif; font-weight:600; font-size:38px; line-height:1; font-variant-numeric:tabular-nums lining-nums; animation:tick .32s cubic-bezier(.2,.8,.3,1); }
+.tileLabel { font-size:11px; letter-spacing:.02em; color:#d9cca9; }
+@keyframes tick { from { transform:translateY(-55%); opacity:0; } to { transform:none; opacity:1; } }
+
+/* Tree and Santa */
+.scene { position:relative; flex:0 0 150px; align-self:stretch; margin-bottom:-18px; }
+.tree { position:absolute; right:14px; bottom:0; width:112px; height:150px; z-index:2; }
+.santa { position:absolute; right:98px; bottom:0; width:66px; height:74px; z-index:1; transform:translateY(105%); animation:peek 13s ease-in-out 2.5s infinite; }
+.santaStay { animation:peekStay .9s ease-out .6s forwards; }
+.arm { transform-box:fill-box; transform-origin:12% 100%; animation:wave .7s ease-in-out infinite alternate; }
+@keyframes peek { 0%,58% { transform:translateY(105%); } 64%,88% { transform:translateY(8%); } 95%,100% { transform:translateY(105%); } }
+@keyframes peekStay { to { transform:translateY(8%); } }
+@keyframes wave { from { transform:rotate(-14deg); } to { transform:rotate(18deg); } }
+
+/* Twinkling bulbs and star */
+.bulb { filter:drop-shadow(0 0 3px currentColor); animation:twinkle 2.4s ease-in-out infinite; }
+@keyframes twinkle { 0%,100% { opacity:1; } 45% { opacity:.38; } }
+.star { transform-box:fill-box; transform-origin:center; filter:drop-shadow(0 0 5px #f6cc4e); animation:star 3s ease-in-out infinite; }
+@keyframes star { 0%,100% { transform:scale(1); } 50% { transform:scale(1.14); } }
+
+@media (prefers-reduced-motion:reduce) {
+  .bulb,.star,.arm,.digits { animation:none; }
+  .santa { animation:none; transform:translateY(8%); }
+}
+
+/* Phones: card first, then scores; a shorter card with smaller tiles. */
 @media (max-width:760px) {
   .row { flex-direction:column; gap:8px; margin:8px 0; }
-  .row > :first-child, .row > .xmas { flex:none; }
-  .xmas { padding:10px 14px; }
-  .flower { width:96px; height:96px; right:-18px; }
-  .xmasBody { max-width:calc(100% - 64px); }
-  .xmasLabel { display:none; }
-  .xmasDays { font-size:15px; }
-  .xmasDays b { font-size:30px; }
-  .xmasSmall { font-size:13px; }
-  .xmasSmall b { font-size:16px; }
-  .xmasNote { margin-top:2px; font-size:12px; }
-  .xmasGreeting { font-size:24px; }
+  .row > *, .row > .xmas { flex:none; }
+  .xmas { min-height:0; padding:30px 0 12px 14px; }
+  .lights { height:30px; }
+  .title { font-size:16px; margin-bottom:8px; }
+  .tiles { gap:6px; }
+  .tileFace { width:46px; height:48px; }
+  .digits { font-size:28px; }
+  .tileLabel { font-size:10px; }
+  .sub { display:none; }
+  .scene { flex-basis:104px; margin-bottom:-12px; }
+  .tree { width:80px; height:108px; right:6px; }
+  .santa { width:46px; height:52px; right:68px; }
 }
+@media (max-width:360px) { .scene { flex-basis:84px; } .tree { width:66px; height:90px; } .santa { right:46px; } }

@@ -60,8 +60,8 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
     </div>
 
     {quiet || (!cricketScores && !christmasCountdownActive()) ? null : <div className="shell"><div className={extras.row}>
-      {cricketScores ? <CricketScores compact /> : null}
       {christmasCountdownActive() ? <ChristmasCountdown /> : null}
+      {cricketScores ? <CricketScores compact /> : null}
     </div></div>}
     {quiet ? null : <AdSlot slotKey="SPOTLIGHT" variant="spotlight"/>}
   </div>;
