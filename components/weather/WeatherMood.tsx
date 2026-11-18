@@ -8,8 +8,8 @@ import { christmasCountdownActive } from '../../lib/christmas';
 
 /** No weather effects in the newsroom, sign-in, ad reports or the e-paper (it copies a printed page). */
 const SKIP = /^\/(admin|login|epaper|ad-report)(\/|$)/;
-const CACHE_KEY = 'wf-wx-mood';
-const CACHE_MS = 20 * 60 * 1000;
+const CACHE_KEY = 'wf-wx-mood-v2';
+const CACHE_MS = 10 * 60 * 1000;
 
 /** Browser bar colour on phones, per sky. */
 const BAR: Record<Sky, string> = {
