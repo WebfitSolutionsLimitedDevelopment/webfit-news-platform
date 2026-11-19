@@ -22,7 +22,7 @@ function staffGroups(reviewer=false):Group[]{
     ...(reviewer?[['Volunteer assignments','/admin/assignments'] as const]:[]),
     ['Analytics','/admin/analytics'],['Reader feedback','/admin/feedback'],['Homepage','/admin/homepage'],['E-paper front','/admin/epaper-front'],['Media','/admin/media'],['Categories','/admin/categories'],['Authors','/admin/authors']]},
   {label:'Revenue & formats',items:[['Advertisements','/admin/advertisements'],['Videos','/admin/videos'],['Digital Edition','/admin/digital-edition']]},
-  {label:'Operations',items:[['Users','/admin/users'],['404 Monitor','/admin/404-monitor'],['Redirects','/admin/redirects'],['Archive Audit','/admin/migration'],['Launch Readiness','/admin/launch'],['Settings','/admin/settings']]}
+  {label:'Operations',items:[['Users','/admin/users'],...(reviewer?[['Logo uploads','/admin/logo-uploads'] as const]:[]),['404 Monitor','/admin/404-monitor'],['Redirects','/admin/redirects'],['Archive Audit','/admin/migration'],['Launch Readiness','/admin/launch'],['Settings','/admin/settings']]}
   ];
 }
 

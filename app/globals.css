@@ -297,3 +297,14 @@ body{background:#fff;color:var(--wf-ink);-webkit-font-smoothing:antialiased}.she
 .article-body .article-embed-instagram-profile{max-width:540px;margin:1.8em auto;padding:16px 20px;border:1px solid #e2e5e8;border-radius:10px;background:#fafafa}
 .article-body .article-embed-instagram-profile p{margin:0}
 @media(max-width:560px){.article-body .article-embed-instagram iframe{height:580px;min-height:520px}}
+
+/* CMS → Logo uploads (Add Your Logo moderation) */
+.logo-uploads-stats{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;margin:0 0 14px;color:#667085;font-size:14px}.logo-uploads-stats b{color:#101828;font-size:20px;margin-right:4px}.logo-uploads-stats a{margin-left:auto;font-weight:700;color:#1d4ed8;text-decoration:none}
+.logo-uploads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.logo-upload-card{display:grid;gap:8px;background:#fff;border:1px solid #dfe2e6;border-radius:8px;padding:10px;min-width:0}
+.logo-upload-thumb{display:block;aspect-ratio:3/2;border-radius:6px;overflow:hidden;background:#eef0f3}.logo-upload-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.logo-upload-meta{display:grid;gap:3px;min-width:0}.logo-upload-meta strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.logo-upload-meta small{font-size:11px;color:#667085}.logo-upload-file{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logo-upload-logo{display:inline-flex;margin-top:4px;padding:4px;border-radius:4px;background:repeating-conic-gradient(#e7e9ee 0 25%,#fff 0 50%) 0 0/10px 10px;width:max-content;max-width:100%}.logo-upload-logo img{max-height:28px;max-width:140px;object-fit:contain}
+.logo-upload-actions{display:flex;gap:8px;flex-wrap:wrap}.logo-upload-actions .admin-secondary{padding:7px 12px;font-size:13px}
+.logo-upload-block{border:1px solid #f1b8b8;background:#fff5f5;color:#b42318;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}.logo-upload-block:hover{background:#fee4e2}
+.logo-uploads-blocked{margin-top:28px}.logo-uploads-blocked h2{font-size:16px;margin:0 0 10px}.logo-uploads-blocked ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}.logo-uploads-blocked li{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #dfe2e6;border-radius:8px;padding:8px 12px}.logo-uploads-blocked li small{color:#667085;margin-right:auto}

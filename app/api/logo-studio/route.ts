@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { DAILY_LOGO_LIMIT, isCorner, LOGO_SIZE_DEFAULT } from '@/lib/logo-placement';
-import { LOGO_BUCKET, downloadName, listJobs, logoStudioUser, makeThumb, nzDayStart, remainingToday, savedLogoUrl, stampLogo, thumbPath, usedToday } from '@/lib/logo-studio';
+import { LOGO_BUCKET, downloadName, isBlocked, listJobs, logoStudioUser, makeThumb, nzDayStart, remainingToday, savedLogoUrl, stampLogo, thumbPath, usedToday } from '@/lib/logo-studio';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,6 +31,8 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await logoStudioUser();
   if (!user) return NextResponse.json({ error: 'Sign in to use Add Your Logo.' }, { status: 401 });
+
+  if (await isBlocked(user.id)) return NextResponse.json({ error: 'This account can no longer use Add Your Logo.' }, { status: 403 });
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: 'The upload could not be read. Try again.' }, { status: 400 });

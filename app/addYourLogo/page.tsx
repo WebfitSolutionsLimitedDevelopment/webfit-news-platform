@@ -30,13 +30,13 @@ export default async function AddYourLogoPage() {
         <ul className={styles.facts}>
           <li><b>{DAILY_LOGO_LIMIT}</b><span>photos a day</span></li>
           <li><b>{LOGO_KEEP_DAYS} days</b><span>to download them again</span></li>
-          <li><b>Private</b><span>only you can see your photos</span></li>
+          <li><b>Never published</b><span>we don’t publish or share them</span></li>
         </ul>
       </header>
       <LogoStudio signedIn={!!user} email={user?.email ?? null}/>
       <section className={styles.notes}>
         <h2>Good to know</h2>
-        <p>You sign in with your Google account so your photos are kept for you and nobody else. The {DAILY_LOGO_LIMIT}-a-day limit resets at midnight, New Zealand time. Photos are deleted automatically after {LOGO_KEEP_DAYS} days.</p>
+        <p>You sign in with your Google account so your logo and photos are kept with your account. The {DAILY_LOGO_LIMIT}-a-day limit resets at midnight, New Zealand time. Photos are deleted automatically after {LOGO_KEEP_DAYS} days.</p>
         <p>Only upload photos your group took, or has permission to use. Webfit News does not publish or share anything you upload here.</p>
       </section>
     </main>
