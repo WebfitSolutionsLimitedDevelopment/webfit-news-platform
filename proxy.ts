@@ -114,6 +114,13 @@ export async function proxy(request: NextRequest) {
   );
 
   const path = request.nextUrl.pathname;
+
+  // /addYourLogo typed in any other case (e.g. /addyourlogo) goes to the real page.
+  if (path.toLowerCase() === '/addyourlogo' && path !== '/addYourLogo') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/addYourLogo';
+    return NextResponse.redirect(url, 308);
+  }
   const search = request.nextUrl.search;
 
   // Historical redirects are database-managed and must execute before route rendering.

@@ -27,6 +27,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/ilikepdf', destination: '/ilikemypdf', permanent: true },
+      { source: '/add-your-logo', destination: '/addYourLogo', permanent: true },
     ];
   },
 };
