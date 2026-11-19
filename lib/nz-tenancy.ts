@@ -8,7 +8,9 @@ export const nzTenancySources=[
 
 async function reachable(url:string){
   try{
-    const res=await fetch(url,{next:{revalidate:86400},headers:{'user-agent':'WebfitNews/1.0'}});
+    // HEAD with a time limit: the full Act page is huge and slow, and one slow government site
+    // used to stall the whole site build past Vercel's 60-second page limit.
+    const res=await fetch(url,{method:'HEAD',next:{revalidate:86400},headers:{'user-agent':'WebfitNews/1.0'},signal:AbortSignal.timeout(8000)});
     return res.ok;
   }catch{return false;}
 }
