@@ -12,6 +12,7 @@ const audience=[
   ['73K','Facebook engagements in the same 28 days, up 247%'],
   ['9.4K','Facebook followers'],
   ['10K','Instagram followers'],
+  ['275K','YouTube views all-time, reached 19 Nov 2026'],
   ['1K+','YouTube subscribers'],
   ['500+','LinkedIn followers'],
   ['936','TikTok followers'],

@@ -889,14 +889,14 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
   </div>;
 }
 
-/** Audience figures for the advertising page. Facebook views and engagement: Meta, last 28 days as at 19 Nov 2026. */
+/** Audience figures for the advertising page. Facebook views and engagement: Meta, last 28 days as at 19 Nov 2026. YouTube views: all-time channel total reached 19 Nov 2026. */
 const REACH: Array<[string, string]> = [
   ['1.1M', 'Facebook views in 28 days'],
   ['73K', 'Facebook engagements in 28 days'],
   ['14.2K', 'website readers a month'],
   ['10K', 'Instagram followers'],
   ['9.4K', 'Facebook followers'],
-  ['1K+', 'YouTube subscribers'],
+  ['275K', 'YouTube views, 1K+ subscribers'],
 ];
 
 /** Last page: Webfit News selling its own space. The only full-page advertisement in the paper. */
