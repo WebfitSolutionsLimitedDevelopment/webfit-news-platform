@@ -69,6 +69,15 @@ export async function POST(req:Request){
     if(stamped)await bucket.remove([`originals/${path}`]);
     return NextResponse.json({error:uploadError.message},{status:400});
   }
+  // Full HD copy for media distribution (Media library uploads only). Same logo, kept at
+  // distribution/<path> and served by /api/admin/media/[id]/download. Never blocks the upload.
+  const hd=form.get('distribution');
+  if(stamped&&hd instanceof File&&hd.type==='image/jpeg'&&hd.size<=4*1024*1024){
+    try{
+      const out=await watermarkImage(await hd.arrayBuffer(),'image/jpeg',{quality:92});
+      if(out)await bucket.upload(`distribution/${path}`,new Blob([new Uint8Array(out)],{type:'image/jpeg'}),{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
+    }catch(e){console.error('full HD copy failed',e)}
+  }
   const {data:pub}=bucket.getPublicUrl(path);
   const {data,error}=await db.from('media').insert({
     width:size?.width??null,height:size?.height??null,uploaded_by:c.user.id,storage_bucket:'news-media',

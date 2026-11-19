@@ -334,3 +334,42 @@ export function formatUploadSize(bytes: number) {
     1024
   ).toFixed(2)} MB`;
 }
+
+/** Long edge of the full HD copy kept for media distribution. */
+export const DISTRIBUTION_LONG_EDGE = 1920;
+const DISTRIBUTION_MAX_BYTES = 3.4 * 1024 * 1024; // with the 512 KB web copy, stays under Vercel's 4.5 MB request limit
+
+/**
+ * A high-quality JPEG, at most 1920 px on its long edge, made from the
+ * original file before web compression. The server stamps the Webfit News
+ * logo on it and keeps it for downloading from the Media library, so photos
+ * sent to other outlets are not the 512 KB web copy. Smaller originals are
+ * kept at their own size, never enlarged.
+ */
+export async function distributionCopy(file: File): Promise<File | null> {
+  if (!/^image\/(jpeg|png|webp|avif)$/.test(file.type)) return null;
+  const image = await loadImage(file);
+  const sw = image.naturalWidth || image.width;
+  const sh = image.naturalHeight || image.height;
+  if (!sw || !sh) return null;
+  const scale = Math.min(1, DISTRIBUTION_LONG_EDGE / Math.max(sw, sh));
+  const width = Math.round(sw * scale);
+  const height = Math.round(sh * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  context.fillStyle = '#ffffff'; // transparent PNGs become white, not black, as JPEG
+  context.fillRect(0, 0, width, height);
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, 0, 0, width, height);
+  let blob: Blob | null = null;
+  for (const q of [0.92, 0.86, 0.8]) {
+    blob = await canvasBlob(canvas, 'image/jpeg', q);
+    if (blob.size <= DISTRIBUTION_MAX_BYTES) break;
+  }
+  if (!blob || blob.size > DISTRIBUTION_MAX_BYTES) return null;
+  const base = file.name.replace(/\.[^.]+$/, '') || 'image';
+  return new File([blob], `${base}-full-hd.jpg`, { type: 'image/jpeg' });
+}

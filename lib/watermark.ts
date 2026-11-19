@@ -19,7 +19,7 @@ export function canWatermark(mime: string) {
   return STAMPABLE.has(mime);
 }
 
-export async function watermarkImage(input: ArrayBuffer, mime: string): Promise<Buffer | null> {
+export async function watermarkImage(input: ArrayBuffer, mime: string, opts: { quality?: number } = {}): Promise<Buffer | null> {
   if (!canWatermark(mime)) return null;
   const image = sharp(Buffer.from(input), { failOn: 'none' }).rotate();
   const meta = await image.metadata();
@@ -42,5 +42,5 @@ export async function watermarkImage(input: ArrayBuffer, mime: string): Promise<
   if (mime === 'image/png') return stamped.png({ compressionLevel: 9 }).toBuffer();
   if (mime === 'image/webp') return stamped.webp({ quality: 82 }).toBuffer();
   if (mime === 'image/avif') return stamped.avif({ quality: 60 }).toBuffer();
-  return stamped.jpeg({ quality: 84, mozjpeg: true }).toBuffer();
+  return stamped.jpeg({ quality: opts.quality ?? 84, mozjpeg: true }).toBuffer();
 }
