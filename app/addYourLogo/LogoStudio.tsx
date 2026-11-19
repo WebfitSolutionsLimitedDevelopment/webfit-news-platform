@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { LOGO_KEEP_DAYS, LOGO_SIZE_DEFAULT, LOGO_SIZE_MAX, LOGO_SIZE_MIN, placeLogo, type LogoCorner } from '@/lib/logo-placement';
+import { knockOutBackground, visibleBounds, type KnockoutResult } from '@/lib/logo-background';
 import s from './LogoStudio.module.css';
 
 type Item = { id: string; createdAt: string; filename: string; download: string | null; thumb: string | null; expiresAt: string };
@@ -62,19 +63,45 @@ async function preparePhoto(file: File) {
   throw new Error('That photo is too large.');
 }
 
-/** Any logo (PNG, JPEG, WebP or SVG) becomes a PNG up to 1200 px wide, keeping transparency. */
-async function prepareLogo(file: File) {
+/**
+ * Any logo (PNG, JPEG, WebP or SVG) becomes a PNG up to 1200 px wide. With removeBg, a plain
+ * background box is taken off first (see lib/logo-background.ts), and empty margins are trimmed
+ * so the size slider matches the logo itself.
+ */
+async function prepareLogo(file: File, removeBg: boolean): Promise<{ file: File; result: KnockoutResult | 'kept' }> {
   const img = await decode(file);
   for (const edge of [1200, 800, 500]) {
     const k = Math.min(1, edge / Math.max(img.width, img.height));
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    const b = await blob(c, 'image/png');
-    if (b.size <= 950 * 1024) return new File([b], 'logo.png', { type: 'image/png' });
+    const ctx = c.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    let result: KnockoutResult | 'kept' = 'kept';
+    let out = c;
+    if (removeBg) {
+      const px = ctx.getImageData(0, 0, c.width, c.height);
+      result = knockOutBackground(px.data, c.width, c.height);
+      if (result === 'removed') ctx.putImageData(px, 0, 0);
+    }
+    const shown = ctx.getImageData(0, 0, c.width, c.height);
+    const box = visibleBounds(shown.data, c.width, c.height);
+    if (box && (box.w < c.width || box.h < c.height)) {
+      out = document.createElement('canvas');
+      out.width = box.w; out.height = box.h;
+      out.getContext('2d')!.drawImage(c, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+    }
+    const b = await blob(out, 'image/png');
+    if (b.size <= 950 * 1024) return { file: new File([b], 'logo.png', { type: 'image/png' }), result };
   }
   throw new Error('That logo file is too large.');
 }
+
+const BG_NOTE: Record<KnockoutResult | 'kept', string> = {
+  removed: 'Background removed.',
+  'already-transparent': 'Your logo already has a transparent background.',
+  'no-plain-background': 'This logo has no plain background to remove, so it is used as it is.',
+  kept: 'Background kept.',
+};
 
 function nzDate(iso: string) {
   return new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', timeZone: 'Pacific/Auckland' }).format(new Date(iso));
@@ -88,6 +115,9 @@ export default function LogoStudio({ signedIn, email }: { signedIn: boolean; ema
   const [limit, setLimit] = useState(5);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoSource, setLogoSource] = useState<File | null>(null);
+  const [removeBg, setRemoveBg] = useState(true);
+  const [logoNote, setLogoNote] = useState('');
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [active, setActive] = useState(0);
@@ -152,11 +182,21 @@ export default function LogoStudio({ signedIn, email }: { signedIn: boolean; ema
     if (error) { setSigningIn(false); setMessage(error.message); }
   }
 
-  async function pickLogo(f: File | undefined) {
+  function pickLogo(f: File | undefined) {
     if (!f) return;
     setMessage('');
-    try { setLogoFile(await prepareLogo(f)); } catch (e: any) { setMessage(e.message); }
+    setLogoSource(f);
   }
+
+  // Re-make the logo whenever a new one is chosen or the background option changes.
+  useEffect(() => {
+    if (!logoSource) return;
+    let stale = false;
+    prepareLogo(logoSource, removeBg)
+      .then(r => { if (!stale) { setLogoFile(r.file); setLogoNote(BG_NOTE[r.result]); } })
+      .catch((e: any) => { if (!stale) setMessage(e.message); });
+    return () => { stale = true; };
+  }, [logoSource, removeBg]);
 
   async function pickPhotos(list: FileList | null) {
     if (!list?.length) return;
@@ -204,7 +244,7 @@ export default function LogoStudio({ signedIn, email }: { signedIn: boolean; ema
         if (r?.status === 422 && !String(d.error || '').includes('processed')) { setMessage(d.error); break; }
       }
     }
-    if (sentLogo) { setLogoFile(null); setLogoUrl(null); }
+    if (sentLogo) { setLogoFile(null); setLogoSource(null); setLogoNote(''); setLogoUrl(null); }
     setBusy(false);
     await refresh();
     if (sentLogo) document.getElementById('your-photos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -241,8 +281,13 @@ export default function LogoStudio({ signedIn, email }: { signedIn: boolean; ema
             <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={e => pickLogo(e.target.files?.[0])}/>
             {logoImg ? <img src={logoImg.src} alt="Your logo"/> : null}
             <span>{haveLogo ? 'Change logo' : 'Choose your logo'}</span>
-            <small>A PNG with a transparent background looks best.</small>
+            <small>PNG, JPEG or SVG. A plain white or coloured background can be removed for you.</small>
           </label>
+          <label className={s.option}>
+            <input type="checkbox" checked={removeBg} onChange={e => setRemoveBg(e.target.checked)} disabled={!logoSource}/>
+            Remove the logo’s background
+          </label>
+          {logoNote && logoSource ? <p className={s.optionNote}>{logoNote}</p> : null}
         </div>
 
         <div className={s.step}>
