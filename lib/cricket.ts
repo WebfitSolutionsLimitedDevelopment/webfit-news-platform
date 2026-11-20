@@ -32,7 +32,7 @@ const secs = (name: string, fallback: number) => Math.max(60, Number(process.env
 
 async function call(path: string, params: Record<string, string>, revalidate: number) {
   const key = process.env.CRICKETDATA_API_KEY?.trim();
-  if (!key) return null;
+  if (!key || key === 'paused') return null; // 'paused' keeps the old widget without wasting calls
   const qs = new URLSearchParams({ apikey: key, ...params });
   try {
     const res = await fetch(`${BASE}/${path}?${qs}`, { next: { revalidate, tags: ['cricket'] }, signal: AbortSignal.timeout(8000) });
@@ -78,7 +78,8 @@ function interest(m: CricMatch) {
   if (/new zealand|white ferns/.test(names)) score += 100;
   if (/\bindia\b/.test(names)) score += 60;
   if (/australia|england|pakistan|south africa|sri lanka|fiji/.test(names)) score += 20;
-  if (/test|odi|t20/.test(m.matchType) && !/\b(a|u19|xi)\b/i.test(names)) score += 15;
+  if (/\b(u19|u-19|a|xi|lions|emerging)\b/i.test(names)) score -= 80; // youth and A sides are not the headline
+  else if (/\btour of\b/i.test(m.series || '') || /test|odi|t20/.test(m.matchType)) score += 15;
   if (/women/.test(names) || /women/i.test(m.series || '')) score -= 2;
   return score;
 }
@@ -114,9 +115,14 @@ export async function getCricketBoard(): Promise<CricketBoard | null> {
   if (!matches.length) return null;
 
   const byInterest = (a: CricMatch, b: CricMatch) => interest(b) - interest(a);
-  const live = matches.filter(m => m.state === 'live').sort(byInterest);
-  const results = matches.filter(m => m.state === 'result').sort(byInterest).slice(0, 12);
-  const upcoming = matches.filter(m => m.state === 'fixture')
+  // The feed marks some games "live" before a ball is bowled, and some unfinished games as results.
+  for (const m of matches) {
+    if (m.state === 'live' && /^match starts/i.test(m.status) && !m.teams.some(t => t.score)) m.state = 'fixture';
+    if (m.state === 'result' && !/\b(won|draw|drawn|tied|tie|no result|abandoned)\b/i.test(m.status)) m.state = 'live';
+  }
+  const live = matches.filter(m => m.state === 'live').sort(byInterest).slice(0, 8);
+  const results = matches.filter(m => m.state === 'result').sort(byInterest).slice(0, 10);
+  const upcoming = matches.filter(m => m.state === 'fixture' && Date.parse(m.startsAt || '') > Date.now() - 3600000)
     .sort((a, b) => interest(b) - interest(a) || Date.parse(a.startsAt || '') - Date.parse(b.startsAt || '')).slice(0, 12);
 
   // The headline match: a live game readers care about, else the most relevant recent result.
