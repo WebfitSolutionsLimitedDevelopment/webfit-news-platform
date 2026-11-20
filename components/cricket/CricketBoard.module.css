@@ -1,0 +1,66 @@
+/* Cricket scores (CricketData.org). Site ink and red; tables in the broadcaster style readers know. */
+.badge { flex:none; border-radius:50%; object-fit:contain; background:#fff; box-shadow:0 0 0 1px #e2e5e8; }
+.badgeText { flex:none; display:inline-grid; place-items:center; border-radius:50%; background:#18212b; color:#fff; font:700 10px/1 Arial,Helvetica,sans-serif; }
+
+.pill { flex:none; padding:3px 8px; border-radius:999px; background:#eef0f3; color:#18212b; font:700 11px/1.2 Arial,Helvetica,sans-serif; white-space:nowrap; }
+.pillLive { background:#c8102e; color:#fff; }
+.pillLive::before { content:''; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#fff; vertical-align:1px; animation:pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.25; } }
+
+.team { display:flex; align-items:center; gap:10px; min-width:0; padding:3px 0; font:14px/1.3 Arial,Helvetica,sans-serif; color:#18212b; }
+.teamName { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.short { display:none; }
+.teamScore { flex:none; font-weight:700; font-variant-numeric:tabular-nums; }
+.teamBig { font-size:16px; }
+.teamBig .teamScore { font-size:18px; }
+
+.rowHead { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; font:12px/1.3 Arial,Helvetica,sans-serif; color:#5b6470; }
+.rowHead > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rowStatus { margin:6px 0 0; font:13px/1.35 Arial,Helvetica,sans-serif; color:#c8102e; }
+
+/* Header strip */
+.compact { display:flex; flex-direction:column; min-height:216px; border:1px solid #e2e5e8; border-radius:8px; background:#fff; overflow:hidden; }
+.compactHead { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; background:#f3f5f7; font:700 13px/1.4 Arial,Helvetica,sans-serif; color:#18212b; }
+.compactHead a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+.compactBody { display:block; flex:1; padding:12px 16px; color:inherit; text-decoration:none; }
+.compactBody:hover .teamName { text-decoration:underline; }
+.more { margin:6px 0 0; font:12px/1.3 Arial,Helvetica,sans-serif; color:#5b6470; }
+.empty { margin:0; padding:20px 16px; font:14px/1.4 Arial,Helvetica,sans-serif; color:#5b6470; }
+
+/* Score centre */
+.full { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:24px; align-items:start; margin:24px 0; }
+.featured { border:1px solid #e2e5e8; border-radius:10px; background:#fff; overflow:hidden; }
+.featHead { padding:16px 18px 8px; text-align:center; }
+.featHead h2 { margin:0; font:700 18px/1.25 Georgia,'Times New Roman',serif; color:#18212b; }
+.featHead p { margin:4px 0 0; font:13px/1.3 Arial,Helvetica,sans-serif; color:#5b6470; }
+.toss { margin:0; padding:8px 18px; background:#f3f5f7; text-align:center; font:13px/1.35 Arial,Helvetica,sans-serif; color:#18212b; }
+.featTeams { display:flex; align-items:center; gap:16px; padding:12px 18px 4px; }
+.featTeams > div { flex:1; min-width:0; }
+.featStatus { margin:0; padding:2px 18px 12px; font:14px/1.35 Arial,Helvetica,sans-serif; color:#c8102e; }
+.tabs { display:flex; border-top:1px solid #e2e5e8; border-bottom:1px solid #e2e5e8; }
+.tabs button { flex:1; padding:11px 8px; border:0; border-bottom:3px solid transparent; background:#fff; font:700 13px/1 Arial,Helvetica,sans-serif; color:#5b6470; cursor:pointer; }
+.tabs button[aria-selected='true'] { color:#c8102e; border-bottom-color:#c8102e; }
+.tabBody { padding:14px; background:#f6f7f9; }
+.tabBody h3 { display:flex; justify-content:space-between; gap:12px; margin:0 0 8px; font:700 14px/1.3 Arial,Helvetica,sans-serif; color:#18212b; }
+.tabBody h3 span { font-variant-numeric:tabular-nums; }
+.innings + .innings { margin-top:18px; }
+
+.table { width:100%; margin:0 0 12px; border-collapse:separate; border-spacing:0; border-radius:8px; overflow:hidden; background:#fff; box-shadow:0 0 0 1px #e2e5e8; font:13px/1.3 Arial,Helvetica,sans-serif; font-variant-numeric:tabular-nums; }
+.table th { padding:8px 10px; background:#2b3138; color:#fff; font-weight:700; text-align:right; }
+.table th:first-child, .table td:first-child { text-align:left; }
+.table td { padding:8px 10px; border-top:1px solid #eef0f3; text-align:right; color:#18212b; }
+.table td small { display:block; margin-top:2px; font-size:11px; color:#6b7480; }
+.strong { font-weight:700; }
+
+.lists { display:grid; gap:20px; }
+.list h2 { margin:0 0 10px; font:700 16px/1.2 Georgia,'Times New Roman',serif; color:#18212b; }
+.list ul { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.row { padding:12px 14px; border:1px solid #e2e5e8; border-radius:8px; background:#fff; }
+.credit { grid-column:1/-1; margin:0; font:12px/1.4 Arial,Helvetica,sans-serif; color:#6b7480; }
+
+@media (max-width:900px) { .full { grid-template-columns:1fr; } }
+@media (max-width:420px) {
+  .long { display:none; } .short { display:inline; }
+  .table th, .table td { padding:7px 6px; }
+}
+@media (prefers-reduced-motion:reduce) { .pillLive::before { animation:none; } }
