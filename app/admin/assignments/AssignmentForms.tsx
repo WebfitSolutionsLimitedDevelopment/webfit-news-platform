@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
-import { assignmentLabels, canAddBriefingAttachments, type Assignment, type AssignmentFile } from '@/lib/volunteer-assignments';
+import { assignmentAttachmentMaxBytes, assignmentLabels, canAddBriefingAttachments, type Assignment, type AssignmentFile } from '@/lib/volunteer-assignments';
 
 async function submit(url: string, payload: object | FormData) {
   const response = await fetch(url, {
@@ -12,7 +12,17 @@ async function submit(url: string, payload: object | FormData) {
     }),
   });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || 'The assignment could not be saved. Please try again.');
+  if (!response.ok) {
+    if (payload instanceof FormData && response.status === 413) {
+      throw new Error('The upload exceeded the 4 MB file limit. Reduce the file size and try again.');
+    }
+    if (payload instanceof FormData && response.status === 401) {
+      throw new Error('Your session expired. Sign in again and retry the upload.');
+    }
+    throw new Error(result.error || (payload instanceof FormData
+      ? `Upload failed (HTTP ${response.status}). Please try again.`
+      : 'The assignment could not be saved. Please try again.'));
+  }
   return result;
 }
 
@@ -91,12 +101,23 @@ export function AssignmentActions({ assignment, files, reviewer }: { assignment:
     const chosen = Array.from(selected || []);
     if (!chosen.length) return;
     return run(async () => {
+      let uploaded = 0;
+      const failures: string[] = [];
       for (const file of chosen) {
+        if (file.size > assignmentAttachmentMaxBytes || file.size === 0) {
+          failures.push(`${file.name}: ${file.size ? 'Over 4 MB. Reduce the file size and retry.' : 'The file is empty.'}`);
+          continue;
+        }
         const form = new FormData();
         form.set('file', file);
-        await submit(url, form);
+        try {
+          await submit(url, form);
+          uploaded += 1;
+        } catch (error) {
+          failures.push(`${file.name}: ${error instanceof Error ? error.message : 'Upload failed.'}`);
+        }
       }
-      setMessage(`${chosen.length} attachment${chosen.length === 1 ? '' : 's'} uploaded.`);
+      setMessage([`${uploaded} of ${chosen.length} attachments uploaded.`, ...failures].join('\n'));
     });
   }
 
@@ -151,7 +172,7 @@ export function AssignmentActions({ assignment, files, reviewer }: { assignment:
             if (status === 'complete' || window.confirm('Complete this assignment and permanently delete its report photos?')) void act('complete');
           }}>{status === 'complete' ? 'Retry photo cleanup' : 'Mark complete and delete report photos'}</button>}
       </div>
-      {message && <p role="status">{message}</p>}
+      {message && <p role="status" style={{ whiteSpace: 'pre-line' }}>{message}</p>}
     </div>
   </section>;
 }

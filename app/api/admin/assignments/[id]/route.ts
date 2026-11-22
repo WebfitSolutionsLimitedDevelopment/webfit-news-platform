@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { canAddBriefingAttachments } from '@/lib/volunteer-assignments';
+import { assignmentAttachmentMaxBytes, canAddBriefingAttachments } from '@/lib/volunteer-assignments';
 import { readImageSize } from '@/lib/image-dimensions';
 import {
   assignmentBucket, assignmentError, assignmentLetter, assignmentLetterName, assignmentSession,
@@ -10,11 +10,17 @@ import {
 type Context = { params: Promise<{ id: string }> };
 const uuid = z.string().uuid();
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
-const wordTypes: Record<string, string> = {
+const briefingTypesByExtension: Record<string, string> = {
+  pdf: 'application/pdf',
+  txt: 'text/plain',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
   doc: 'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
-const briefingTypes = [...imageTypes, 'application/pdf', 'text/plain', ...Object.values(wordTypes)];
+const briefingTypes = Object.values(briefingTypesByExtension);
 const command = z.discriminatedUnion('action', [
   z.object({ action: z.literal('offer') }),
   z.object({ action: z.literal('accept') }),
@@ -72,10 +78,13 @@ export async function POST(request: Request, context: Context) {
     const file = form?.get('file');
     const extension = file instanceof File ? file.name.toLowerCase().split('.').at(-1) || '' : '';
     const contentType = file instanceof File
-      ? (kind === 'briefing' && (!file.type || file.type === 'application/octet-stream') && Object.hasOwn(wordTypes, extension)
-        ? wordTypes[extension] : file.type)
+      ? (kind === 'briefing' && (!file.type || file.type === 'application/octet-stream') && Object.hasOwn(briefingTypesByExtension, extension)
+        ? briefingTypesByExtension[extension] : file.type)
       : '';
-    if (!(file instanceof File) || file.size < 1 || file.size > 4 * 1024 * 1024 ||
+    if (file instanceof File && file.size > assignmentAttachmentMaxBytes) {
+      return assignmentError('The file exceeds 4 MB. Reduce the file size and try again.', 413);
+    }
+    if (!(file instanceof File) || file.size < 1 ||
         !(kind === 'report' ? imageTypes : briefingTypes).includes(contentType)) {
       return assignmentError(kind === 'report' ? 'Choose a JPEG, PNG or WebP image up to 4 MB.' : 'Choose a PDF, Word document, text file or supported image up to 4 MB.', 422);
     }
@@ -85,7 +94,12 @@ export async function POST(request: Request, context: Context) {
     const fileId = crypto.randomUUID();
     const path = `${id}/${kind}/${fileId}`;
     const { error: uploadError } = await bucket.upload(path, file, { contentType, cacheControl: '0', upsert: false });
-    if (uploadError) return assignmentError('Could not upload the attachment.', 500);
+    if (uploadError) {
+      console.error('[assignments] Attachment storage upload failed', {
+        id, kind, bytes: file.size, contentType, error: uploadError.message,
+      });
+      return assignmentError('Storage could not save the attachment. Please try uploading it again.', 502);
+    }
     const filename = file.name.replace(/[\x00-\x1F\x7F/\\]/g, '_').slice(0, 180) || 'attachment';
     const { error: insertError } = await session.admin.from('volunteer_assignment_files').insert({
       id: fileId, assignment_id: id, kind, object_path: path, filename, content_type: contentType,
