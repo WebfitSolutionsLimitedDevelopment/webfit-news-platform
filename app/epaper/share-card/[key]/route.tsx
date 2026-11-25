@@ -30,8 +30,10 @@ async function picture(url: string | null | undefined, width: number) {
     const src = url.startsWith('/') ? absoluteUrl(url) : url;
     const res = await fetch(resizedImage(src, width * 2, 80), { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
-    const jpg = await sharp(Buffer.from(await res.arrayBuffer())).rotate().resize({ width: width * 2, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
-    return `data:image/jpeg;base64,${jpg.toString('base64')}`;
+    const img = sharp(Buffer.from(await res.arrayBuffer())).rotate().resize({ width: width * 2, withoutEnlargement: true });
+    // PNGs (the logo badge) stay PNG so their transparent corners survive; photos become small JPEGs.
+    if (/\.png($|\?)/i.test(url)) return `data:image/png;base64,${(await img.png().toBuffer()).toString('base64')}`;
+    return `data:image/jpeg;base64,${(await img.jpeg({ quality: 80 }).toBuffer()).toString('base64')}`;
   } catch { return null; }
 }
 
@@ -51,7 +53,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
 
   const [oswald, roboto, robotoBold, playfair, playfairItalic, globe, leadPic, ...posterPics] = await Promise.all([
     font('oswald-600.ttf'), font('roboto-400.ttf'), font('roboto-700.ttf'), font('playfair-800.ttf'), font('playfair-800-italic.ttf'),
-    picture('/icon-192.png', 26), picture(lead?.image, 300), ...posters.map(p => picture(p.image, 100)),
+    picture('/webfit-news-badge-240.png', 34), picture(lead?.image, 300), ...posters.map(p => picture(p.image, 100)),
   ]);
   const fonts = [
     oswald && { name: 'Head', data: oswald, weight: 600 as const, style: 'normal' as const },
@@ -72,7 +74,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
         <div style={{ display: 'flex', marginTop: 7, gap: 7, flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', width: 300, gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: NAVY, borderRadius: 3, padding: '7px 9px' }}>
-              {globe ? <img src={globe} width={26} height={26} style={{ width: 26, height: 26, borderRadius: 13, background: '#fff' }}/> : <div style={{ width: 26, height: 26, borderRadius: 13, background: '#fff', display: 'flex' }}/>}
+              {globe ? <img src={globe} width={34} height={34} style={{ width: 34, height: 34 }}/> : null}
               <div style={{ display: 'flex', fontFamily: 'Display', fontWeight: 800, fontSize: 30, color: '#fff', letterSpacing: -1 }}>Webfit<span style={{ color: GOLD, fontStyle: 'italic', marginLeft: 6 }}>News</span></div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, border: `1.5px solid ${NAVY}`, borderRadius: 4, padding: 7, overflow: 'hidden' }}>

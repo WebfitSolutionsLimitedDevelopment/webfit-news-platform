@@ -92,7 +92,7 @@ function buildAdBlock(block: AdBlock): HTMLElement {
       const inner = el('a', styles.adHouse) as HTMLAnchorElement;
       inner.href = ad.href!;
       inner.append(el('img', '') as HTMLImageElement);
-      (inner.firstChild as HTMLImageElement).src = '/icon-192.png';
+      (inner.firstChild as HTMLImageElement).src = '/webfit-news-badge-240.png';
       (inner.firstChild as HTMLImageElement).alt = '';
       inner.append(el('strong', '', 'Advertise with Webfit News'));
       inner.append(el('span', '', 'Your business could be here, next to the stories our readers come for.'));
@@ -722,7 +722,7 @@ function CoverPage({ n, edition, contents, teaserPages, ads }: { n: number; edit
     <div className={styles.coverGrid}>
       <div className={styles.coverMain}>
         <header className={styles.coverBand}>
-          <img src="/icon-192.png" alt=""/>
+          <img src="/webfit-news-badge-240.png" alt="" width={240} height={240}/>
           <div>
             <div className={styles.coverName} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div>
             <div className={styles.coverTag}>Independent New Zealand journalism · Member, New Zealand Media Council</div>
@@ -781,7 +781,7 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf, teaserPages 
           <span>Vol. 1 · No. {edition.number} · Free</span>
         </div>
         <div className={styles.nameplate}>
-          <img className={styles.globe} src="/icon-192.png" alt=""/>
+          <img className={styles.globe} src="/webfit-news-badge-240.png" alt=""/>
           <div className={styles.wordmark} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div>
           <div className={styles.nameplateSide}>
             <strong>{edition.title}</strong>
@@ -817,7 +817,7 @@ function FlowPageView({ page, n, edition, contents, nextOf, prevOf, teaserPages 
         <span>{page.startsWithContinuation && prevOf ? `Continued from page ${prevOf}` : page.section.kicker}</span>
       </div>
       <div className={styles.pageBrand}>
-        <div className={styles.pageBrandName}><img src="/icon-192.png" alt=""/><span>Webfit</span> <b>News</b></div>
+        <div className={styles.pageBrandName}><img src="/webfit-news-badge-96.png" alt=""/><span>Webfit</span> <b>News</b></div>
         <span>{edition.dateline}</span>
       </div>
     </header>
@@ -843,7 +843,7 @@ function AlmanacPageView({ n, edition, almanac }: { n: number; edition: Edition;
         <span>{almanac.range}</span>
       </div>
       <div className={styles.pageBrand}>
-        <div className={styles.pageBrandName}><img src="/icon-192.png" alt=""/><span>Webfit</span> <b>News</b></div>
+        <div className={styles.pageBrandName}><img src="/webfit-news-badge-96.png" alt=""/><span>Webfit</span> <b>News</b></div>
         <span>{edition.dateline}</span>
       </div>
     </header>
@@ -951,7 +951,7 @@ function BackPageView({ n, edition, shelf, extra }: { n: number; edition: Editio
   const all = [...extra, ...edition.moreStories];
   const more = all.slice(0, 14);
   return <div className={`${styles.page} ${styles.backPage} ${more.length ? styles.backPageList : ''}`}>
-    <div className={styles.backNameplate}><img src="/icon-192.png" alt=""/><div className={styles.wordmark} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div></div>
+    <div className={styles.backNameplate}><img src="/webfit-news-badge-240.png" alt=""/><div className={styles.wordmark} role="img" aria-label="Webfit News"><span>Webfit</span> <b>News</b></div></div>
     {more.length ? <div className={styles.backMore}>
       <strong>Also this edition on webfitnews.com</strong>
       <ul>{more.map(s => <li key={s.slug}><a href={`/${s.slug}`}>{s.title}</a></li>)}</ul>

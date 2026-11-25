@@ -108,7 +108,7 @@
 .pageSection span{font:700 8.5px/1 'WN Body',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c8232c;margin-top:3px}
 .pageBrand{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .pageBrandName{display:flex;align-items:center;gap:5px;font:800 17px/1 'WN Display',Georgia,serif;letter-spacing:-.02em;white-space:nowrap}
-.pageBrandName img{width:20px;height:20px}
+.pageBrandName img{width:24px;height:24px}
 .pageBrand .pageBrandName span{font:inherit;letter-spacing:inherit;text-transform:none;color:#1f2a6b}
 .pageBrandName b{color:#c8232c;font-style:italic}
 .pageBrand span{font:700 7.5px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4b4740}
@@ -161,7 +161,7 @@
 .houseTitleSm{font:700 22px/1.1 Georgia,'Times New Roman',serif;color:#1f2a6b}
 .houseTextSm{font:11.5px/1.5 Arial,Helvetica,sans-serif;color:#4b4740;max-width:400px}
 .backNameplate{display:flex;align-items:center;gap:10px}
-.backNameplate img{width:48px;height:48px}
+.backNameplate img{width:58px;height:58px}
 .backNameplate .wordmark{font-size:40px}
 
 /* front page */
@@ -404,12 +404,13 @@
 .coverTop span:nth-child(2){color:#c8232c}
 .coverGrid{display:grid;grid-template-columns:minmax(0,1fr) 146px;gap:10px;flex:1;min-height:0}
 .coverMain{display:flex;flex-direction:column;gap:7px;min-width:0;min-height:0}
-.coverBand{display:flex;align-items:center;gap:10px;background:#1f2a6b;border-radius:4px;padding:10px 12px;color:#fff;flex:none}
-.coverBand img{width:42px;height:42px;flex:none;border-radius:50%;background:#fff}
-.coverName{font:800 46px/1 'WN Display',Georgia,serif;letter-spacing:-.03em;white-space:nowrap}
+.coverBand{display:flex;align-items:center;gap:12px;background:#1f2a6b;border-radius:4px;padding:8px 12px;color:#fff;flex:none}
+/* The Webfit News badge (gold ring, globe, wordmark): transparent outside the ring, no white disc behind it. */
+.coverBand img{width:66px;height:66px;flex:none;display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.coverName{font:800 44px/1 'WN Display',Georgia,serif;letter-spacing:-.03em;white-space:nowrap}
 .coverName span{color:#fff}
 .coverName b{color:#f1c34a;font-style:italic}
-.coverTag{font:italic 700 8px/1.2 'WN Display',Georgia,serif;color:#dfe5f5;margin-top:3px}
+.coverTag{font:italic 700 7.4px/1.2 'WN Display',Georgia,serif;color:#dfe5f5;margin-top:3px;white-space:nowrap}
 .coverInside{display:flex;flex-wrap:wrap;gap:3px 9px;align-items:baseline;border:1px solid #1f2a6b;border-radius:3px;padding:4px 7px;font:700 7.2px/1.2 'WN Body',Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#151515;flex:none}
 .coverInside strong{background:#c8232c;color:#fff;padding:2px 5px;border-radius:2px}
 .coverInside b{color:#c8232c}
