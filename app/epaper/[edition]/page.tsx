@@ -5,6 +5,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { EpaperScreen } from '@/components/epaper/EpaperScreen';
 import { getEdition, getEditionShelf, isEditionKey } from '@/lib/epaper';
 import { SITE_NAME, absoluteUrl } from '@/lib/site';
+import { shareCard, shareText } from '@/lib/epaper-share';
 
 export const revalidate = 300;
 
@@ -24,7 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ edition: 
     // Editions repeat stories that already have their own pages, so only /epaper is indexed.
     alternates: { canonical: absoluteUrl(`/epaper/${edition.key}`) },
     robots: { index: false, follow: true },
-    openGraph: { type: 'website', url: absoluteUrl(`/epaper/${edition.key}`), siteName: SITE_NAME, title, description, locale: 'en_NZ', images: edition.coverImage ? [{ url: edition.coverImage }] : undefined },
+    openGraph: { type: 'website', url: absoluteUrl(`/epaper/${edition.key}`), siteName: SITE_NAME, ...shareText(edition), locale: 'en_NZ', images: [shareCard(edition)] },
+    twitter: { card: 'summary_large_image', ...shareText(edition), images: [shareCard(edition).url] },
   };
 }
 
