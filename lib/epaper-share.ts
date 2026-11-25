@@ -15,6 +15,7 @@ export function shareText(edition: Edition) {
   const lead = edition.sections[0]?.stories[0]?.title;
   return {
     title: `Webfit News e-paper No. ${edition.number} · ${edition.dateline}`,
-    description: `${lead ? `This week: ${lead}. ` : ''}${edition.storyCount} stories, free to read page by page.`,
+    // No extra full stop when the headline already ends with ? ! or .
+    description: `${lead ? `This week: ${lead}${/[?!.…]$/.test(lead) ? '' : '.'} ` : ''}${edition.storyCount} stories, free to read page by page.`,
   };
 }
