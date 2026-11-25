@@ -194,6 +194,8 @@ export default async function ArticlePage({params}:{params:Promise<{slug:string}
             <div className="article-body" dangerouslySetInnerHTML={{__html:html}}/>
             {index<bodyChunks.length-1&&breakPlan[index]?<AdSlot slotKey={breakPlan[index].slot} variant={breakPlan[index].variant}/>:null}
           </div>)}
+          {/* Wide "cinema" ad straight after the story text, before the share box (ARTICLE_CINEMA). */}
+          <AdSlot slotKey="ARTICLE_CINEMA" variant="cinema"/>
           <ArticleSocialBox id="share-end">
             <ArticleShareBar url={pageUrl} title={displayTitle}/>
             <ArticleFollow social={siteSettings.social} contactEmail={siteSettings.identity.contact_email||'sandy@webfitnews.co.nz'} storyTitle={displayTitle}/>
