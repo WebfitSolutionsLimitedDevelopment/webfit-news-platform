@@ -8,6 +8,7 @@ import { ThirdPartyScripts } from '../components/ThirdPartyScripts';
 import { ReadTracker } from '../components/ReadTracker';
 import { AppInstallPrompt } from '../components/AppInstallPrompt';
 import { WeatherMood } from '../components/weather/WeatherMood';
+import { VideoPopIn } from '../components/VideoPopIn';
 import { getSiteUrl } from '../lib/env';
 import { getPublicSiteSettings } from '../lib/public-settings';
 
@@ -127,6 +128,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <ReadTracker/>
       <AppInstallPrompt/>
       <WeatherMood/>
+      <VideoPopIn/>
 
       <Script id="sw-register" strategy="afterInteractive">
         {`
