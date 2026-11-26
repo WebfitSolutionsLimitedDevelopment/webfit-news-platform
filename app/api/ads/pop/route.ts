@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { getLiveAds } from '@/lib/ads';
 
 /**
- * The live pop-in video ad(s) (slot SITE_VIDEO_POP). Fetched by components/VideoPopIn.tsx only
- * after a reader has spent a minute on the site, so short visits cost nothing.
+ * Live pop-in video ads for components/VideoPopIn.tsx:
+ *  - now:   slot SITE_VIDEO_POP_NOW, shown as soon as a page opens
+ *  - later: slot SITE_VIDEO_POP, shown after a minute on the site
  */
 export const revalidate = 300;
 
 export async function GET() {
-  const ads = (await getLiveAds())['SITE_VIDEO_POP'] || [];
-  return NextResponse.json(ads, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+  const live = await getLiveAds();
+  return NextResponse.json(
+    { now: live['SITE_VIDEO_POP_NOW'] || [], later: live['SITE_VIDEO_POP'] || [] },
+    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } },
+  );
 }

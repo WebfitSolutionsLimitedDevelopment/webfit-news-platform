@@ -21,6 +21,9 @@ export type LiveAd = {
   mobile_image: string | null;
   poster_image: string | null;
   video_url: string | null;
+  /** Size of the video (e.g. 1080x1920 for a vertical video), when known. */
+  video_width?: number | null;
+  video_height?: number | null;
 };
 
 /** Screens at or below this width get the mobile artwork and mobile-only positions. */
