@@ -1,0 +1,13 @@
+/*
+ * The logo box matches the crop of the logo video: the video's globe + wordmark sit between
+ * 9%-91.5% across and 19%-77% down the 16:9 frame (the web address line below 77% is cut off).
+ */
+.wrap{position:relative;display:block;overflow:hidden;aspect-ratio:2.529}
+.desktop{width:240px}
+.mobile{width:132px;max-width:100%}
+@media (max-width:420px){.mobile{width:120px}}
+/* Still logo: the square image cropped to its middle band, which lines up with the video crop. */
+.still{position:absolute;inset:0;width:100%!important;height:100%!important;max-height:none!important;object-fit:cover!important;object-position:50% 49%!important;display:block;transition:opacity .6s ease}
+.video{position:absolute;border:0;width:121.21%;height:172.41%;left:-10.91%;top:-32.76%;pointer-events:none;opacity:0;transition:opacity .6s ease;mix-blend-mode:multiply}
+.playing .video{opacity:1}
+.playing .still{opacity:0}

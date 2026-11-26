@@ -9,6 +9,7 @@ import { AdSlot } from './AdSlot';
 import { ChristmasCountdown } from './ChristmasCountdown';
 import { christmasCountdownActive } from '@/lib/christmas';
 import extras from './HeaderExtras.module.css';
+import { HeaderLogo } from './HeaderLogo';
 
 const links=[['E-Paper','/epaper'],['New Zealand','/category/new-zealand'],['Auckland','/category/auckland'],['Politics','/category/politics'],['Business','/category/business'],['Immigration','/category/immigration'],['India','/category/india'],['World','/category/world'],['Community','/category/communities'],['Entertainment','/category/entertainment'],['Sports','/category/sports'],['Opinion','/category/opinion']];
 
@@ -34,7 +35,7 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
     <header data-wx-masthead className={`masthead-premium ${styles.desktopHeader}`}>
       <div className="shell masthead-premium-inner">
         <SiteMenu/>
-        <Link href="/" className="brand-premium"><img src="/webfit-news-logo-400.webp" alt={siteName}/></Link>
+        <Link href="/" className="brand-premium"><HeaderLogo alt={siteName} variant="desktop"/></Link>
         <div className="header-actions-premium"><LanguageSelector/><Link href="/search">Search</Link><Link className="newsroom-chip" href="/admin">Newsroom</Link></div>
       </div>
     </header>
@@ -42,7 +43,7 @@ export async function SiteHeader({ quiet = false, cricketScores = true }: { quie
     <header data-wx-masthead className={styles.mobileHeader}>
       <div className={styles.mobileRow}>
         <Link href="/" className={styles.mobileBrand}>
-          <img src="/webfit-news-logo-400.webp" alt={siteName}/>
+          <HeaderLogo alt={siteName} variant="mobile"/>
         </Link>
         <div className={styles.mobileControls}>
           <LanguageSelector mobile/>
