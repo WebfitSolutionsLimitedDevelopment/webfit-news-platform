@@ -7,7 +7,7 @@
  *
  * Every reader is served from our cache, never straight from the provider, so
  * the daily allowance depends only on these two timers (seconds):
- *   CRICKETDATA_LIST_SECONDS       match list        (default 900 = 96 calls a day)
+ *   CRICKETDATA_LIST_SECONDS       match list        (default 1800 = 48 calls a day)
  *   CRICKETDATA_SCORECARD_SECONDS  featured scorecard (default 1800 = 48 a day)
  * The defaults fit the free plan (100 calls a day) with a little room. On a paid
  * plan, set both to 120 for scores about two minutes behind.
@@ -60,7 +60,8 @@ const cleanTeam = (raw: string) => raw.replace(/\s*\[[^\]]*\]\s*/g, '').trim();
 function fromList(row: any): CricMatch | null {
   if (!row?.id || !row?.t1 || !row?.t2) return null;
   const ms = str(row.ms).toLowerCase();
-  const state: CricMatch['state'] = ms === 'live' ? 'live' : ms === 'result' ? 'result' : 'fixture';
+  const finished = /\b(match drawn|match tied|won by|won the match|no result|abandoned|cancelled|canceled)\b/i.test(str(row.status));
+  const state: CricMatch['state'] = ms === 'result' || finished ? 'result' : ms === 'live' ? 'live' : 'fixture';
   const team = (raw: string, score: unknown, img: unknown): CricTeam => ({
     name: cleanTeam(raw), short: shortName(raw), img: str(img) || null, score: str(score) || null,
   });
@@ -108,19 +109,20 @@ function fromScorecard(data: any): CricScorecard | null {
 }
 
 export async function getCricketBoard(): Promise<CricketBoard | null> {
-  const list = await call('cricScore', {}, secs('CRICKETDATA_LIST_SECONDS', 900));
+  const list = await call('cricScore', {}, secs('CRICKETDATA_LIST_SECONDS', 1800));
   if (!Array.isArray(list)) return null;
   const matches = list.map(fromList).filter((m): m is CricMatch => !!m);
   if (!matches.length) return null;
 
   const byInterest = (a: CricMatch, b: CricMatch) => interest(b) - interest(a);
   const live = matches.filter(m => m.state === 'live').sort(byInterest);
-  const results = matches.filter(m => m.state === 'result').sort(byInterest).slice(0, 12);
+  const date = (m: CricMatch) => Date.parse(m.startsAt || '') || 0;
+  const results = matches.filter(m => m.state === 'result').sort((a, b) => date(b) - date(a) || byInterest(a, b)).slice(0, 12);
   const upcoming = matches.filter(m => m.state === 'fixture')
-    .sort((a, b) => interest(b) - interest(a) || Date.parse(a.startsAt || '') - Date.parse(b.startsAt || '')).slice(0, 12);
+    .sort((a, b) => (date(a) || Infinity) - (date(b) || Infinity) || byInterest(a, b)).slice(0, 12);
 
-  // The headline match: a live game readers care about, else the most relevant recent result.
-  const featured = live.find(m => interest(m) >= 60) ?? live[0] ?? results.find(m => interest(m) >= 60) ?? results[0] ?? upcoming[0] ?? null;
+  // The headline match: a live game readers care about, else the newest dated result.
+  const featured = live.find(m => interest(m) >= 60) ?? live[0] ?? results[0] ?? upcoming[0] ?? null;
   let scorecard: CricScorecard | null = null;
   if (featured && featured.state !== 'fixture') {
     // Results don't change, so their scorecard can be kept a day.
