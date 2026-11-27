@@ -35,6 +35,11 @@ function nzWhen(iso: string | null) {
   return new Intl.DateTimeFormat('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Pacific/Auckland' }).format(d);
 }
 
+function nzTime(iso: string) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat('en-NZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Pacific/Auckland' }).format(d);
+}
+
 function Badge({ team, size = 28 }: { team: CricTeam; size?: number }) {
   const [broken, setBroken] = useState(false);
   return team.img && !broken
@@ -140,7 +145,7 @@ export function CricketBoardFull({ initial }: { initial: Board }) {
       <List title="Recent results" items={rest(board.results)}/>
       <List title="Coming up" items={rest(board.upcoming)}/>
     </div>
-    <p className={s.credit}>Scores from CricketData.org, updated every few minutes. Times are New Zealand time.</p>
+    <p className={s.credit}>Scores from CricketData.org, updated about every 20 minutes (last update {nzTime(board.updatedAt)}). Times are New Zealand time.</p>
   </div>;
 }
 
@@ -156,7 +161,7 @@ export function CricketBoardCompact({ initial }: { initial: Board }) {
       <TeamRow team={m.teams[0]} big/>
       <TeamRow team={m.teams[1]} big/>
       {m.status ? <p className={s.rowStatus}>{m.status}</p> : null}
-      {others ? <p className={s.more}>{others} more live {others === 1 ? 'match' : 'matches'}</p> : null}
+      <p className={s.more}>{others ? `${others} more live ${others === 1 ? 'match' : 'matches'} · ` : ''}Updated {nzTime(board.updatedAt)}</p>
     </Link> : <p className={s.empty}>No matches right now.</p>}
   </section>;
 }

@@ -5,13 +5,17 @@
  * answers in a shape we don't recognise, getCricketBoard() returns null and the
  * page falls back to the old embedded widget, so nothing breaks.
  *
- * Every reader is served from our cache, never straight from the provider, so
- * the daily allowance depends only on these two timers (seconds):
- *   CRICKETDATA_LIST_SECONDS       match list        (default 1800 = 48 calls a day)
- *   CRICKETDATA_SCORECARD_SECONDS  featured scorecard (default 1800 = 48 a day)
- * The defaults fit the free plan (100 calls a day) with a little room. On a paid
- * plan, set both to 120 for scores about two minutes behind.
+ * Readers are served from our own store (Supabase table cricket_feed), never straight
+ * from the provider. One call per interval goes out, whatever the traffic or region,
+ * so the daily allowance depends only on these two timers (seconds):
+ *   CRICKETDATA_LIST_SECONDS       match list        (default 1200 = 72 calls a day)
+ *   CRICKETDATA_SCORECARD_SECONDS  live scorecard    (default 5400 = 16 a day)
+ * The defaults fit the free plan (100 calls a day). On a paid plan, set both to 120
+ * for scores about two minutes behind. If the provider fails, the last good scores stay.
  */
+
+import { unstable_cache } from 'next/cache';
+import { createAdminClient } from './supabase-admin';
 
 const BASE = 'https://api.cricapi.com/v1';
 
@@ -30,20 +34,55 @@ const num = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0);
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(v));
 const secs = (name: string, fallback: number) => Math.max(60, Number(process.env[name]) || fallback);
 
-async function call(path: string, params: Record<string, string>, revalidate: number) {
+type Stored = { data: any; okAt: string | null };
+
+/** Straight to the provider, no caching: only called by refresh() below. */
+async function fetchProvider(path: string, params: Record<string, string>) {
   const key = process.env.CRICKETDATA_API_KEY?.trim();
-  if (!key || key === 'paused') return null; // 'paused' keeps the old widget without wasting calls
+  if (!key || key === 'paused') return { data: null, error: 'off' };
   const qs = new URLSearchParams({ apikey: key, ...params });
   try {
-    const res = await fetch(`${BASE}/${path}?${qs}`, { next: { revalidate, tags: ['cricket'] }, signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
+    const res = await fetch(`${BASE}/${path}?${qs}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return { data: null, error: `HTTP ${res.status}` };
     const json = await res.json();
-    if (json?.status !== 'success') { console.error('cricketdata', path, json?.reason || json?.status); return null; }
-    return json.data ?? null;
-  } catch (e) {
-    console.error('cricketdata', path, e);
-    return null;
+    if (json?.status !== 'success') return { data: null, error: String(json?.reason || json?.status || 'failed') };
+    return { data: json.data ?? null, error: null };
+  } catch (e: any) {
+    return { data: null, error: String(e?.message || e) };
   }
+}
+
+/**
+ * The provider's answer for one request, from our own store (Supabase table cricket_feed).
+ * At most one call to the provider per `every` seconds, across all regions and visitors,
+ * so the free plan's daily limit can't run out. If the provider fails, the last good
+ * answer stays. Without the database (e.g. preview builds) this returns nothing and the
+ * old widget shows, so test copies never spend the live site's calls.
+ */
+async function call(path: string, params: Record<string, string>, every: number): Promise<Stored | null> {
+  const key = process.env.CRICKETDATA_API_KEY?.trim();
+  if (!key || key === 'paused' || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const id = [path, ...Object.values(params)].join(':');
+  let db;
+  try { db = createAdminClient(); } catch { return null; }
+  const read = async (): Promise<Stored | null> => {
+    const { data } = await db.from('cricket_feed').select('data, ok_at').eq('key', id).maybeSingle();
+    return data?.data != null ? { data: data.data, okAt: data.ok_at } : null;
+  };
+  let stored = await read();
+  const { data: won } = await db.rpc('cricket_feed_claim', { p_key: id, p_seconds: every });
+  if (won) {
+    const r = await fetchProvider(path, params);
+    if (r.data != null) {
+      const okAt = new Date().toISOString();
+      await db.from('cricket_feed').update({ data: r.data, ok_at: okAt, error: null }).eq('key', id);
+      stored = { data: r.data, okAt };
+    } else {
+      console.error('cricketdata', path, r.error);
+      await db.from('cricket_feed').update({ error: r.error }).eq('key', id);
+    }
+  }
+  return stored;
 }
 
 /** Short code for a team, e.g. "New Zealand [NZ]" -> NZ. */
@@ -115,8 +154,9 @@ function fromScorecard(data: any): CricScorecard | null {
   return { venue: str(data.venue) || null, tossNote: data.tossWinner ? `${titleCase(cleanTeam(str(data.tossWinner)))} won the toss and chose to ${str(data.tossChoice) || 'play'}` : null, innings };
 }
 
-export async function getCricketBoard(): Promise<CricketBoard | null> {
-  const list = await call('cricScore', {}, secs('CRICKETDATA_LIST_SECONDS', 1800));
+async function buildBoard(): Promise<CricketBoard | null> {
+  const listed = await call('cricScore', {}, secs('CRICKETDATA_LIST_SECONDS', 1200));
+  const list = listed?.data;
   if (!Array.isArray(list)) return null;
   const matches = list.map(fromList).filter((m): m is CricMatch => !!m);
   if (!matches.length) return null;
@@ -137,8 +177,11 @@ export async function getCricketBoard(): Promise<CricketBoard | null> {
   let scorecard: CricScorecard | null = null;
   if (featured && featured.state !== 'fixture') {
     // Results don't change, so their scorecard can be kept a day.
-    const ttl = featured.state === 'live' ? secs('CRICKETDATA_SCORECARD_SECONDS', 1800) : 86400;
-    scorecard = fromScorecard(await call('match_scorecard', { id: featured.id }, ttl));
+    const ttl = featured.state === 'live' ? secs('CRICKETDATA_SCORECARD_SECONDS', 5400) : 86400 * 7;
+    scorecard = fromScorecard((await call('match_scorecard', { id: featured.id }, ttl))?.data);
   }
-  return { updatedAt: new Date().toISOString(), featured, scorecard, live, results, upcoming };
+  return { updatedAt: listed?.okAt || new Date().toISOString(), featured, scorecard, live, results, upcoming };
 }
+
+/** One database read a minute at most; the provider timers above decide the API calls. */
+export const getCricketBoard = unstable_cache(buildBoard, ['cricket-board-v2'], { revalidate: 60 });
