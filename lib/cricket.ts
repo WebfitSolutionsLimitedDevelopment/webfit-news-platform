@@ -63,14 +63,14 @@ function fromList(row: any): CricMatch | null {
   const finished = /\b(match drawn|match tied|won by|won the match|no result|abandoned|cancelled|canceled)\b/i.test(str(row.status));
   let state: CricMatch['state'] = ms === 'result' || finished ? 'result' : ms === 'live' ? 'live' : 'fixture';
   const startsAt = str(row.dateTimeGMT) ? `${str(row.dateTimeGMT).replace(/Z?$/, 'Z')}` : null;
-  // The feed sometimes fills a match that hasn't started with another game's score
-  // (e.g. "Day 1: Stumps, 246/5" hours before the toss). Before the start time, show no score.
-  const notStarted = !finished && !!startsAt && Date.parse(startsAt) > Date.now();
-  let status = str(row.status);
-  if (notStarted) { state = 'fixture'; status = 'Match not started'; }
-  else if (state === 'live' && /^match (starts|not started)/i.test(status) && !str(row.t1s) && !str(row.t2s)) state = 'fixture';
+  const status = str(row.status);
+  // A match with a score or a "Day 2"/"Stumps"/"innings" status has started, whatever
+  // the feed's date says (its date for a Test can be the current day, not day one).
+  const started = !!(str(row.t1s) || str(row.t2s)) || /\b(day \d|stumps|innings|session|opt to|elected to|need|trail|lead)\b/i.test(status);
+  if (!finished && started) state = 'live';
+  else if (state === 'live' && !started) state = 'fixture';
   const team = (raw: string, score: unknown, img: unknown): CricTeam => ({
-    name: cleanTeam(raw), short: shortName(raw), img: str(img) || null, score: notStarted ? null : str(score) || null,
+    name: cleanTeam(raw), short: shortName(raw), img: str(img) || null, score: str(score) || null,
   });
   return {
     id: str(row.id), name: `${cleanTeam(row.t1)} v ${cleanTeam(row.t2)}`, series: str(row.series) || null,
