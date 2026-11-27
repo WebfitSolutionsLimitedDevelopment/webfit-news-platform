@@ -32,7 +32,7 @@ const secs = (name: string, fallback: number) => Math.max(60, Number(process.env
 
 async function call(path: string, params: Record<string, string>, revalidate: number) {
   const key = process.env.CRICKETDATA_API_KEY?.trim();
-  if (!key) return null;
+  if (!key || key === 'paused') return null; // 'paused' keeps the old widget without wasting calls
   const qs = new URLSearchParams({ apikey: key, ...params });
   try {
     const res = await fetch(`${BASE}/${path}?${qs}`, { next: { revalidate, tags: ['cricket'] }, signal: AbortSignal.timeout(8000) });
@@ -61,13 +61,20 @@ function fromList(row: any): CricMatch | null {
   if (!row?.id || !row?.t1 || !row?.t2) return null;
   const ms = str(row.ms).toLowerCase();
   const finished = /\b(match drawn|match tied|won by|won the match|no result|abandoned|cancelled|canceled)\b/i.test(str(row.status));
-  const state: CricMatch['state'] = ms === 'result' || finished ? 'result' : ms === 'live' ? 'live' : 'fixture';
+  let state: CricMatch['state'] = ms === 'result' || finished ? 'result' : ms === 'live' ? 'live' : 'fixture';
+  const startsAt = str(row.dateTimeGMT) ? `${str(row.dateTimeGMT).replace(/Z?$/, 'Z')}` : null;
+  // The feed sometimes fills a match that hasn't started with another game's score
+  // (e.g. "Day 1: Stumps, 246/5" hours before the toss). Before the start time, show no score.
+  const notStarted = !finished && !!startsAt && Date.parse(startsAt) > Date.now();
+  let status = str(row.status);
+  if (notStarted) { state = 'fixture'; status = 'Match not started'; }
+  else if (state === 'live' && /^match (starts|not started)/i.test(status) && !str(row.t1s) && !str(row.t2s)) state = 'fixture';
   const team = (raw: string, score: unknown, img: unknown): CricTeam => ({
-    name: cleanTeam(raw), short: shortName(raw), img: str(img) || null, score: str(score) || null,
+    name: cleanTeam(raw), short: shortName(raw), img: str(img) || null, score: notStarted ? null : str(score) || null,
   });
   return {
     id: str(row.id), name: `${cleanTeam(row.t1)} v ${cleanTeam(row.t2)}`, series: str(row.series) || null,
-    matchType: str(row.matchType).toLowerCase(), state, status: str(row.status), startsAt: str(row.dateTimeGMT) ? `${str(row.dateTimeGMT).replace(/Z?$/, 'Z')}` : null,
+    matchType: str(row.matchType).toLowerCase(), state, status, startsAt,
     teams: [team(row.t1, row.t1s, row.t1img), team(row.t2, row.t2s, row.t2img)],
   };
 }
@@ -118,11 +125,15 @@ export async function getCricketBoard(): Promise<CricketBoard | null> {
   const live = matches.filter(m => m.state === 'live').sort(byInterest);
   const date = (m: CricMatch) => Date.parse(m.startsAt || '') || 0;
   const results = matches.filter(m => m.state === 'result').sort((a, b) => date(b) - date(a) || byInterest(a, b)).slice(0, 12);
-  const upcoming = matches.filter(m => m.state === 'fixture')
+  const upcoming = matches.filter(m => m.state === 'fixture' && (!date(m) || date(m) > Date.now() - 6 * 3600000))
     .sort((a, b) => (date(a) || Infinity) - (date(b) || Infinity) || byInterest(a, b)).slice(0, 12);
 
-  // The headline match: a live game readers care about, else the newest dated result.
-  const featured = live.find(m => interest(m) >= 60) ?? live[0] ?? results[0] ?? upcoming[0] ?? null;
+  // The headline match: a live game readers care about, else a New Zealand or India game
+  // starting within a day, else any live game, else the newest dated result.
+  const soon = (m: CricMatch) => date(m) > 0 && date(m) - Date.now() < 86400000;
+  const upcomingSoon = upcoming.filter(m => date(m) > Date.now() - 3600000);
+  const featured = live.find(m => interest(m) >= 60) ?? upcomingSoon.find(m => interest(m) >= 60 && soon(m))
+    ?? live[0] ?? results[0] ?? upcomingSoon[0] ?? null;
   let scorecard: CricScorecard | null = null;
   if (featured && featured.state !== 'fixture') {
     // Results don't change, so their scorecard can be kept a day.
