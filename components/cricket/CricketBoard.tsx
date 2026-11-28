@@ -145,7 +145,7 @@ export function CricketBoardFull({ initial }: { initial: Board }) {
       <List title="Recent results" items={rest(board.results)}/>
       <List title="Coming up" items={rest(board.upcoming)}/>
     </div>
-    <p className={s.credit}>Scores from CricketData.org, updated about every 20 minutes (last update {nzTime(board.updatedAt)}). Times are New Zealand time.</p>
+    <p className={s.credit}>Scores from CricTimes, checked every minute (last update {nzTime(board.updatedAt)}). Times are New Zealand time.</p>
   </div>;
 }
 

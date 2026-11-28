@@ -184,4 +184,13 @@ async function buildBoard(): Promise<CricketBoard | null> {
 }
 
 /** One database read a minute at most; the provider timers above decide the API calls. */
-export const getCricketBoard = unstable_cache(buildBoard, ['cricket-board-v2'], { revalidate: 60 });
+const getCricketDataBoard = unstable_cache(buildBoard, ['cricket-board-v2'], { revalidate: 60 });
+
+/**
+ * The scores the site shows: CricTimes' feed first (no key, no daily limit, the data the
+ * site has used since 1 Nov), then CricketData.org if its key is switched on.
+ */
+export async function getCricketBoard(): Promise<CricketBoard | null> {
+  const { getCricTimesBoard } = await import('./cricket-crictimes');
+  return (await getCricTimesBoard()) ?? (await getCricketDataBoard().catch(() => null));
+}
